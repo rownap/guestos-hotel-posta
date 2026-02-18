@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animazione - Hotel Posta</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #FF0080 0%, #FF3399 25%, #00D4FF 75%, #00E5FF 100%);
+            min-height: 100vh;
+            padding-bottom: 120px;
+        }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(25px);
+            padding: 15px 20px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .back-btn {
+            background: rgba(255,255,255,0.3);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+        }
+        .page-title { color: white; font-size: 22px; font-weight: 900; text-shadow: 2px 2px 6px rgba(0,0,0,0.3); }
+        
+        /* Hero Section */
+        .hero-section {
+            background: rgba(255,255,255,0.25);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 22px;
+            padding: 30px 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .hero-icon {
+            font-size: 80px;
+            margin-bottom: 15px;
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        .hero-title {
+            color: white;
+            font-size: 28px;
+            font-weight: 900;
+            margin-bottom: 10px;
+            text-shadow: 3px 3px 8px rgba(0,0,0,0.3);
+        }
+        .hero-subtitle {
+            color: rgba(255,255,255,0.95);
+            font-size: 15px;
+            font-weight: 700;
+            line-height: 1.6;
+        }
+        
+        /* Team Section */
+        .team-section {
+            background: rgba(255,255,255,0.25);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 22px;
+            padding: 25px 20px;
+            margin-bottom: 20px;
+        }
+        .team-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .team-header-title {
+            color: white;
+            font-size: 20px;
+            font-weight: 900;
+            text-shadow: 2px 2px 6px rgba(0,0,0,0.3);
+        }
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        .team-card {
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(15px);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 18px;
+            padding: 20px;
+            text-align: center;
+        }
+        .team-icon {
+            font-size: 60px;
+            margin-bottom: 12px;
+        }
+        .team-name {
+            color: white;
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 5px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .team-role {
+            color: rgba(255,255,255,0.85);
+            font-size: 13px;
+            font-weight: 600;
+        }
+        
+        /* Eventi Oggi */
+        .today-events {
+            background: rgba(255,255,255,0.25);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 22px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .section-title {
+            color: white;
+            font-size: 18px;
+            font-weight: 900;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 6px rgba(0,0,0,0.3);
+        }
+        .event-item {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 12px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        .event-item.current {
+            background: linear-gradient(135deg, rgba(255,0,128,0.4), rgba(0,212,255,0.4));
+            border: 2px solid rgba(255,255,255,0.5);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.02); opacity: 0.9; }
+        }
+        .event-time {
+            background: rgba(0,212,255,0.3);
+            border: 2px solid rgba(0,212,255,0.5);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-weight: 900;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        .event-info { flex: 1; }
+        .event-name {
+            color: white;
+            font-size: 16px;
+            font-weight: 800;
+            margin-bottom: 4px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .event-desc {
+            color: rgba(255,255,255,0.9);
+            font-size: 13px;
+            font-weight: 600;
+        }
+        
+        /* Sezioni Cards */
+        .sections-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .section-card {
+            background: rgba(255,255,255,0.25);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 22px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .section-card:active {
+            transform: scale(0.95);
+        }
+        .section-icon {
+            font-size: 50px;
+            margin-bottom: 12px;
+        }
+        .section-name {
+            color: white;
+            font-size: 16px;
+            font-weight: 800;
+            margin-bottom: 6px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .section-desc {
+            color: rgba(255,255,255,0.85);
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        /* Detail Page */
+        .detail-page {
+            display: none;
+        }
+        .detail-page.active {
+            display: block;
+        }
+        .detail-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        .detail-title {
+            color: white;
+            font-size: 26px;
+            font-weight: 900;
+            text-shadow: 3px 3px 10px rgba(0,0,0,0.3);
+            margin-bottom: 10px;
+        }
+        .detail-subtitle {
+            color: rgba(255,255,255,0.9);
+            font-size: 15px;
+            font-weight: 700;
+        }
+        .activities-list {
+            display: grid;
+            gap: 15px;
+        }
+        .activity-card {
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(15px);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 18px;
+            padding: 18px;
+        }
+        .activity-header {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+        .activity-icon {
+            font-size: 36px;
+        }
+        .activity-info { flex: 1; }
+        .activity-name {
+            color: white;
+            font-size: 17px;
+            font-weight: 800;
+            margin-bottom: 5px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .activity-time {
+            color: rgba(255,255,255,0.85);
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .activity-desc {
+            color: rgba(255,255,255,0.9);
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="mainPage">
+            <div class="header">
+                <button class="back-btn" onclick="window.history.back()">←</button>
+                <div style="flex: 1;">
+                    <div class="page-title">🎭 Animazione</div>
+                </div>
+            </div>
+            
+            <div class="hero-section">
+                <div class="hero-icon">🎉</div>
+                <div class="hero-title">Vivi un'estate Indimenticabile!</div>
+                <div class="hero-subtitle">Spettacoli serali, musical, cabaret, tornei sportivi, serate a tema e tanto altro!</div>
+            </div>
+            
+            <div class="today-events">
+                <div class="section-title">📅 Programma di Oggi</div>
+                <div id="eventsContainer">
+                    </div>
+            </div>
+            
+            <div class="sections-grid">
+                <div class="section-card" onclick="showSection('miniclub')">
+                    <div class="section-icon">👶</div>
+                    <div class="section-name">Mini Club</div>
+                    <div class="section-desc">Attività bambini</div>
+                </div>
+                <div class="section-card" onclick="showSection('sport')">
+                    <div class="section-icon">⚽</div>
+                    <div class="section-name">Sport</div>
+                    <div class="section-desc">Tornei e giochi</div>
+                </div>
+                <div class="section-card" onclick="showSection('fitness')">
+                    <div class="section-icon">💪</div>
+                    <div class="section-name">Fitness</div>
+                    <div class="section-desc">Allenamenti</div>
+                </div>
+                <div class="section-card" onclick="showSection('spettacoli')">
+                    <div class="section-icon">🎬</div>
+                    <div class="section-name">Spettacoli</div>
+                    <div class="section-desc">Serate live</div>
+                </div>
+            </div>
+
+            <div class="team-section">
+                <div class="team-header">
+                    <span style="font-size: 24px;">⭐</span>
+                    <div class="team-header-title">Il Nostro Team</div>
+                </div>
+                <div class="team-grid">
+                    <div class="team-card">
+                        <div class="team-icon">🧑‍🎤</div>
+                        <div class="team-name">Marco</div>
+                        <div class="team-role">Capo Animazione</div>
+                    </div>
+                    <div class="team-card">
+                        <div class="team-icon">👩‍🎤</div>
+                        <div class="team-name">Giulia</div>
+                        <div class="team-role">Animatrice</div>
+                    </div>
+                    <div class="team-card">
+                        <div class="team-icon">🎭</div>
+                        <div class="team-name">Luca</div>
+                        <div class="team-role">Attore & Ballerino</div>
+                    </div>
+                    <div class="team-card">
+                        <div class="team-icon">👶</div>
+                        <div class="team-name">Sara</div>
+                        <div class="team-role">Mini Club</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="miniclubPage" class="detail-page">
+            <div class="header">
+                <button class="back-btn" onclick="backToMain()">←</button>
+                <div style="flex: 1;">
+                    <div class="page-title">👶 Mini Club</div>
+                </div>
+            </div>
+            <div class="detail-header">
+                <div class="detail-title">🎨 Mini Club</div>
+                <div class="detail-subtitle">Divertimento per i più piccoli!</div>
+            </div>
+            <div class="activities-list">
+                <div class="activity-card">
+                    <div class="activity-header">
+                        <div class="activity-icon">🎨</div>
+                        <div class="activity-info">
+                            <div class="activity-name">Laboratorio Creativo</div>
+                            <div class="activity-time">Ore 10:00 - 12:00</div>
+                        </div>
+                    </div>
+                    <div class="activity-desc">Disegno, pittura e lavoretti manuali con materiali sicuri</div>
+                </div>
+                <div class="activity-card">
+                    <div class="activity-header">
+                        <div class="activity-icon">🏖️</div>
+                        <div class="activity-info">
+                            <div class="activity-name">Giochi in Spiaggia</div>
+                            <div class="activity-time">Ore 15:00 - 17:00</div>
+                        </div>
+                    </div>
+                    <div class="activity-desc">Castelli di sabbia, giochi d'acqua e caccia al tesoro</div>
+                </div>
+                <div class="activity-card">
+                    <div class="activity-header">
+                        <div class="activity-icon">🎭</div>
+                        <div class="activity-info">
+                            <div class="activity-name">Mini Spettacolo</div>
+                            <div class="activity-time">Ore 18:30 - 19:30</div>
+                        </div>
+                    </div>
+                    <div class="activity-desc">I bambini preparano uno spettacolo per i genitori</div>
+                </div>
+                <div class="activity-card">
+                    <div class="activity-header">
+                        <div class="activity-icon">🍕</div>
+                        <div class="activity-info">
+                            <div class="activity-name">Baby Pizza Party</div>
+                            <div class="activity-time">Venerdì 20:00</div>
+                        </div>
+                    </div>
+                    <div class="activity-desc">I bambini preparano la loro pizza con lo chef</div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="sportPage" class="detail-page">
+            <div class="header">
+                <button class="back-btn" onclick="backToMain()">←</button>
+                <div style="flex: 1;">
+                    <div class="page-title">⚽ Sport</div>
+                </div>
+            </div>
+            <div class="detail-header">
+                <div class="detail-title">🏆 Sport & Tornei</div>
+                <div class="detail-subtitle">Sfida i tuoi amici!</div>
+            </div>
+            <div class="activities-list">
+                <div class="activity-card">
+                    <div class="activity-header">
+                        <div class="activity-icon">🏐</div>
+                        <div class="activity-info">
+                            <div class="activity-name">Beach Volley</div>
+                            <div class="activity-time">Ore 15:00 - 18:00</div>
+                        </div>
+                    </div>
+                    <div class="activity-desc">Torneo giornaliero sulla spiaggia. Premi per i vincitori!</div>
+                </div>
+                <div class="activity-card">
+                    <div class="activity-header">
+                        <div class="activity-icon">⚽</div>
+                        <div class="activity-info">
+                            <div class="activity-name">Calcetto</div>
+                            <div class="activity-time">Ore 17:00 - 19:00</div>
+                        </div>
+                    </div>
+                    <div class="activity-desc">Partite a tema: Italia vs Resto del Mondo</div>
+                </div>
+                <div class="activity-card">
+                    <div class="activity-header">
+                        <div class="activity-icon">🏓</div>
+                        <div class="activity-info">
+                            <div class="activity-name">Ping Pong</div>
+                            <div class="activity-time">Sempre disponibile</div>
+                        </div>
+                    </div>
+                    <div class="activity-desc">Tavoli professionali sempre a disposizione</div>
+                </div>
+                <div class="activity-card">
+                    <div class="activity-header">
+                        <div class="activity-icon">🎱</div>
+                        <div class="activity-info">
+                            <div class="activity-name">Biliardo</div>
+                            <div class="activity-time">Sempre disponibile</div>
+                        </div>
+                    </div>
+                    <div class="activity-desc">Sala giochi con 2 tavoli da biliardo</div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="fitnessPage" class="detail-page">
+            <div class="header">
+                <button class="back-btn" onclick="backToMain()">←</button>
+                <div style="flex: 1;">
+                    <div class="page-title">💪 Fitness</div>
+                </div>
+            </div>
+            <div class="detail-header">
+                <div class="detail-title">💪 Fitness & Wellness</div>
+                <div class="detail-subtitle">Resta in forma in vacanza!</div>
+            </div>
+            <div class="activities-list">
+                <div class="activity-card">
+                    <div class="activity-header">
+                        <div class="activity-icon">💦</div>
+                        <div class="activity-info">
+                            <div class="activity-name">Aquagym</div>
+                            <div class="activity-time">Ore 10:00 - 11:00</div>
+                        </div>
+                    </div>
+                    <div class="activity-desc">Risveglio muscolare in piscina con musica</div>
+                </div>
+                <div class="activity-card">
+                    <div class="activity-header">
+                        <div class="activity-icon">🧘</div>
+                        <div class="activity-info">
+                            <div class="activity-name">Yoga Mattutino</div>
+                            <div class="activity-time">Ore 8:00 - 9:00</div>
+                        </div>
+                    </div>
+                    <div class="activity-desc">Sessione di yoga sulla spiaggia all'alba</div>
+                </div>
+                <div class="activity-card">
+                    <div class="activity-header">
+                        <div class="activity-icon">🏋️</div>
+                        <div class="activity-info">
+                            <div class="activity-name">Total Body</div>
+                            <div class="activity-time">Ore 18:00 - 19:00</div>
+                        </div>
+                    </div>
+                    <div class="activity-desc">Allenamento completo a corpo libero</div>
+                </div>
+                <div class="activity-card">
+                    <div class="activity-header">
+                        <div class="activity-icon">🧘‍♀️</div>
+                        <div class="activity-info">
+                            <div class="activity-name">Pilates</div>
+                            <div class="activity-time">Mercoledì 17:00</div>
+                        </div>
+                    </div>
+                    <div class="activity-desc">Tonificazione e allungamento muscolare</div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="spettacoliPage" class="detail-page">
+            <div class="header">
+                <button class="back-btn" onclick="backToMain()">←</button>
+                <div style="flex: 1;">
+                    <div class="page-title">🎬 Spettacoli</div>
+                </div>
+            </div>
+            <div class="detail-header">
+                <div class="detail-title">🌟 Spettacoli Serali</div>
+                <div class="detail-subtitle">Serate indimenticabili!</div>
+            </div>
+            <div class="activities-list">
+                <div class="activity-card">
+                    <div class="activity-header">
+                        <div class="activity-icon">🎭</div>
+                        <div class="activity-info">
+                            <div class="activity-name">Musical Live Show</div>
+                            <div class="activity-time">Ore 21:30 - 23:00</div>
+                        </div>
+                    </div>
+                    <div class="activity-desc">Musical con artisti professionisti e scenografie mozzafiato</div>
+                </div>
+                <div class="activity-card">
+                    <div class="activity-header">
+                        <div class="activity-icon">😂</div>
+                        <div class="activity-info">
+                            <div class="activity-name">Cabaret Night</div>
+                            <div class="activity-time">Martedì 21:30</div>
+                        </div>
+                    </div>
+                    <div class="activity-desc">Comici professionisti per una serata di risate</div>
+                </div>
+                <div class="activity-card">
+                    <div class="activity-header">
+                        <div class="activity-icon">🎤</div>
+                        <div class="activity-info">
+                            <div class="activity-name">Karaoke Night</div>
+                            <div class="activity-time">Venerdì 22:00</div>
+                        </div>
+                    </div>
+                    <div class="activity-desc">Canta le tue canzoni preferite! Premi per le migliori performance</div>
+                </div>
+                <div class="activity-card">
+                    <div class="activity-header">
+                        <div class="activity-icon">💃</div>
+                        <div class="activity-info">
+                            <div class="activity-name">Disco Party</div>
+                            <div class="activity-time">Ore 23:00 - 01:00</div>
+                        </div>
+                    </div>
+                    <div class="activity-desc">Balli latino-americani e DJ set fino a tardi</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const dailyEvents = [
+            {time: '10:00', name: 'Aquagym in Piscina 💦', desc: 'Risveglio muscolare con musica'},
+            {time: '15:00', name: 'Torneo Beach Volley 🏐', desc: 'Iscrizioni in spiaggia - premi per i vincitori!'},
+            {time: '17:00', name: 'Mini Club 👶', desc: 'Laboratorio creativo e giochi per bambini'},
+            {time: '21:30', name: 'Musical Live Show 🌟', desc: 'Spettacolo musicale con artisti professionisti'},
+            {time: '23:00', name: 'Disco Party 💃', desc: 'Balli latino-americani e DJ set fino a tardi'}
+        ];
+        
+        function loadEvents() {
+            const now = new Date();
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+            
+            const container = document.getElementById('eventsContainer');
+            container.innerHTML = dailyEvents.map(event => {
+                const [eventHour, eventMinute] = event.time.split(':').map(Number);
+                const eventTime = eventHour * 60 + eventMinute;
+                const currentTime = currentHour * 60 + currentMinute;
+                const isCurrent = currentTime >= eventTime && currentTime < eventTime + 60;
+                
+                return `
+                    <div class="event-item ${isCurrent ? 'current' : ''}">
+                        <div class="event-time">${event.time}</div>
+                        <div class="event-info">
+                            <div class="event-name">${event.name}</div>
+                            <div class="event-desc">${event.desc}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function showSection(section) {
+            document.getElementById('mainPage').style.display = 'none';
+            document.getElementById(section + 'Page').classList.add('active');
+            window.scrollTo(0,0);
+        }
+        
+        function backToMain() {
+            document.querySelectorAll('.detail-page').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.getElementById('mainPage').style.display = 'block';
+        }
+        
+        loadEvents();
+        setInterval(loadEvents, 60000); 
+    </script>
+</body>
+</html>

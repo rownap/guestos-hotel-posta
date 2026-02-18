@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Calabria - Hotel Posta</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0a12;
+            --bg-secondary: #13131f;
+            --accent-primary: #6366f1;
+            --accent-success: #10b981;
+            --accent-error: #ef4444;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: white;
+            min-height: 100vh;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at 30% 20%, rgba(99, 102, 241, 0.08) 0%, transparent 50%);
+            z-index: 0;
+        }
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .header {
+            background: rgba(19, 19, 31, 0.8);
+            backdrop-filter: blur(20px);
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .back-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .back-btn:hover { background: rgba(255, 255, 255, 0.1); }
+        .content {
+            padding: 20px;
+        }
+        .quiz-screen {
+            display: none;
+        }
+        .quiz-screen.active {
+            display: block;
+        }
+        .start-card {
+            background: var(--bg-secondary);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 32px;
+            text-align: center;
+        }
+        .quiz-icon {
+            font-size: 80px;
+            margin-bottom: 24px;
+        }
+        h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 28px;
+            margin-bottom: 12px;
+        }
+        .quiz-rules {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            padding: 20px;
+            margin: 24px 0;
+            text-align: left;
+        }
+        .rule-item {
+            display: flex;
+            align-items: start;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .start-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--accent-primary), #a855f7);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .start-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        .quiz-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .question-counter {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+        .timer {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent-error);
+        }
+        .question-card {
+            background: var(--bg-secondary);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 32px 24px;
+            margin-bottom: 24px;
+        }
+        .question-text {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 22px;
+            font-weight: 600;
+            line-height: 1.4;
+            margin-bottom: 24px;
+        }
+        .answers-grid {
+            display: grid;
+            gap: 12px;
+        }
+        .answer-btn {
+            width: 100%;
+            padding: 16px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 14px;
+            color: white;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+        }
+        .answer-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--accent-primary);
+        }
+        .answer-btn.correct {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: var(--accent-success);
+            color: var(--accent-success);
+        }
+        .answer-btn.wrong {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: var(--accent-error);
+            color: var(--accent-error);
+        }
+        .results-card {
+            background: var(--bg-secondary);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 32px;
+            text-align: center;
+        }
+        .score-circle {
+            width: 140px;
+            height: 140px;
+            margin: 0 auto 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-primary), #a855f7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .score-value {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 48px;
+            font-weight: 700;
+        }
+        .score-total {
+            font-size: 18px;
+            opacity: 0.8;
+        }
+        .reward-box {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 16px;
+            padding: 20px;
+            margin: 24px 0;
+        }
+        .btn-group {
+            display: grid;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        /* Countdown Box Animation */
+        .countdown-box {
+            animation: pulse-warning 2s ease-in-out infinite;
+        }
+        @keyframes pulse-warning {
+            0%, 100% {
+                transform: scale(1);
+                border-color: rgba(255,68,68,0.3);
+            }
+            50% {
+                transform: scale(1.02);
+                border-color: rgba(255,68,68,0.5);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="back-btn" onclick="goBack()">
+                <i data-lucide="arrow-left" style="width: 20px; height: 20px;"></i>
+            </button>
+            <div style="flex: 1;">
+                <div style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 600;">Quiz Calabria</div>
+                <div style="font-size: 13px; color: rgba(255,255,255,0.5);">Cultura & Tradizioni</div>
+            </div>
+            <button class="back-btn" onclick="window.location.href='index.html'" style="background: linear-gradient(135deg, var(--accent-primary), #8b5cf6); border-color: transparent;">
+                <i data-lucide="home" style="width: 20px; height: 20px;"></i>
+            </button>
+        </div>
+
+        <div class="content">
+            <div class="quiz-screen active" id="startScreen">
+                <div class="start-card">
+                    <div class="quiz-icon">🧠</div>
+                    <h1>Quiz Cultura Calabrese</h1>
+                    <p style="color: rgba(255,255,255,0.7); margin-bottom: 24px;">Metti alla prova le tue conoscenze!</p>
+                    
+                    <div class="quiz-rules">
+                        <div class="rule-item">
+                            <i data-lucide="list" style="width: 20px; height: 20px; color: #6366f1;"></i>
+                            <div><strong>10 domande</strong> sulla Calabria</div>
+                        </div>
+                        <div class="rule-item">
+                            <i data-lucide="clock" style="width: 20px; height: 20px; color: #6366f1;"></i>
+                            <div><strong>20 secondi</strong> per risposta</div>
+                        </div>
+                        <div class="rule-item">
+                            <i data-lucide="trophy" style="width: 20px; height: 20px; color: #6366f1;"></i>
+                            <div><strong>+100 punti</strong> completando il quiz</div>
+                        </div>
+                        <div class="rule-item">
+                            <i data-lucide="gift" style="width: 20px; height: 20px; color: #10b981;"></i>
+                            <div><strong>Sconto 10%</strong> ristorante (se ≥7/10)</div>
+                        </div>
+                    </div>
+
+                    <div id="blockedScreen" style="display: none;">
+                        <div class="start-card" style="border-color: var(--accent-error);">
+                            <div class="quiz-icon" style="font-size: 100px;">⏰</div>
+                            <h1 style="color: #ff4444;">Hai già giocato oggi!</h1>
+                            <p style="color: rgba(255,255,255,0.8); margin: 20px 0;">
+                                Torna domani per guadagnare altri punti!
+                            </p>
+                            
+                            <div class="countdown-box" style="background: rgba(255,68,68,0.15); border: 2px solid rgba(255,68,68,0.3); border-radius: 16px; padding: 20px; margin: 24px 0;">
+                                <div style="font-size: 14px; color: rgba(255,255,255,0.8); margin-bottom: 12px;">
+                                    Prossimo quiz tra:
+                                </div>
+                                <div id="countdownTimer" style="font-family: 'Space Grotesk', sans-serif; font-size: 36px; font-weight: 700; color: #ff4444;"></div>
+                            </div>
+                            
+                            <button class="start-btn" onclick="window.location.href='games.html'" style="background: linear-gradient(135deg, #6366f1, #a855f7);">
+                                <i data-lucide="arrow-left" style="width: 20px; height: 20px; vertical-align: middle;"></i>
+                                Torna ai Giochi
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <button id="mainStartBtn" class="start-btn" onclick="startQuiz()">
+                        <i data-lucide="play" style="width: 20px; height: 20px; vertical-align: middle;"></i>
+                        Inizia Quiz
+                    </button>
+                </div>
+            </div>
+
+            <div class="quiz-screen" id="gameScreen">
+                <div class="quiz-header">
+                    <div class="question-counter" id="questionCounter">Domanda 1/10</div>
+                    <div class="timer" id="timer">20s</div>
+                </div>
+                
+                <div class="question-card">
+                    <div class="question-text" id="questionText"></div>
+                    <div class="answers-grid" id="answersGrid"></div>
+                </div>
+            </div>
+
+            <div class="quiz-screen" id="resultsScreen">
+                <div class="results-card">
+                    <div class="score-circle">
+                        <div class="score-value" id="finalScore">0</div>
+                        <div class="score-total">/10</div>
+                    </div>
+                    
+                    <h2 id="resultsTitle" style="margin-bottom: 12px;">Ottimo lavoro!</h2>
+                    <p id="resultsMessage" style="color: rgba(255,255,255,0.7); margin-bottom: 24px;"></p>
+                    
+                    <div class="reward-box" id="rewardBox">
+                        <div style="font-size: 24px; margin-bottom: 8px;">🎉</div>
+                        <div id="rewardText"></div>
+                    </div>
+                    
+                    <div class="btn-group">
+                        <button class="start-btn" onclick="window.location.href='leaderboard.html'">👑 Vai alla Leaderboard</button>
+                        <button class="start-btn" style="background: rgba(255,255,255,0.1);" onclick="window.location.href='games.html'">🎮 Torna ai Giochi</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        
+        const questions = [
+            { q: "Qual è il capoluogo della Calabria?", a: ["Catanzaro", "Cosenza", "Reggio Calabria", "Crotone"], correct: 0 },
+            { q: "Quale mare bagna la costa orientale della Calabria?", a: ["Mar Tirreno", "Mar Ionio", "Mar Adriatico", "Mar Ligure"], correct: 1 },
+            { q: "Quale di questi prodotti è tipico della Calabria?", a: ["'Nduja", "Parmigiano", "Gorgonzola", "Prosciutto San Daniele"], correct: 0 },
+            { q: "Come si chiama il Parco Nazionale più grande della Calabria?", a: ["Parco del Pollino", "Parco della Sila", "Parco dell'Aspromonte", "Parco della Majella"], correct: 0 },
+            { q: "Quale città calabrese è famosa per i Bronzi di Riace?", a: ["Catanzaro", "Cosenza", "Reggio Calabria", "Crotone"], correct: 2 },
+            { q: "Quale peperoncino calabrese è il più famoso?", a: ["Habanero", "Jalapeño", "Peperoncino di Calabria", "Carolina Reaper"], correct: 2 },
+            { q: "Quale civiltà antica fondò molte città in Calabria?", a: ["Romani", "Greci", "Fenici", "Cartaginesi"], correct: 1 },
+            { q: "Quale santo è patrono della Calabria?", a: ["San Gennaro", "San Francesco", "San Francesco di Paola", "Sant'Antonio"], correct: 2 },
+            { q: "Quale dolce tipico calabrese si prepara a Natale?", a: ["Panettone", "Pandoro", "Susumelle", "Torrone"], correct: 2 },
+            { q: "Quale vino calabrese è più famoso?", a: ["Cirò", "Chianti", "Barolo", "Prosecco"], correct: 0 }
+        ];
+
+        let currentQuestion = 0;
+        let score = 0;
+        let timeLeft = 20;
+        let timerInterval;
+
+        function goBack() {
+            window.location.href = 'games.html';
+        }
+
+        // 1. Check se utente ha già giocato oggi
+        async function checkIfCanPlay() {
+            try {
+                const userEmail = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                const { data, error } = await supabaseClient
+                    .from('quiz_scores')
+                    .select('completed_at')
+                    .eq('user_email', userEmail)
+                    .gte('completed_at', today.toISOString())
+                    .order('completed_at', { ascending: false })
+                    .limit(1);
+
+                if (error) throw error;
+
+                if (data && data.length > 0) {
+                    // Ha già giocato oggi
+                    const lastPlay = new Date(data[0].completed_at);
+                    const nextPlay = new Date(lastPlay);
+                    nextPlay.setDate(nextPlay.getDate() + 1);
+                    nextPlay.setHours(0, 0, 0, 0);
+
+                    showAlreadyPlayedMessage(nextPlay);
+                    return false;
+                }
+                return true; 
+            } catch (error) {
+                console.error('Error checking play status:', error);
+                return true; 
+            }
+        }
+
+        // 4. Modifica Funzione startQuiz
+        async function startQuiz() {
+            const canPlay = await checkIfCanPlay();
+            if (!canPlay) return;
+
+            currentQuestion = 0;
+            score = 0;
+            showScreen('gameScreen');
+            loadQuestion();
+        }
+
+        // 3. Funzione Mostra Blocco e Countdown
+        function showAlreadyPlayedMessage(nextPlayDate) {
+            // Nascondi elementi iniziali
+            document.querySelector('.quiz-icon').style.display = 'none';
+            document.querySelector('h1').style.display = 'none';
+            document.querySelector('p').style.display = 'none';
+            document.querySelector('.quiz-rules').style.display = 'none';
+            document.getElementById('mainStartBtn').style.display = 'none';
+
+            // Mostra blocked screen
+            document.getElementById('blockedScreen').style.display = 'block';
+
+            updateCountdown(nextPlayDate);
+            setInterval(() => updateCountdown(nextPlayDate), 1000);
+        }
+
+        function updateCountdown(targetDate) {
+            const now = new Date().getTime();
+            const distance = targetDate.getTime() - now;
+
+            if (distance < 0) {
+                document.getElementById('countdownTimer').textContent = "00:00:00";
+                setTimeout(() => location.reload(), 2000);
+                return;
+            }
+
+            const hours = Math.floor(distance / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            document.getElementById('countdownTimer').textContent = 
+                String(hours).padStart(2, '0') + ':' +
+                String(minutes).padStart(2, '0') + ':' +
+                String(seconds).padStart(2, '0');
+        }
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.quiz-screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function loadQuestion() {
+            if (currentQuestion >= questions.length) {
+                showResults();
+                return;
+            }
+
+            const q = questions[currentQuestion];
+            document.getElementById('questionCounter').textContent = `Domanda ${currentQuestion + 1}/10`;
+            document.getElementById('questionText').textContent = q.q;
+            
+            const grid = document.getElementById('answersGrid');
+            grid.innerHTML = '';
+            q.a.forEach((answer, i) => {
+                const btn = document.createElement('button');
+                btn.className = 'answer-btn';
+                btn.textContent = answer;
+                btn.onclick = () => selectAnswer(i);
+                grid.appendChild(btn);
+            });
+
+            startTimer();
+        }
+
+        function startTimer() {
+            timeLeft = 20;
+            document.getElementById('timer').textContent = timeLeft + 's';
+            
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer').textContent = timeLeft + 's';
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    selectAnswer(-1);
+                }
+            }, 1000);
+        }
+
+        function selectAnswer(selectedIndex) {
+            clearInterval(timerInterval);
+            
+            const q = questions[currentQuestion];
+            const buttons = document.querySelectorAll('.answer-btn');
+            
+            buttons.forEach((btn, i) => {
+                btn.disabled = true;
+                if (i === q.correct) {
+                    btn.classList.add('correct');
+                } else if (i === selectedIndex) {
+                    btn.classList.add('wrong');
+                }
+            });
+
+            if (selectedIndex === q.correct) {
+                score++;
+            }
+
+            setTimeout(() => {
+                currentQuestion++;
+                loadQuestion();
+            }, 1500);
+        }
+
+        async function showResults() {
+            showScreen('resultsScreen');
+            document.getElementById('finalScore').textContent = score;
+            
+            let title, message, reward;
+            if (score >= 9) {
+                title = "Eccezionale! 🏆";
+                message = "Sei un vero esperto della Calabria!";
+                reward = "🎁 +150 punti + Sconto 15% ristorante";
+            } else if (score >= 7) {
+                title = "Ottimo lavoro! 🎉";
+                message = "Conosci molto bene la Calabria!";
+                reward = "🎁 +100 punti + Sconto 10% ristorante";
+            } else if (score >= 5) {
+                title = "Buon risultato! 👍";
+                message = "Non male, continua a esplorare!";
+                reward = "🎁 +50 punti";
+            } else {
+                title = "Ritenta! 💪";
+                message = "C'è ancora molto da scoprire!";
+                reward = "🎁 +25 punti";
+            }
+            
+            document.getElementById('resultsTitle').textContent = title;
+            document.getElementById('resultsMessage').textContent = message;
+            document.getElementById('rewardText').textContent = reward;
+
+            await saveQuizScore(score);
+        }
+
+        async function saveQuizScore(finalScore) {
+            try {
+                const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
+                await supabaseClient.from('quiz_scores').insert({
+                    user_email: email,
+                    score: finalScore,
+                    total_questions: 10,
+                    completed_at: new Date().toISOString()
+                });
+
+                const points = finalScore >= 9 ? 150 : finalScore >= 7 ? 100 : finalScore >= 5 ? 50 : 25;
+                const { data: userData } = await supabaseClient
+                    .from('user_points')
+                    .select('*')
+                    .eq('user_email', email)
+                    .single();
+
+                if (userData) {
+                    await supabaseClient
+                        .from('user_points')
+                        .update({ points: userData.points + points })
+                        .eq('user_email', email);
+                }
+            } catch (error) {
+                console.error('Error saving quiz:', error);
+            }
+        }
+    </script>
+</body>
+</html>

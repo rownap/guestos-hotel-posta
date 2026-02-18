@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premi - Hotel Posta</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0a12;
+            --bg-secondary: #13131f;
+            --accent-primary: #6366f1;
+            --accent-success: #10b981;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: white;
+            min-height: 100vh;
+            padding-bottom: 90px;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at 50% 20%, rgba(99, 102, 241, 0.08) 0%, transparent 50%);
+            z-index: 0;
+        }
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: rgba(19, 19, 31, 0.8);
+            backdrop-filter: blur(20px);
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            border-radius: 16px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .back-btn {
+            width: 36px;
+            height: 36px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .points-banner {
+            background: linear-gradient(135deg, var(--accent-primary), #a855f7);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 24px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.3);
+        }
+        .points-value {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .points-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .section-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .rewards-grid {
+            display: grid;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .reward-card {
+            background: var(--bg-secondary);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 20px;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .reward-card:hover {
+            border-color: rgba(99, 102, 241, 0.3);
+            transform: translateY(-2px);
+        }
+        .reward-card.locked {
+            opacity: 0.6;
+        }
+        .reward-header {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .reward-icon {
+            font-size: 48px;
+            flex-shrink: 0;
+        }
+        .reward-info {
+            flex: 1;
+        }
+        .reward-name {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .reward-description {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.6);
+            line-height: 1.5;
+        }
+        .reward-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .reward-cost {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 18px;
+            font-weight: 700;
+            color: #fbbf24;
+        }
+        .redeem-btn {
+            background: linear-gradient(135deg, var(--accent-success), #34d399);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .redeem-btn:hover {
+            transform: scale(1.05);
+        }
+        .redeem-btn:disabled {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.3);
+            cursor: not-allowed;
+        }
+        .locked-badge {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="back-btn" onclick="window.history.back()">
+                <i data-lucide="arrow-left" style="width: 20px; height: 20px;"></i>
+            </button>
+            <div style="flex: 1;">
+                <div style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 600;">🎁 Premi</div>
+                <div style="font-size: 13px; color: rgba(255,255,255,0.5);">Riscatta i tuoi punti</div>
+            </div>
+        </div>
+
+        <div class="points-banner">
+            <div class="points-value" id="userPoints">0</div>
+            <div class="points-label">Punti Disponibili</div>
+        </div>
+
+        <h2 class="section-title">
+            <i data-lucide="gift" style="width: 20px; height: 20px; color: #6366f1;"></i>
+            Premi Disponibili
+        </h2>
+
+        <div class="rewards-grid" id="rewardsGrid">
+            <!-- Rewards will be loaded here -->
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        
+        let userPoints = 0;
+        
+        async function loadUserPoints() {
+            try {
+                const userEmail = localStorage.getItem('guestos_user_email');
+                
+                const { data, error } = await supabaseClient
+                    .from('user_points')
+                    .select('points')
+                    .eq('user_email', userEmail)
+                    .single();
+                
+                if (data) {
+                    userPoints = data.points || 0;
+                    document.getElementById('userPoints').textContent = userPoints;
+                }
+            } catch (error) {
+                console.error('Error loading points:', error);
+            }
+        }
+        
+        async function loadRewards() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('rewards')
+                    .select('*')
+                    .eq('active', true)
+                    .order('points_required', { ascending: true });
+                
+                if (error) throw error;
+                
+                const grid = document.getElementById('rewardsGrid');
+                grid.innerHTML = '';
+                
+                data.forEach(reward => {
+                    const canRedeem = userPoints >= reward.points_required;
+                    const isOutOfStock = reward.stock !== -1 && reward.stock <= 0;
+                    
+                    const card = document.createElement('div');
+                    card.className = 'reward-card' + (canRedeem && !isOutOfStock ? '' : ' locked');
+                    card.innerHTML = `
+                        <div class="reward-header">
+                            <div class="reward-icon">${reward.emoji || '🎁'}</div>
+                            <div class="reward-info">
+                                <div class="reward-name">${reward.name}</div>
+                                <div class="reward-description">${reward.description || ''}</div>
+                            </div>
+                        </div>
+                        <div class="reward-footer">
+                            <div class="reward-cost">
+                                <i data-lucide="coins" style="width: 18px; height: 18px;"></i>
+                                <span>${reward.points_required}</span>
+                            </div>
+                            ${isOutOfStock ? 
+                                '<span class="locked-badge">Esaurito</span>' :
+                                canRedeem ? 
+                                `<button class="redeem-btn" onclick="redeemReward(${reward.id}, ${reward.points_required})">Riscatta</button>` :
+                                `<span class="locked-badge">Servono ${reward.points_required - userPoints} punti</span>`
+                            }
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+                
+                lucide.createIcons();
+                
+            } catch (error) {
+                console.error('Error loading rewards:', error);
+            }
+        }
+        
+        async function redeemReward(rewardId, cost) {
+            if (!confirm('Confermi il riscatto di questo premio?')) return;
+            
+            try {
+                const userEmail = localStorage.getItem('guestos_user_email');
+                
+                // Verifica punti sufficienti
+                if (userPoints < cost) {
+                    alert('Punti insufficienti!');
+                    return;
+                }
+                
+                // Inserisci premio riscattato
+                const { error: redeemError } = await supabaseClient
+                    .from('user_rewards')
+                    .insert({
+                        user_email: userEmail,
+                        reward_id: rewardId,
+                        status: 'pending'
+                    });
+                
+                if (redeemError) throw redeemError;
+                
+                // Scala punti
+                const { error: pointsError } = await supabaseClient
+                    .from('user_points')
+                    .update({ points: userPoints - cost })
+                    .eq('user_email', userEmail);
+                
+                if (pointsError) throw pointsError;
+                
+                alert('🎉 Premio riscattato! Vai alla reception per ritirarlo.');
+                
+                // Ricarica
+                await loadUserPoints();
+                await loadRewards();
+                
+            } catch (error) {
+                console.error('Error redeeming reward:', error);
+                alert('Errore durante il riscatto');
+            }
+        }
+        
+        // Init
+        loadUserPoints();
+        loadRewards();
+    </script>
+    
+    <script>
+        // Load bottom nav
+        fetch('bottom-nav.html')
+            .then(response => response.text())
+            .then(html => document.body.insertAdjacentHTML('beforeend', html));
+    </script>
+</body>
+</html>

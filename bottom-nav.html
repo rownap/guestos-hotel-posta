@@ -1,0 +1,213 @@
+<!-- Bottom Navigation Bar -->
+<style>
+/* PADDING BODY - evita che nav copra contenuto + margine */
+body {
+    padding-bottom: 110px !important;
+}
+
+/* Margine extra per ultima sezione prima della nav */
+.container > *:last-child,
+.content > *:last-child {
+    margin-bottom: 40px !important;
+}
+
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(255,255,255,0.12);
+    backdrop-filter: blur(30px) saturate(180%);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    padding: 12px 0;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    box-shadow: 0 -8px 32px rgba(0,0,0,0.12);
+    z-index: 9999;
+    border-top: 1px solid rgba(255,255,255,0.25);
+}
+
+.bottom-nav-container {
+    max-width: 600px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0 10px;
+    gap: 8px;
+}
+
+.bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    padding: 10px 14px;
+    border-radius: 18px;
+    text-decoration: none;
+    background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(255,255,255,0.15);
+    box-shadow: 
+        0 4px 12px rgba(0,0,0,0.08),
+        inset 0 1px 0 rgba(255,255,255,0.2);
+    position: relative;
+}
+
+/* Animazione PRESS 3D */
+.bottom-nav-item:active {
+    transform: scale(0.88) translateY(2px);
+    box-shadow: 
+        0 2px 6px rgba(0,0,0,0.15),
+        inset 0 2px 4px rgba(0,0,0,0.15);
+}
+
+/* STATO ATTIVO - EFFETTO PREMUTO FORTE */
+.bottom-nav-item.active {
+    background: linear-gradient(
+        135deg,
+        rgba(255,0,128,0.4) 0%,
+        rgba(0,212,255,0.35) 100%
+    );
+    border: 3px solid rgba(255,0,128,0.6);
+    box-shadow: 
+        0 0 20px rgba(255,0,128,0.4),
+        inset 0 3px 8px rgba(0,0,0,0.25),
+        inset 0 -1px 0 rgba(255,255,255,0.2);
+    transform: translateY(1px) scale(0.96);
+}
+
+/* Glow continuo per item attivo */
+@keyframes glow-pulse {
+    0%, 100% {
+        box-shadow: 
+            0 0 20px rgba(255,0,128,0.4),
+            inset 0 3px 8px rgba(0,0,0,0.25),
+            inset 0 -1px 0 rgba(255,255,255,0.2);
+    }
+    50% {
+        box-shadow: 
+            0 0 30px rgba(255,0,128,0.6),
+            0 0 15px rgba(0,212,255,0.4),
+            inset 0 3px 8px rgba(0,0,0,0.25),
+            inset 0 -1px 0 rgba(255,255,255,0.2);
+    }
+}
+
+.bottom-nav-item.active {
+    animation: glow-pulse 2s ease-in-out infinite;
+}
+
+.bottom-nav-icon {
+    font-size: 28px;
+    transition: all 0.3s ease;
+    filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.25));
+}
+
+.bottom-nav-item.active .bottom-nav-icon {
+    transform: scale(1.2);
+    filter: 
+        drop-shadow(0 0 8px rgba(255,0,128,0.8))
+        drop-shadow(2px 2px 4px rgba(0,0,0,0.4));
+}
+
+.bottom-nav-label {
+    font-size: 10px;
+    font-weight: 900;
+    color: rgba(255,255,255,0.85);
+    transition: all 0.3s ease;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.4);
+    text-align: center;
+    letter-spacing: 0.3px;
+}
+
+.bottom-nav-item.active .bottom-nav-label {
+    color: white;
+    text-shadow: 
+        0 0 10px rgba(255,0,128,1),
+        2px 2px 8px rgba(0,0,0,0.6);
+    transform: scale(1.08);
+    font-weight: 900;
+}
+</style>
+
+<div class="bottom-nav">
+    <div class="bottom-nav-container">
+        <a href="index.html" class="bottom-nav-item" data-page="index">
+            <div class="bottom-nav-icon">🏠</div>
+            <div class="bottom-nav-label">Home</div>
+        </a>
+        <a href="ristorante.html" class="bottom-nav-item" data-page="ristorante">
+            <div class="bottom-nav-icon">🍽️</div>
+            <div class="bottom-nav-label">Ristorante</div>
+        </a>
+        <a href="games.html" class="bottom-nav-item" data-page="games">
+            <div class="bottom-nav-icon">🎮</div>
+            <div class="bottom-nav-label">Giochi</div>
+        </a>
+        <a href="leaderboard.html" class="bottom-nav-item" data-page="leaderboard">
+            <div class="bottom-nav-icon">🔥</div>
+            <div class="bottom-nav-label">Classifica</div>
+        </a>
+        <a href="account.html" class="bottom-nav-item" data-page="account">
+            <div class="bottom-nav-icon">👤</div>
+            <div class="bottom-nav-label">Account</div>
+        </a>
+    </div>
+</div>
+
+<script>
+// Attiva item corrente
+document.addEventListener('DOMContentLoaded', function() {
+    const currentPage = window.location.pathname.split('/').pop().replace('.html', '') || 'index';
+    const items = document.querySelectorAll('.bottom-nav-item');
+    
+    items.forEach(item => {
+        const itemPage = item.getAttribute('data-page');
+        if (itemPage === currentPage || (currentPage === '' && itemPage === 'index')) {
+            item.classList.add('active');
+        }
+    });
+});
+</script>
+</style>
+
+<div class="bottom-nav">
+    <div class="bottom-nav-container">
+        <a href="index.html" class="bottom-nav-item" data-page="index">
+            <div class="bottom-nav-icon">🏠</div>
+            <div class="bottom-nav-label">Home</div>
+        </a>
+        <a href="ristorante.html" class="bottom-nav-item" data-page="ristorante">
+            <div class="bottom-nav-icon">🍽️</div>
+            <div class="bottom-nav-label">Ristorante</div>
+        </a>
+        <a href="games.html" class="bottom-nav-item" data-page="games">
+            <div class="bottom-nav-icon">🎮</div>
+            <div class="bottom-nav-label">Giochi</div>
+        </a>
+        <a href="leaderboard.html" class="bottom-nav-item" data-page="leaderboard">
+            <div class="bottom-nav-icon">🔥</div>
+            <div class="bottom-nav-label">Classifica</div>
+        </a>
+        <a href="account.html" class="bottom-nav-item" data-page="account">
+            <div class="bottom-nav-icon">👤</div>
+            <div class="bottom-nav-label">Account</div>
+        </a>
+    </div>
+</div>
+
+<script>
+// Attiva item corrente
+document.addEventListener('DOMContentLoaded', function() {
+    const currentPage = window.location.pathname.split('/').pop().replace('.html', '') || 'index';
+    const items = document.querySelectorAll('.bottom-nav-item');
+    
+    items.forEach(item => {
+        const itemPage = item.getAttribute('data-page');
+        if (itemPage === currentPage || (currentPage === '' && itemPage === 'index')) {
+            item.classList.add('active');
+        }
+    });
+});
+</script>

@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#FF0080">
+    <title>Dettaglio Escursione - Hotel Posta</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="common.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #FF0080 0%, #FF3399 25%, #00D4FF 75%, #00E5FF 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            padding-bottom: 100px;
+        }
+        
+        .container {
+            position: relative;
+            z-index: 10;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        /* Header */
+        .header {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(25px);
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .back-btn {
+            background: rgba(255,255,255,0.3);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-btn:active {
+            transform: scale(0.9);
+            background: rgba(255,255,255,0.5);
+        }
+        
+        /* Hero Gallery */
+        .hero-gallery {
+            position: relative;
+            height: 300px;
+            overflow: hidden;
+        }
+        
+        .hero-image {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(0,212,255,0.3), rgba(255,0,128,0.3)),
+                        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><rect fill="%23e0f7ff" width="800" height="600"/><text x="50%" y="50%" font-family="Arial" font-size="80" fill="%2300D4FF" text-anchor="middle" dominant-baseline="middle">🚢 Tour</text></svg>');
+            background-size: cover;
+            background-position: center;
+        }
+        
+        .hero-badges {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        
+        .badge {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 900;
+            font-size: 13px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .badge.featured {
+            background: linear-gradient(135deg, #FF0080, #FF3399);
+            color: white;
+        }
+        
+        .badge.rating {
+            color: #FFD700;
+        }
+        
+        /* Content */
+        .content {
+            padding: 25px 20px;
+        }
+        
+        /* Title Section */
+        .tour-title {
+            color: white;
+            font-size: 28px;
+            font-weight: 900;
+            margin-bottom: 15px;
+            text-shadow: 3px 3px 10px rgba(0,0,0,0.3);
+            line-height: 1.2;
+        }
+        
+        .tour-subtitle {
+            color: rgba(255,255,255,0.95);
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 6px rgba(0,0,0,0.3);
+        }
+        
+        /* Info Cards */
+        .info-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+        
+        .info-card {
+            background: rgba(255,255,255,0.25);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 18px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 6px 25px rgba(0,0,0,0.12);
+        }
+        
+        .info-icon {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+        
+        .info-label {
+            color: rgba(255,255,255,0.9);
+            font-size: 11px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        .info-value {
+            color: white;
+            font-size: 15px;
+            font-weight: 900;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        /* Section */
+        .section {
+            background: rgba(255,255,255,0.25);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 6px 25px rgba(0,0,0,0.12);
+        }
+        
+        .section-title {
+            color: white;
+            font-size: 20px;
+            font-weight: 900;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 6px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section-text {
+            color: rgba(255,255,255,0.95);
+            font-size: 15px;
+            font-weight: 600;
+            line-height: 1.6;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        /* Highlights */
+        .highlights-grid {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .highlight-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: white;
+            font-size: 15px;
+            font-weight: 700;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        .highlight-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #00D4FF, #00E5FF);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+            box-shadow: 0 4px 15px rgba(0,212,255,0.3);
+        }
+        
+        /* Itinerary Timeline */
+        .itinerary-list {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .itinerary-item {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .itinerary-time {
+            background: linear-gradient(135deg, #00D4FF, #00E5FF);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-weight: 900;
+            font-size: 13px;
+            height: fit-content;
+            white-space: nowrap;
+            box-shadow: 0 4px 15px rgba(0,212,255,0.3);
+        }
+        
+        .itinerary-content {
+            flex: 1;
+        }
+        
+        .itinerary-title {
+            color: white;
+            font-size: 16px;
+            font-weight: 800;
+            margin-bottom: 4px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .itinerary-desc {
+            color: rgba(255,255,255,0.9);
+            font-size: 14px;
+            font-weight: 600;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        /* Reviews */
+        .reviews-list {
+            display: grid;
+            gap: 12px;
+        }
+        
+        .review-item {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 15px;
+        }
+        
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .review-name {
+            color: white;
+            font-size: 15px;
+            font-weight: 800;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        .review-stars {
+            color: #FFD700;
+            font-size: 14px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+        }
+        
+        .review-text {
+            color: rgba(255,255,255,0.95);
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1.5;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+            font-style: italic;
+        }
+        
+        /* Bottom Bar */
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(25px);
+            padding: 15px 20px;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .price-section {
+            flex: 1;
+        }
+        
+        .price-label {
+            color: #666;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+        
+        .price-value {
+            color: #FF0080;
+            font-size: 28px;
+            font-weight: 900;
+        }
+        
+        .price-per {
+            font-size: 14px;
+            color: #999;
+            font-weight: 700;
+        }
+        
+        .book-btn {
+            flex: 1;
+            background: linear-gradient(135deg, #FF0080, #00D4FF);
+            border: none;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 18px;
+            font-size: 17px;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 6px 25px rgba(255,0,128,0.4);
+            transition: all 0.3s ease;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        .book-btn:active {
+            transform: scale(0.98);
+        }
+        
+        /* Booking Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 25px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            animation: slideUp 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        
+        @keyframes slideUp {
+            from {
+                transform: translateY(100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .modal-title {
+            font-size: 24px;
+            font-weight: 900;
+            color: #FF0080;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            color: #999;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+        
+        .modal-close:hover {
+            background: #f0f0f0;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 800;
+            color: #333;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            color: #333;
+            transition: all 0.3s ease;
+        }
+        
+        .form-input:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: #FF0080;
+            box-shadow: 0 0 0 3px rgba(255,0,128,0.1);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #FF0080, #00D4FF);
+            border: none;
+            color: white;
+            padding: 18px;
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 6px 25px rgba(255,0,128,0.4);
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        
+        .submit-btn:active {
+            transform: scale(0.98);
+        }
+        
+        /* Success Modal */
+        .success-modal {
+            display: none;
+        }
+        
+        .success-modal.active {
+            display: flex;
+        }
+        
+        .success-content {
+            background: white;
+            border-radius: 25px;
+            padding: 40px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+        
+        .success-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: bounce 0.6s ease;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        .success-title {
+            font-size: 26px;
+            font-weight: 900;
+            color: #00c853;
+            margin-bottom: 15px;
+        }
+        
+        .success-message {
+            font-size: 15px;
+            color: #666;
+            font-weight: 600;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+        
+        .reception-reminder {
+            background: rgba(255,152,0,0.1);
+            border: 2px solid rgba(255,152,0,0.3);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .reception-text {
+            color: #ff6f00;
+            font-size: 14px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .ok-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #00c853, #00e676);
+            border: none;
+            color: white;
+            padding: 16px;
+            border-radius: 15px;
+            font-size: 17px;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 6px 25px rgba(0,200,83,0.4);
+            transition: all 0.3s ease;
+        }
+        
+        .ok-btn:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<!--Start of Tawk.to Script-->
+<script type="text/javascript">
+    var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+    (function(){
+    var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+    s1.async=true;
+    s1.src='https://embed.tawk.to/6972347ad23857197b3dab11/1jfj1q09n';
+    s1.charset='UTF-8';
+    s1.setAttribute('crossorigin','*');
+    s0.parentNode.insertBefore(s1,s0);
+    })();
+</script>
+<!--End of Tawk.to Script-->
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <button class="back-btn" onclick="window.history.back()">←</button>
+        </div>
+        
+        <!-- Hero Gallery -->
+        <div class="hero-gallery">
+            <div class="hero-image"></div>
+            <div class="hero-badges">
+                <div class="badge featured">🔥 PIÙ VENDUTO</div>
+                <div class="badge rating">⭐ 4.9</div>
+            </div>
+        </div>
+        
+        <!-- Content -->
+        <div class="content">
+            <!-- Title -->
+            <h1 class="tour-title">Giro delle Isole Incantate</h1>
+            <p class="tour-subtitle">Tour esclusivo in barca con pranzo e snorkeling</p>
+            
+            <!-- Info Cards -->
+            <div class="info-cards">
+                <div class="info-card">
+                    <div class="info-icon">⏱️</div>
+                    <div class="info-label">DURATA</div>
+                    <div class="info-value">8 ore</div>
+                </div>
+                <div class="info-card">
+                    <div class="info-icon">🚢</div>
+                    <div class="info-label">PARTENZA</div>
+                    <div class="info-value">9:00</div>
+                </div>
+                <div class="info-card">
+                    <div class="info-icon">👥</div>
+                    <div class="info-label">GRUPPO</div>
+                    <div class="info-value">Max 12</div>
+                </div>
+            </div>
+            
+            <!-- Description -->
+            <div class="section">
+                <h2 class="section-title">
+                    <span>📖</span>
+                    <span>Descrizione</span>
+                </h2>
+                <p class="section-text">
+                    Scopri le isole più belle della costa calabrese in un tour esclusivo in barca! Navigheremo verso paradisi nascosti con acque cristalline, grotte marine e spiagge da sogno. Include pranzo tipico a bordo, aperitivo al tramonto, attrezzatura snorkeling e guida fotografo professionale. Un'esperienza indimenticabile!
+                </p>
+            </div>
+            
+            <!-- Highlights -->
+            <div class="section">
+                <h2 class="section-title">
+                    <span>✨</span>
+                    <span>Cosa Include</span>
+                </h2>
+                <div class="highlights-grid">
+                    <div class="highlight-item">
+                        <div class="highlight-icon">✓</div>
+                        <div>Trasporto in barca privata</div>
+                    </div>
+                    <div class="highlight-item">
+                        <div class="highlight-icon">✓</div>
+                        <div>Pranzo tipico a bordo</div>
+                    </div>
+                    <div class="highlight-item">
+                        <div class="highlight-icon">✓</div>
+                        <div>Aperitivo al tramonto</div>
+                    </div>
+                    <div class="highlight-item">
+                        <div class="highlight-icon">✓</div>
+                        <div>Attrezzatura snorkeling</div>
+                    </div>
+                    <div class="highlight-item">
+                        <div class="highlight-icon">✓</div>
+                        <div>Guida fotografo professionale</div>
+                    </div>
+                    <div class="highlight-item">
+                        <div class="highlight-icon">✓</div>
+                        <div>Bevande illimitate</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Itinerary -->
+            <div class="section">
+                <h2 class="section-title">
+                    <span>🗺️</span>
+                    <span>Itinerario</span>
+                </h2>
+                <div class="itinerary-list">
+                    <div class="itinerary-item">
+                        <div class="itinerary-time">09:00</div>
+                        <div class="itinerary-content">
+                            <div class="itinerary-title">Partenza dal Porto</div>
+                            <div class="itinerary-desc">Briefing di sicurezza e presentazione equipaggio</div>
+                        </div>
+                    </div>
+                    <div class="itinerary-item">
+                        <div class="itinerary-time">10:30</div>
+                        <div class="itinerary-content">
+                            <div class="itinerary-title">Prima Sosta - Isola Verde</div>
+                            <div class="itinerary-desc">Bagno e snorkeling in acque cristalline</div>
+                        </div>
+                    </div>
+                    <div class="itinerary-item">
+                        <div class="itinerary-time">13:00</div>
+                        <div class="itinerary-content">
+                            <div class="itinerary-title">Pranzo a Bordo</div>
+                            <div class="itinerary-desc">Menu tipico calabrese con prodotti locali</div>
+                        </div>
+                    </div>
+                    <div class="itinerary-item">
+                        <div class="itinerary-time">15:00</div>
+                        <div class="itinerary-content">
+                            <div class="itinerary-title">Grotte Marine</div>
+                            <div class="itinerary-desc">Esplorazione grotte e calette nascoste</div>
+                        </div>
+                    </div>
+                    <div class="itinerary-item">
+                        <div class="itinerary-time">17:00</div>
+                        <div class="itinerary-content">
+                            <div class="itinerary-title">Aperitivo al Tramonto</div>
+                            <div class="itinerary-desc">Prosecco e stuzzichini vista mare</div>
+                        </div>
+                    </div>
+                    <div class="itinerary-item">
+                        <div class="itinerary-time">18:00</div>
+                        <div class="itinerary-content">
+                            <div class="itinerary-title">Rientro</div>
+                            <div class="itinerary-desc">Arrivo al porto dell'hotel</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Reviews -->
+            <div class="section">
+                <h2 class="section-title">
+                    <span>⭐</span>
+                    <span>Recensioni (127)</span>
+                </h2>
+                <div class="reviews-list">
+                    <div class="review-item">
+                        <div class="review-header">
+                            <div class="review-name">Maria G.</div>
+                            <div class="review-stars">⭐⭐⭐⭐⭐</div>
+                        </div>
+                        <div class="review-text">
+                            "Esperienza fantastica! Le isole sono meravigliose e il pranzo era delizioso. La guida molto preparata. Consigliatissimo!"
+                        </div>
+                    </div>
+                    <div class="review-item">
+                        <div class="review-header">
+                            <div class="review-name">Luca R.</div>
+                            <div class="review-stars">⭐⭐⭐⭐⭐</div>
+                        </div>
+                        <div class="review-text">
+                            "La migliore escursione della vacanza! Acqua cristallina, personale gentilissimo e organizzazione perfetta."
+                        </div>
+                    </div>
+                    <div class="review-item">
+                        <div class="review-header">
+                            <div class="review-name">Sofia M.</div>
+                            <div class="review-stars">⭐⭐⭐⭐⭐</div>
+                        </div>
+                        <div class="review-text">
+                            "Magico! Le grotte marine sono spettacolari. L'aperitivo al tramonto è stato il momento più romantico."
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bottom Bar -->
+    <div class="bottom-bar">
+        <div class="price-section">
+            <div class="price-label">Prezzo</div>
+            <div class="price-value">€55 <span class="price-per">/persona</span></div>
+        </div>
+        <button class="book-btn" onclick="openBookingModal()">📅 Prenota Ora</button>
+    </div>
+    
+    <!-- Booking Modal -->
+    <div class="modal" id="bookingModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Prenota Escursione</h3>
+                <button class="modal-close" onclick="closeBookingModal()">×</button>
+            </div>
+            <form id="bookingForm" onsubmit="submitBooking(event)">
+                <div class="form-group">
+                    <label class="form-label">Nome Completo *</label>
+                    <input type="text" class="form-input" required placeholder="Mario Rossi">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email *</label>
+                    <input type="email" class="form-input" required placeholder="mario@email.com">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Numero Persone *</label>
+                        <select class="form-select" required>
+                            <option value="">Seleziona</option>
+                            <option value="1">1 persona</option>
+                            <option value="2">2 persone</option>
+                            <option value="3">3 persone</option>
+                            <option value="4">4 persone</option>
+                            <option value="5">5+ persone</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Data *</label>
+                        <input type="date" class="form-input" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Telefono</label>
+                    <input type="tel" class="form-input" placeholder="+39 123 456 7890">
+                </div>
+                <button type="submit" class="submit-btn">✨ Conferma Prenotazione</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Success Modal -->
+    <div class="modal success-modal" id="successModal">
+        <div class="success-content">
+            <div class="success-icon">🎉</div>
+            <h3 class="success-title">Prenotazione Confermata!</h3>
+            <p class="success-message">
+                Abbiamo ricevuto la tua prenotazione per il <strong>Giro delle Isole Incantate</strong>.<br><br>
+                Riceverai una email di conferma con tutti i dettagli.
+            </p>
+            <div class="reception-reminder">
+                <div class="reception-text">
+                    <span>📍</span>
+                    <span>Passa in reception per saldare l'importo</span>
+                </div>
+            </div>
+            <button class="ok-btn" onclick="closeSuccessModal()">Perfetto!</button>
+        </div>
+    </div>
+    
+    <script>
+        // Open booking modal
+        function openBookingModal() {
+            document.getElementById('bookingModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        // Close booking modal
+        function closeBookingModal() {
+            document.getElementById('bookingModal').classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+        
+        // Submit booking
+        function submitBooking(event) {
+            event.preventDefault();
+            
+            // Here: save to Supabase / send to n8n webhook
+            console.log('Booking submitted');
+            
+            // Close booking modal
+            closeBookingModal();
+            
+            // Show success modal
+            setTimeout(() => {
+                document.getElementById('successModal').classList.add('active');
+            }, 300);
+        }
+        
+        // Close success modal
+        function closeSuccessModal() {
+            document.getElementById('successModal').classList.remove('active');
+            document.body.style.overflow = 'auto';
+            
+            // Redirect to tours page
+            setTimeout(() => {
+                window.location.href = 'tours.html';
+            }, 300);
+        }
+    </script>
+    
+    <script src="app.js"></script>
+</body>
+</html>

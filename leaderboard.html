@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classifica - Hotel Posta</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0a12;
+            --bg-secondary: #13131f;
+            --gold: #ffd700;
+            --silver: #c0c0c0;
+            --bronze: #cd7f32;
+            --accent-primary: #6366f1;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: white;
+            min-height: 100vh;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at 50% 20%, rgba(99, 102, 241, 0.08) 0%, transparent 50%);
+            z-index: 0;
+        }
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .header {
+            background: rgba(19, 19, 31, 0.8);
+            backdrop-filter: blur(20px);
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .back-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .content {
+            padding: 20px;
+        }
+        
+        /* Filter Tabs */
+        .filter-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            overflow-x: auto;
+        }
+        .filter-tab {
+            padding: 10px 18px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .filter-tab.active {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+        
+        /* Podium */
+        .podium {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 32px;
+            align-items: end;
+        }
+        .podium-item {
+            text-align: center;
+        }
+        .podium-item.first { order: 2; }
+        .podium-item.second { order: 1; }
+        .podium-item.third { order: 3; }
+        
+        .podium-avatar {
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 12px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-primary), #a855f7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            position: relative;
+        }
+        .podium-item.first .podium-avatar {
+            width: 88px;
+            height: 88px;
+            font-size: 40px;
+        }
+        .podium-crown {
+            position: absolute;
+            top: -12px;
+            font-size: 28px;
+        }
+        .podium-platform {
+            background: var(--bg-secondary);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px 16px 0 0;
+            padding: 16px 12px;
+        }
+        .podium-item.first .podium-platform {
+            padding: 24px 12px;
+            border-color: rgba(255, 215, 0, 0.3);
+        }
+        .podium-rank {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .podium-item.first .podium-rank { color: var(--gold); }
+        .podium-item.second .podium-rank { color: var(--silver); }
+        .podium-item.third .podium-rank { color: var(--bronze); }
+        
+        .podium-name {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .podium-points {
+            font-size: 16px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-primary), #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        /* Rankings List */
+        .rankings-list {
+            display: grid;
+            gap: 12px;
+        }
+        .ranking-item {
+            background: var(--bg-secondary);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.2s ease;
+        }
+        .ranking-item:hover {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+        .ranking-item.me {
+            border-color: var(--accent-primary);
+            background: rgba(99, 102, 241, 0.1);
+        }
+        .rank-number {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.5);
+            min-width: 32px;
+        }
+        .user-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        .user-info {
+            flex: 1;
+        }
+        .user-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .user-level {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+        .user-points {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-primary), #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 40px 20px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<!-- Include Bottom Nav -->
+<script>
+    fetch('bottom-nav.html')
+        .then(response => response.text())
+        .then(html => document.body.insertAdjacentHTML('beforeend', html));
+</script>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="back-btn" onclick="window.location.href='games.html'">
+                <i data-lucide="arrow-left" style="width: 20px; height: 20px;"></i>
+            </button>
+            <div style="flex: 1;">
+                <div style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                    <i data-lucide="crown" style="width: 20px; height: 20px; color: #ffd700;"></i>
+                    Classifica
+                </div>
+                <div style="font-size: 13px; color: rgba(255,255,255,0.5);">I migliori giocatori</div>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- Filter Tabs -->
+            <div class="filter-tabs">
+                <button class="filter-tab active" data-filter="all">
+                    <i data-lucide="trophy" style="width: 16px; height: 16px; vertical-align: middle;"></i>
+                    Tutti
+                </button>
+                <button class="filter-tab" data-filter="week">
+                    <i data-lucide="calendar" style="width: 16px; height: 16px; vertical-align: middle;"></i>
+                    Questa Settimana
+                </button>
+                <button class="filter-tab" data-filter="month">
+                    <i data-lucide="calendar-days" style="width: 16px; height: 16px; vertical-align: middle;"></i>
+                    Questo Mese
+                </button>
+            </div>
+
+            <!-- Loading State -->
+            <div class="loading" id="loadingState">
+                <div class="loading-spinner"></div>
+                <div>Caricamento classifica...</div>
+            </div>
+
+            <!-- Podium -->
+            <div class="podium" id="podium" style="display: none;"></div>
+
+            <!-- Rankings List -->
+            <div class="rankings-list" id="rankingsList"></div>
+        </div>
+    </div>
+
+    <!-- Include Bottom Nav -->
+    <script>
+        fetch('bottom-nav.html')
+            .then(response => response.text())
+            .then(html => document.body.insertAdjacentHTML('beforeend', html));
+    </script>
+
+    <script>
+        lucide.createIcons();
+        
+        let currentFilter = 'all';
+        let allUsers = [];
+
+        async function loadLeaderboard() {
+            try {
+                let query = supabaseClient
+                    .from('user_points')
+                    .select('*')
+                    .order('points', { ascending: false })
+                    .limit(50);
+
+                // 🔥 FIX: Applica filtri basati su created_at
+                if (currentFilter === 'week') {
+                    const weekAgo = new Date();
+                    weekAgo.setDate(weekAgo.getDate() - 7);
+                    query = query.gte('created_at', weekAgo.toISOString());
+                } else if (currentFilter === 'month') {
+                    const monthAgo = new Date();
+                    monthAgo.setDate(monthAgo.getDate() - 30);
+                    query = query.gte('created_at', monthAgo.toISOString());
+                }
+
+                const { data, error } = await query;
+
+                if (error) throw error;
+                
+                if (data) {
+                    allUsers = data;
+                    renderLeaderboard(data);
+                }
+
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('podium').style.display = 'grid';
+
+            } catch (error) {
+                console.error('Error loading leaderboard:', error);
+                document.getElementById('loadingState').innerHTML = '<div>Errore caricamento classifica</div>';
+            }
+        }
+
+        function renderLeaderboard(users) {
+            const podium = document.getElementById('podium');
+            podium.innerHTML = '';
+            
+            if (users.length >= 1) {
+                podium.innerHTML += createPodiumItem(users[0], 1, '🥇', 'first');
+            }
+            if (users.length >= 2) {
+                podium.innerHTML += createPodiumItem(users[1], 2, '🥈', 'second');
+            }
+            if (users.length >= 3) {
+                podium.innerHTML += createPodiumItem(users[2], 3, '🥉', 'third');
+            }
+
+            const list = document.getElementById('rankingsList');
+            list.innerHTML = '';
+            
+            const currentUserEmail = localStorage.getItem('guestos_user_email') || '';
+            
+            users.slice(3).forEach((user, index) => {
+                const rank = index + 4;
+                const isCurrentUser = user.user_email === currentUserEmail;
+                
+                list.innerHTML += `
+                    <div class="ranking-item ${isCurrentUser ? 'me' : ''}">
+                        <div class="rank-number">#${rank}</div>
+                        <div class="user-avatar">👤</div>
+                        <div class="user-info">
+                            <div class="user-name">${user.user_name || 'Ospite'}</div>
+                            <div class="user-level">Livello ${user.level || 1}</div>
+                        </div>
+                        <div class="user-points">${user.points || 0}</div>
+                    </div>
+                `;
+            });
+
+            lucide.createIcons();
+        }
+
+        function createPodiumItem(user, rank, medal, className) {
+            return `
+                <div class="podium-item ${className}">
+                    <div class="podium-avatar">
+                        ${rank === 1 ? '<div class="podium-crown">👑</div>' : ''}
+                        👤
+                    </div>
+                    <div class="podium-platform">
+                        <div class="podium-rank">${medal} #${rank}</div>
+                        <div class="podium-name">${user.user_name || 'Ospite'}</div>
+                        <div class="podium-points">${user.points || 0} pt</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 🔥 FIX: Event listener per i filtri
+        document.querySelectorAll('.filter-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                // Update active tab
+                document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Set filter and reload
+                currentFilter = this.getAttribute('data-filter');
+                loadLeaderboard();
+            });
+        });
+
+        // Initialize
+        loadLeaderboard();
+    </script>
+</body>
+</html>

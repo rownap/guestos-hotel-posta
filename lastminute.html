@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#FF0080">
+    <title>Last Minute - Hotel Posta</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="common.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #FF0080 0%, #FF3399 25%, #00D4FF 75%, #00E5FF 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            padding-bottom: 30px;
+        }
+        
+        /* Pulsating background */
+        .pulse-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+        
+        .pulse-circle {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1), transparent);
+            animation: pulse 3s infinite;
+        }
+        
+        .pulse-circle:nth-child(1) { width: 300px; height: 300px; top: 10%; left: 10%; animation-delay: 0s; }
+        .pulse-circle:nth-child(2) { width: 400px; height: 400px; bottom: 10%; right: 10%; animation-delay: 1s; }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.3; }
+            50% { transform: scale(1.2); opacity: 0.6; }
+        }
+        
+        .container {
+            position: relative;
+            z-index: 10;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        /* Header */
+        .header {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(25px);
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .back-btn {
+            background: rgba(255,255,255,0.3);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-btn:active {
+            transform: scale(0.9);
+            background: rgba(255,255,255,0.5);
+        }
+        
+        .header-title {
+            flex: 1;
+        }
+        
+        .page-title {
+            color: white;
+            font-size: 22px;
+            font-weight: 900;
+            text-shadow: 2px 2px 6px rgba(0,0,0,0.3);
+        }
+        
+        .page-subtitle {
+            color: rgba(255,255,255,0.9);
+            font-size: 13px;
+            font-weight: 600;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        /* Hero */
+        .hero {
+            padding: 30px 20px;
+            text-align: center;
+        }
+        
+        .hero-icon {
+            font-size: 70px;
+            margin-bottom: 15px;
+            animation: flash 1.5s infinite;
+        }
+        
+        @keyframes flash {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+        
+        .hero-title {
+            color: white;
+            font-size: 32px;
+            font-weight: 900;
+            text-shadow: 3px 3px 10px rgba(0,0,0,0.3);
+            margin-bottom: 10px;
+            line-height: 1.2;
+        }
+        
+        .hero-subtitle {
+            color: rgba(255,255,255,0.95);
+            font-size: 17px;
+            font-weight: 700;
+            text-shadow: 2px 2px 6px rgba(0,0,0,0.3);
+        }
+        
+        /* Content */
+        .content {
+            padding: 0 20px;
+        }
+        
+        /* Offer Card */
+        .offer-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85));
+            backdrop-filter: blur(25px);
+            border-radius: 25px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+            border: 3px solid rgba(255,255,255,0.5);
+            position: relative;
+            animation: slideIn 0.5s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .offer-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #FF0000;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 900;
+            box-shadow: 0 4px 15px rgba(255,0,0,0.5);
+            z-index: 10;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .offer-image {
+            width: 100%;
+            height: 180px;
+            background: linear-gradient(135deg, rgba(255,0,128,0.3), rgba(0,212,255,0.3)),
+                        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 360"><rect fill="%23f0f0f0" width="800" height="360"/><text x="50%" y="50%" font-family="Arial" font-size="60" fill="%23ccc" text-anchor="middle" dominant-baseline="middle">🔥 Offerta</text></svg>');
+            background-size: cover;
+            background-position: center;
+        }
+        
+        .offer-content {
+            padding: 20px;
+        }
+        
+        .offer-type {
+            display: inline-block;
+            background: rgba(0,212,255,0.15);
+            color: #00D4FF;
+            padding: 6px 14px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 800;
+            margin-bottom: 12px;
+            border: 1px solid rgba(0,212,255,0.3);
+        }
+        
+        .offer-title {
+            color: #FF0080;
+            font-size: 22px;
+            font-weight: 900;
+            margin-bottom: 10px;
+        }
+        
+        .offer-description {
+            color: #666;
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1.5;
+            margin-bottom: 15px;
+        }
+        
+        .offer-details {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #333;
+            font-size: 13px;
+            font-weight: 700;
+        }
+        
+        .offer-pricing {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: rgba(255,0,128,0.05);
+            border-radius: 15px;
+        }
+        
+        .pricing-left {
+            flex: 1;
+        }
+        
+        .original-price {
+            color: #999;
+            font-size: 16px;
+            font-weight: 700;
+            text-decoration: line-through;
+            margin-bottom: 2px;
+        }
+        
+        .new-price {
+            color: #FF0080;
+            font-size: 32px;
+            font-weight: 900;
+        }
+        
+        .discount-badge {
+            background: linear-gradient(135deg, #FF0000, #FF4444);
+            color: white;
+            padding: 10px 16px;
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: 900;
+            box-shadow: 0 4px 15px rgba(255,0,0,0.3);
+        }
+        
+        .countdown {
+            background: rgba(255,152,0,0.1);
+            border: 2px solid rgba(255,152,0,0.3);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .countdown-label {
+            color: #ff6f00;
+            font-size: 12px;
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+        
+        .countdown-timer {
+            color: #ff6f00;
+            font-size: 24px;
+            font-weight: 900;
+            font-family: monospace;
+        }
+        
+        .offer-cta {
+            width: 100%;
+            background: linear-gradient(135deg, #FF0080, #00D4FF);
+            border: none;
+            color: white;
+            padding: 16px;
+            border-radius: 18px;
+            font-size: 17px;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 6px 25px rgba(255,0,128,0.4);
+            transition: all 0.3s ease;
+        }
+        
+        .offer-cta:active {
+            transform: scale(0.98);
+        }
+        
+        /* Slots indicator */
+        .slots-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .slots-dots {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .slot-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ddd;
+        }
+        
+        .slot-dot.filled {
+            background: linear-gradient(135deg, #00c853, #00e676);
+            box-shadow: 0 2px 8px rgba(0,200,83,0.4);
+        }
+        
+        .slots-text {
+            color: #ff6f00;
+            font-size: 13px;
+            font-weight: 800;
+        }
+    </style>
+</head>
+<!--Start of Tawk.to Script-->
+<script type="text/javascript">
+    var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+    (function(){
+    var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+    s1.async=true;
+    s1.src='https://embed.tawk.to/6972347ad23857197b3dab11/1jfj1q09n';
+    s1.charset='UTF-8';
+    s1.setAttribute('crossorigin','*');
+    s0.parentNode.insertBefore(s1,s0);
+    })();
+</script>
+<!--End of Tawk.to Script-->
+<!-- Include Bottom Nav -->
+<script>
+    fetch('bottom-nav.html')
+        .then(response => response.text())
+        .then(html => document.body.insertAdjacentHTML('beforeend', html));
+</script>
+<body>
+    <!-- Pulse Background -->
+    <div class="pulse-bg">
+        <div class="pulse-circle"></div>
+        <div class="pulse-circle"></div>
+    </div>
+    
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <button class="back-btn" onclick="window.history.back()">←</button>
+            <div class="header-title">
+                <div class="page-title">⚡ Last Minute</div>
+                <div class="page-subtitle">Offerte esclusive a tempo limitato!</div>
+            </div>
+        </div>
+        
+        <!-- Hero -->
+        <div class="hero">
+            <div class="hero-icon">🔥</div>
+            <div class="hero-title">Offerte Lampo!</div>
+            <div class="hero-subtitle">Sconti fino al 40% - Solo per oggi</div>
+        </div>
+        
+        <!-- Content -->
+        <div class="content">
+            <!-- Offer 1: Camera -->
+            <div class="offer-card">
+                <div class="offer-badge">⚡ LAST MINUTE</div>
+                <div class="offer-image"></div>
+                <div class="offer-content">
+                    <div class="offer-type">🏨 CAMERA</div>
+                    <div class="offer-title">Suite Superior con Vista Mare</div>
+                    <div class="offer-description">
+                        Upgrade esclusivo a Suite Superior! Camera spaziosa con balcone vista mare, minibar incluso e late check-out gratuito.
+                    </div>
+                    <div class="offer-details">
+                        <div class="detail-item">
+                            <span>📅</span>
+                            <span>Questa settimana</span>
+                        </div>
+                        <div class="detail-item">
+                            <span>⏱️</span>
+                            <span>2 notti min.</span>
+                        </div>
+                    </div>
+                    <div class="countdown">
+                        <div class="countdown-label">⏰ L'OFFERTA SCADE TRA:</div>
+                        <div class="countdown-timer" id="countdown1">05:32:18</div>
+                    </div>
+                    <div class="slots-indicator">
+                        <div class="slots-dots">
+                            <div class="slot-dot filled"></div>
+                            <div class="slot-dot filled"></div>
+                            <div class="slot-dot"></div>
+                            <div class="slot-dot"></div>
+                            <div class="slot-dot"></div>
+                        </div>
+                        <div class="slots-text">Solo 3 camere disponibili!</div>
+                    </div>
+                    <div class="offer-pricing">
+                        <div class="pricing-left">
+                            <div class="original-price">€120/notte</div>
+                            <div class="new-price">€75</div>
+                        </div>
+                        <div class="discount-badge">-37%</div>
+                    </div>
+                    <button class="offer-cta" onclick="bookOffer('camera', 1)">🚀 Prenota Subito</button>
+                </div>
+            </div>
+            
+            <!-- Offer 2: Tour -->
+            <div class="offer-card">
+                <div class="offer-badge">⚡ LAST MINUTE</div>
+                <div class="offer-image"></div>
+                <div class="offer-content">
+                    <div class="offer-type">🚢 ESCURSIONE</div>
+                    <div class="offer-title">Giro Isole + Grotte Marine</div>
+                    <div class="offer-description">
+                        Tour completo: isole, grotte marine, pranzo a bordo e aperitivo al tramonto. Ultimi posti per domani!
+                    </div>
+                    <div class="offer-details">
+                        <div class="detail-item">
+                            <span>📅</span>
+                            <span>Domani</span>
+                        </div>
+                        <div class="detail-item">
+                            <span>⏱️</span>
+                            <span>8 ore</span>
+                        </div>
+                        <div class="detail-item">
+                            <span>🕐</span>
+                            <span>Partenza 9:00</span>
+                        </div>
+                    </div>
+                    <div class="countdown">
+                        <div class="countdown-label">⏰ L'OFFERTA SCADE TRA:</div>
+                        <div class="countdown-timer" id="countdown2">02:45:30</div>
+                    </div>
+                    <div class="slots-indicator">
+                        <div class="slots-dots">
+                            <div class="slot-dot filled"></div>
+                            <div class="slot-dot"></div>
+                            <div class="slot-dot"></div>
+                            <div class="slot-dot"></div>
+                            <div class="slot-dot"></div>
+                        </div>
+                        <div class="slots-text">Solo 2 posti rimasti!</div>
+                    </div>
+                    <div class="offer-pricing">
+                        <div class="pricing-left">
+                            <div class="original-price">€55/persona</div>
+                            <div class="new-price">€39</div>
+                        </div>
+                        <div class="discount-badge">-29%</div>
+                    </div>
+                    <button class="offer-cta" onclick="bookOffer('tour', 2)">🚀 Prenota Subito</button>
+                </div>
+            </div>
+            
+            <!-- Offer 3: Spa -->
+            <div class="offer-card">
+                <div class="offer-badge">⚡ LAST MINUTE</div>
+                <div class="offer-image"></div>
+                <div class="offer-content">
+                    <div class="offer-type">💆 SPA</div>
+                    <div class="offer-title">Pacchetto Relax Total</div>
+                    <div class="offer-description">
+                        Massaggio 60 min + Trattamento viso + Sauna e bagno turco illimitati. Include tisana detox e kit benessere.
+                    </div>
+                    <div class="offer-details">
+                        <div class="detail-item">
+                            <span>📅</span>
+                            <span>Oggi/Domani</span>
+                        </div>
+                        <div class="detail-item">
+                            <span>⏱️</span>
+                            <span>2+ ore</span>
+                        </div>
+                    </div>
+                    <div class="countdown">
+                        <div class="countdown-label">⏰ L'OFFERTA SCADE TRA:</div>
+                        <div class="countdown-timer" id="countdown3">08:15:42</div>
+                    </div>
+                    <div class="slots-indicator">
+                        <div class="slots-dots">
+                            <div class="slot-dot filled"></div>
+                            <div class="slot-dot filled"></div>
+                            <div class="slot-dot filled"></div>
+                            <div class="slot-dot"></div>
+                            <div class="slot-dot"></div>
+                        </div>
+                        <div class="slots-text">Solo 4 slot disponibili!</div>
+                    </div>
+                    <div class="offer-pricing">
+                        <div class="pricing-left">
+                            <div class="original-price">€120</div>
+                            <div class="new-price">€75</div>
+                        </div>
+                        <div class="discount-badge">-37%</div>
+                    </div>
+                    <button class="offer-cta" onclick="bookOffer('spa', 3)">🚀 Prenota Subito</button>
+                </div>
+            </div>
+            
+            <!-- Offer 4: Combo -->
+            <div class="offer-card">
+                <div class="offer-badge">⚡ SUPER COMBO</div>
+                <div class="offer-image"></div>
+                <div class="offer-content">
+                    <div class="offer-type">🎁 PACCHETTO</div>
+                    <div class="offer-title">Spa + Cena Romantica</div>
+                    <div class="offer-description">
+                        Combo esclusivo: Massaggio coppia (90 min) + Cena romantica sul mare (menu degustazione 4 portate). Vino incluso!
+                    </div>
+                    <div class="offer-details">
+                        <div class="detail-item">
+                            <span>📅</span>
+                            <span>Valido 7 giorni</span>
+                        </div>
+                        <div class="detail-item">
+                            <span>💑</span>
+                            <span>Per 2 persone</span>
+                        </div>
+                    </div>
+                    <div class="countdown">
+                        <div class="countdown-label">⏰ L'OFFERTA SCADE TRA:</div>
+                        <div class="countdown-timer" id="countdown4">12:30:00</div>
+                    </div>
+                    <div class="slots-indicator">
+                        <div class="slots-dots">
+                            <div class="slot-dot filled"></div>
+                            <div class="slot-dot filled"></div>
+                            <div class="slot-dot"></div>
+                            <div class="slot-dot"></div>
+                            <div class="slot-dot"></div>
+                        </div>
+                        <div class="slots-text">Solo 5 pacchetti rimasti!</div>
+                    </div>
+                    <div class="offer-pricing">
+                        <div class="pricing-left">
+                            <div class="original-price">€180</div>
+                            <div class="new-price">€110</div>
+                        </div>
+                        <div class="discount-badge">-39%</div>
+                    </div>
+                    <button class="offer-cta" onclick="bookOffer('combo', 4)">🚀 Prenota Subito</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Countdown timers
+        function updateCountdown(elementId, endTime) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+            
+            setInterval(() => {
+                const now = new Date().getTime();
+                const distance = endTime - now;
+                
+                if (distance < 0) {
+                    element.textContent = "00:00:00";
+                    return;
+                }
+                
+                const hours = Math.floor(distance / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                
+                element.textContent = 
+                    String(hours).padStart(2, '0') + ':' +
+                    String(minutes).padStart(2, '0') + ':' +
+                    String(seconds).padStart(2, '0');
+            }, 1000);
+        }
+        
+        // Initialize countdowns
+        const now = new Date().getTime();
+        updateCountdown('countdown1', now + (5 * 60 * 60 * 1000) + (32 * 60 * 1000));
+        updateCountdown('countdown2', now + (2 * 60 * 60 * 1000) + (45 * 60 * 1000));
+        updateCountdown('countdown3', now + (8 * 60 * 60 * 1000) + (15 * 60 * 1000));
+        updateCountdown('countdown4', now + (12 * 60 * 60 * 1000) + (30 * 60 * 1000));
+        
+        // Book offer
+        function bookOffer(type, id) {
+            // Here: open booking modal or redirect to booking page
+            alert(`🔥 Ottima scelta!\n\nStai prenotando l'offerta ${type} #${id}\n\nSarai reindirizzato al form di prenotazione.`);
+            
+            // Redirect based on type
+            switch(type) {
+                case 'camera':
+                    // window.location.href = 'booking-room.html?offer=' + id;
+                    break;
+                case 'tour':
+                    window.location.href = 'tour-detail.html?id=1&lastminute=true';
+                    break;
+                case 'spa':
+                    window.location.href = 'spa.html?offer=' + id;
+                    break;
+                case 'combo':
+                    // window.location.href = 'booking-combo.html?offer=' + id;
+                    break;
+            }
+        }
+    </script>
+    
+    <script src="app.js"></script>
+</body>
+</html>

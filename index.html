@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#FF0080">
+    <title>Hotel Posta - Bubbles Assistant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="config.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #FF0080 0%, #FF3399 25%, #00D4FF 75%, #00E5FF 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            padding-bottom: 40px;
+        }
+        
+        /* Animated Bubbles */
+        .bubbles-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        
+        .bubble {
+            position: absolute;
+            bottom: -100px;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.6), rgba(0,212,255,0.3));
+            border-radius: 50%;
+            animation: rise 12s infinite ease-in;
+            opacity: 0.5;
+            box-shadow: 0 8px 32px rgba(255,255,255,0.3);
+        }
+        
+        .bubble:nth-child(1) { width: 60px; height: 60px; left: 10%; animation-delay: 0s; }
+        .bubble:nth-child(2) { width: 80px; height: 80px; left: 30%; animation-delay: 3s; }
+        .bubble:nth-child(3) { width: 50px; height: 50px; left: 50%; animation-delay: 6s; }
+        .bubble:nth-child(4) { width: 70px; height: 70px; left: 70%; animation-delay: 2s; }
+        .bubble:nth-child(5) { width: 55px; height: 55px; left: 90%; animation-delay: 8s; }
+        
+        @keyframes rise {
+            0% { bottom: -100px; opacity: 0; transform: translateX(0); }
+            10% { opacity: 0.5; }
+            90% { opacity: 0.5; }
+            100% { bottom: 110vh; opacity: 0; transform: translateX(50px); }
+        }
+        
+        .container {
+            position: relative;
+            z-index: 10;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 20px 0 30px;
+        }
+        
+        .hotel-badge {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(40px) saturate(180%);
+            -webkit-backdrop-filter: blur(40px) saturate(180%);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 800;
+            color: white;
+            border: 2px solid rgba(255,255,255,0.25);
+            margin-bottom: 20px;
+            box-shadow: 
+                0 8px 32px rgba(0,0,0,0.12),
+                inset 0 1px 0 rgba(255,255,255,0.2);
+        }
+        
+        /* Mascot */
+        .mascot-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .bubbles-mascot {
+            width: 140px;
+            height: 140px;
+            margin: 0 auto 20px;
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(40px) saturate(180%);
+            -webkit-backdrop-filter: blur(40px) saturate(180%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 
+                0 20px 60px rgba(0,0,0,0.2),
+                0 0 0 1px rgba(255,255,255,0.15),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+            animation: float 3s ease-in-out infinite;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        
+        .bubbles-mascot i {
+            width: 70px;
+            height: 70px;
+            color: white;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+        
+        .welcome-text {
+            color: white;
+            font-size: 26px;
+            font-weight: 900;
+            text-shadow: 3px 3px 10px rgba(0,0,0,0.3);
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            color: rgba(255,255,255,0.95);
+            font-size: 15px;
+            font-weight: 700;
+            text-shadow: 2px 2px 6px rgba(0,0,0,0.3);
+        }
+
+        /* Weather Widget Container */
+        .weather-container {
+            margin: 20px 0 30px;
+            border-radius: 28px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+        
+        /* LIQUID GLASS Cards Grid */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .card-3d {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(40px) saturate(180%);
+            -webkit-backdrop-filter: blur(40px) saturate(180%);
+            border-radius: 28px;
+            padding: 24px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 
+                0 8px 32px rgba(0,0,0,0.12),
+                0 1px 0 rgba(255,255,255,0.2) inset,
+                0 0 0 1px rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card-3d::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255,255,255,0.25),
+                transparent
+            );
+            transition: left 0.5s ease;
+        }
+        
+        .card-3d:hover::before {
+            left: 100%;
+        }
+        
+        .card-3d:active {
+            transform: scale(0.96) translateY(2px);
+            box-shadow: 
+                0 4px 16px rgba(0,0,0,0.15),
+                0 1px 0 rgba(255,255,255,0.15) inset;
+        }
+        
+        .card-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 12px;
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 
+                0 8px 24px rgba(0,0,0,0.15),
+                0 0 0 1px rgba(255,255,255,0.2),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+            position: relative;
+            z-index: 1;
+            border: 2px solid rgba(255,255,255,0.25);
+        }
+        
+        .card-icon i {
+            width: 32px;
+            height: 32px;
+            color: white;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+        }
+        
+        .card-title {
+            font-size: 17px;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 6px;
+            position: relative;
+            z-index: 1;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.25);
+        }
+        
+        .card-subtitle {
+            font-size: 12px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.85);
+            position: relative;
+            z-index: 1;
+            text-shadow: 1px 1px 4px rgba(0,0,0,0.2);
+        }
+        
+        /* Featured Card (large) */
+        .card-featured {
+            grid-column: 1 / -1;
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(50px) saturate(200%);
+            -webkit-backdrop-filter: blur(50px) saturate(200%);
+            padding: 28px 24px;
+        }
+        
+        .card-featured .card-icon {
+            width: 80px;
+            height: 80px;
+        }
+        
+        .card-featured .card-icon i {
+            width: 40px;
+            height: 40px;
+        }
+        
+        .card-featured .card-title {
+            font-size: 20px;
+        }
+        
+        .featured-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,0,128,0.85);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 900;
+            margin-bottom: 12px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 12px rgba(255,0,128,0.4);
+        }
+        
+        /* LIQUID GLASS Main Chat Button */
+        .chat-button {
+            width: 100%;
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(40px) saturate(180%);
+            -webkit-backdrop-filter: blur(40px) saturate(180%);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 28px;
+            padding: 22px;
+            color: white;
+            font-size: 18px;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 
+                0 12px 40px rgba(0,0,0,0.15),
+                0 1px 0 rgba(255,255,255,0.2) inset;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .chat-button:active {
+            transform: scale(0.97) translateY(2px);
+            box-shadow: 
+                0 6px 20px rgba(0,0,0,0.2),
+                0 1px 0 rgba(255,255,255,0.15) inset;
+        }
+        
+        /* Notification Badge */
+        .notification-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            min-width: 24px;
+            height: 24px;
+            padding: 0 8px;
+            background: rgba(255,0,128,0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 900;
+            color: white;
+            box-shadow: 
+                0 4px 12px rgba(255,0,128,0.5),
+                0 0 0 2px rgba(255,255,255,0.2);
+            z-index: 2;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bubbles-bg">
+        <div class="bubble"></div>
+        <div class="bubble"></div>
+        <div class="bubble"></div>
+        <div class="bubble"></div>
+        <div class="bubble"></div>
+    </div>
+    
+    <div class="container">
+        <div class="header">
+            <div class="hotel-badge">
+                <i data-lucide="hotel" style="width: 20px; height: 20px;"></i>
+                HOTEL POSTA
+            </div>
+        </div>
+        
+        <div class="mascot-section">
+            <div class="bubbles-mascot">
+                <i data-lucide="droplet" style="width: 70px; height: 70px;"></i>
+            </div>
+            <div class="welcome-text">Ciao! Sono Bubbles! 👋</div>
+            <div class="subtitle">Il tuo assistente personale in vacanza</div>
+        </div>
+
+        <div class="weather-container">
+            <a class="weatherwidget-io" href="https://forecast7.com/it/38d6815d90/tropea/" data-label_1="TROPEA" data-label_2="WEATHER" data-icons="Climacons" data-theme="weather_one" >TROPEA WEATHER</a>
+            <script>
+            !function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src='https://weatherwidget.io/js/widget.min.js';fjs.parentNode.insertBefore(js,fjs);}}(document,'script','weatherwidget-io-js');
+            </script>
+        </div>
+        
+        <div class="cards-grid">
+            <div class="card-3d card-featured" onclick="window.location.href='games.html'">
+                <div class="featured-badge">
+                    <i data-lucide="flame" style="width: 14px; height: 14px;"></i>
+                    NUOVO!
+                </div>
+                <div class="card-icon">
+                    <i data-lucide="gamepad-2"></i>
+                </div>
+                <div class="card-title">Giochi & Sfide</div>
+                <div class="card-subtitle">Guadagna punti e vinci premi esclusivi</div>
+            </div>
+            
+            <div class="card-3d" onclick="window.location.href='ristorante.html'">
+                <div class="card-icon">
+                    <i data-lucide="utensils"></i>
+                </div>
+                <div class="card-title">Ristorante</div>
+                <div class="card-subtitle">Prenota tavolo</div>
+            </div>
+            
+            <div class="card-3d" onclick="window.location.href='tours.html'">
+                <div class="card-icon">
+                    <i data-lucide="ship"></i>
+                </div>
+                <div class="card-title">Escursioni</div>
+                <div class="card-subtitle">Tour e gite</div>
+            </div>
+            
+            <div class="card-3d" onclick="window.location.href='spa.html'">
+                <div class="card-icon">
+                    <i data-lucide="sparkles"></i>
+                </div>
+                <div class="card-title">Spa & Relax</div>
+                <div class="card-subtitle">Massaggi e benessere</div>
+            </div>
+            
+            <div class="card-3d" onclick="window.location.href='animazione.html'">
+                <div class="card-icon">
+                    <i data-lucide="party-popper"></i>
+                </div>
+                <div class="card-title">Animazione</div>
+                <div class="card-subtitle">Eventi e spettacoli</div>
+            </div>
+            
+            <div class="card-3d" onclick="window.location.href='lastminute.html'">
+                <div class="notification-badge">3</div>
+                <div class="card-icon">
+                    <i data-lucide="zap"></i>
+                </div>
+                <div class="card-title">Last Minute</div>
+                <div class="card-subtitle">Offerte esclusive</div>
+            </div>
+            
+            <div class="card-3d" onclick="window.location.href='leaderboard.html'">
+                <div class="card-icon">
+                    <i data-lucide="crown"></i>
+                </div>
+                <div class="card-title">Classifica</div>
+                <div class="card-subtitle">Vedi il ranking</div>
+            </div>
+        </div>
+        
+        <button class="chat-button" onclick="window.location.href='chat.html'">
+            💬 Chatta con Bubbles
+        </button>
+    </div>
+    
+    <script>
+        // Check if user is logged in
+        if (localStorage.getItem('guestos_logged_in') !== 'true') {
+            window.location.href = 'login.html';
+        }
+        
+        // Initialize Lucide icons
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    </script>
+    
+    <script>
+        fetch('bottom-nav.html')
+            .then(response => response.text())
+            .then(html => document.body.insertAdjacentHTML('beforeend', html));
+    </script>
+    
+    <script src="app.js"></script>
+</body>
+</html>

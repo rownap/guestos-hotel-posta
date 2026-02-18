@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#FF0080">
+    <title>Spa & Wellness - Hotel Posta</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="common.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #FF0080 0%, #FF3399 25%, #00D4FF 75%, #00E5FF 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            padding-bottom: 80px;
+        }
+        
+        /* Floating Particles (more zen-like) */
+        .particles-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+        
+        .particle {
+            position: absolute;
+            background: radial-gradient(circle, rgba(255,255,255,0.6), rgba(0,212,255,0.2));
+            border-radius: 50%;
+            animation: float-gentle 20s infinite ease-in-out;
+            opacity: 0.2;
+        }
+        
+        .particle:nth-child(1) { width: 80px; height: 80px; left: 10%; top: 20%; animation-delay: 0s; }
+        .particle:nth-child(2) { width: 60px; height: 60px; left: 70%; top: 40%; animation-delay: 5s; }
+        .particle:nth-child(3) { width: 100px; height: 100px; left: 30%; top: 60%; animation-delay: 10s; }
+        .particle:nth-child(4) { width: 70px; height: 70px; left: 80%; top: 70%; animation-delay: 15s; }
+        
+        @keyframes float-gentle {
+            0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.2; }
+            25% { transform: translate(30px, -30px) scale(1.1); opacity: 0.3; }
+            50% { transform: translate(-20px, 40px) scale(0.9); opacity: 0.25; }
+            75% { transform: translate(40px, 20px) scale(1.05); opacity: 0.3; }
+        }
+        
+        /* Container */
+        .container {
+            position: relative;
+            z-index: 10;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        /* Header */
+        .header {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .back-btn {
+            background: rgba(255,255,255,0.3);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-btn:active {
+            transform: scale(0.9);
+            background: rgba(255,255,255,0.5);
+        }
+        
+        .header-title {
+            flex: 1;
+        }
+        
+        .page-title {
+            color: white;
+            font-size: 22px;
+            font-weight: 900;
+            text-shadow: 2px 2px 6px rgba(0,0,0,0.3);
+        }
+        
+        .page-subtitle {
+            color: rgba(255,255,255,0.9);
+            font-size: 13px;
+            font-weight: 600;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        /* Hero Section */
+        .hero-section {
+            position: relative;
+            height: 280px;
+            overflow: hidden;
+        }
+        
+        .hero-image {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255,0,128,0.3), rgba(0,212,255,0.3)),
+                        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560"><rect fill="%23e8f4f8" width="800" height="560"/><text x="50%" y="50%" font-family="Arial" font-size="70" fill="%2300D4FF" text-anchor="middle" dominant-baseline="middle">💆 Spa &amp; Relax</text></svg>');
+            background-size: cover;
+            background-position: center;
+        }
+        
+        .hero-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.6), transparent);
+            padding: 25px 20px;
+        }
+        
+        .hero-title {
+            color: white;
+            font-size: 28px;
+            font-weight: 900;
+            text-shadow: 3px 3px 10px rgba(0,0,0,0.5);
+            margin-bottom: 8px;
+        }
+        
+        .hero-tagline {
+            color: rgba(255,255,255,0.95);
+            font-size: 15px;
+            font-weight: 700;
+            text-shadow: 2px 2px 6px rgba(0,0,0,0.5);
+        }
+        
+        /* Content */
+        .content {
+            padding: 25px 20px 20px;
+        }
+        
+        /* Opening Hours Card */
+        .hours-card {
+            background: rgba(255,255,255,0.25);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+        }
+        
+        .hours-title {
+            color: white;
+            font-size: 17px;
+            font-weight: 800;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .hours-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .hours-row:last-child {
+            border-bottom: none;
+        }
+        
+        .hours-label {
+            color: rgba(255,255,255,0.9);
+            font-size: 14px;
+            font-weight: 700;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        .hours-value {
+            color: white;
+            font-size: 15px;
+            font-weight: 900;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        .status-open {
+            background: #00FF88;
+            color: #003320;
+            padding: 6px 14px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 900;
+            box-shadow: 0 2px 10px rgba(0,255,136,0.4);
+        }
+        
+        /* Premium Package Banner */
+        .premium-package {
+            background: linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,255,255,0.88));
+            backdrop-filter: blur(30px);
+            border-radius: 28px;
+            padding: 28px;
+            margin-bottom: 25px;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.25);
+            border: 3px solid rgba(255,215,0,0.5);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .premium-badge {
+            position: absolute;
+            top: -8px;
+            right: 25px;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #663300;
+            padding: 10px 22px;
+            border-radius: 0 0 18px 18px;
+            font-size: 13px;
+            font-weight: 900;
+            box-shadow: 0 6px 20px rgba(255,215,0,0.5);
+        }
+        
+        .package-icon {
+            font-size: 50px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .package-title {
+            color: #FF0080;
+            font-size: 24px;
+            font-weight: 900;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        
+        .package-description {
+            color: #333;
+            font-size: 15px;
+            font-weight: 600;
+            line-height: 1.6;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .package-includes {
+            background: rgba(0,212,255,0.08);
+            border-radius: 18px;
+            padding: 18px;
+            margin-bottom: 20px;
+        }
+        
+        .includes-title {
+            color: #00D4FF;
+            font-size: 15px;
+            font-weight: 800;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        
+        .includes-list {
+            display: grid;
+            gap: 8px;
+        }
+        
+        .include-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #333;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        
+        .include-icon {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #00D4FF, #00E5FF);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+        
+        .package-pricing {
+            display: flex;
+            justify-content: center;
+            align-items: baseline;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+        
+        .original-price {
+            color: #999;
+            font-size: 18px;
+            font-weight: 700;
+            text-decoration: line-through;
+        }
+        
+        .discounted-price {
+            color: #FF0080;
+            font-size: 34px;
+            font-weight: 900;
+        }
+        
+        .savings-badge {
+            background: #00FF88;
+            color: #003320;
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 900;
+        }
+        
+        .book-premium-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            border: none;
+            color: #663300;
+            padding: 18px;
+            border-radius: 20px;
+            font-size: 18px;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 8px 30px rgba(255,215,0,0.5);
+            transition: all 0.3s ease;
+        }
+        
+        .book-premium-btn:active {
+            transform: scale(0.98);
+        }
+        
+        /* Treatments Section */
+        .section-title {
+            color: white;
+            font-size: 20px;
+            font-weight: 900;
+            margin-bottom: 18px;
+            text-shadow: 2px 2px 6px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .treatments-grid {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .treatment-card {
+            background: rgba(255,255,255,0.25);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 6px 25px rgba(0,0,0,0.12);
+            transition: all 0.3s ease;
+        }
+        
+        .treatment-card:active {
+            transform: scale(0.98);
+        }
+        
+        .treatment-header {
+            display: flex;
+            align-items: start;
+            gap: 15px;
+            margin-bottom: 12px;
+        }
+        
+        .treatment-icon {
+            font-size: 40px;
+            flex-shrink: 0;
+        }
+        
+        .treatment-info {
+            flex: 1;
+        }
+        
+        .treatment-name {
+            color: white;
+            font-size: 17px;
+            font-weight: 800;
+            margin-bottom: 6px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .treatment-description {
+            color: rgba(255,255,255,0.9);
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1.5;
+            margin-bottom: 10px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        .treatment-details {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 12px;
+        }
+        
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: rgba(255,255,255,0.95);
+            font-size: 13px;
+            font-weight: 700;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        .treatment-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .treatment-price {
+            color: white;
+            font-size: 22px;
+            font-weight: 900;
+            text-shadow: 2px 2px 6px rgba(0,0,0,0.3);
+        }
+        
+        .treatment-book-btn {
+            background: rgba(255,255,255,0.9);
+            color: #FF0080;
+            border: none;
+            padding: 11px 22px;
+            border-radius: 16px;
+            font-size: 14px;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255,255,255,0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .treatment-book-btn:active {
+            transform: scale(0.95);
+            background: white;
+        }
+        
+        /* Testimonials */
+        .testimonials-section {
+            margin-bottom: 30px;
+        }
+        
+        .testimonial-card {
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(15px);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 18px;
+            padding: 18px;
+            margin-bottom: 12px;
+            box-shadow: 0 6px 25px rgba(0,0,0,0.12);
+        }
+        
+        .testimonial-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .testimonial-name {
+            color: white;
+            font-size: 15px;
+            font-weight: 800;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        .testimonial-stars {
+            color: #FFD700;
+            font-size: 14px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+        }
+        
+        .testimonial-text {
+            color: rgba(255,255,255,0.9);
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1.5;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+            font-style: italic;
+        }
+        
+        /* Bottom CTA */
+        .bottom-cta {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(25px);
+            padding: 15px 20px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+        
+        .cta-btn {
+            width: 100%;
+            max-width: 560px;
+            margin: 0 auto;
+            display: block;
+            background: linear-gradient(135deg, #FF0080, #00D4FF);
+            border: none;
+            color: white;
+            padding: 18px;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 6px 25px rgba(255,0,128,0.5);
+            transition: all 0.3s ease;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .cta-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* BOOKING MODAL - STILE TOURS */
+        .booking-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            padding: 20px;
+            overflow-y: auto;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .booking-modal.active { display: flex; }
+        
+        .modal-content {
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(50px) saturate(200%);
+            border-radius: 25px;
+            padding: 25px;
+            max-width: 450px;
+            width: 100%;
+            max-height: 65vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            border: 3px solid rgba(255,255,255,0.6);
+            position: relative;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(0,0,0,0.1);
+        }
+        
+        .modal-title {
+            font-size: 22px;
+            font-weight: 900;
+            color: #FF0080;
+        }
+        
+        .close-btn {
+            background: rgba(255,59,48,0.15);
+            border: 2px solid rgba(255,59,48,0.3);
+            color: #ff3b30;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-size: 24px;
+            font-weight: 900;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+        
+        .close-btn:active { transform: scale(0.9); }
+        
+        /* Calendario */
+        .calendar {
+            margin-bottom: 20px;
+        }
+        
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .month-display {
+            font-size: 18px;
+            font-weight: 800;
+            color: #333;
+        }
+        
+        .month-nav {
+            background: rgba(0,212,255,0.15);
+            border: 2px solid rgba(0,212,255,0.3);
+            color: #00D4FF;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-size: 18px;
+            font-weight: 900;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .month-nav:active { transform: scale(0.9); }
+        
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+        
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #333;
+            background: rgba(0,0,0,0.05);
+        }
+        
+        .calendar-day.disabled {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+        
+        .calendar-day.selected {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            box-shadow: 0 4px 15px rgba(99,102,241,0.4);
+        }
+        
+        .calendar-day:not(.disabled):not(.selected):hover {
+            background: rgba(99,102,241,0.1);
+        }
+        
+        /* Selezione Persone */
+        .people-selector {
+            margin-bottom: 20px;
+        }
+        
+        .selector-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 800;
+            color: #333;
+            margin-bottom: 12px;
+        }
+        
+        .people-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+        
+        .people-btn {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.05);
+            border: 2px solid rgba(0,0,0,0.1);
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 800;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .people-btn.selected {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border-color: #6366f1;
+            color: white;
+            box-shadow: 0 4px 15px rgba(99,102,241,0.4);
+        }
+        
+        .people-btn:active { transform: scale(0.95); }
+        
+        /* Points Payment */
+        .points-payment {
+            background: rgba(255,215,0,0.1);
+            border: 2px solid rgba(255,215,0,0.3);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .points-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .points-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: #333;
+        }
+        
+        .points-available {
+            font-size: 13px;
+            font-weight: 700;
+            color: #fbbf24;
+        }
+        
+        .points-slider {
+            width: 100%;
+            margin-bottom: 12px;
+        }
+        
+        .price-breakdown {
+            background: rgba(255,255,255,0.6);
+            border-radius: 12px;
+            padding: 12px;
+        }
+        
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #666;
+        }
+        
+        .price-row:last-child {
+            margin-bottom: 0;
+            padding-top: 8px;
+            border-top: 2px solid rgba(0,0,0,0.1);
+            font-size: 18px;
+            color: #FF0080;
+        }
+        
+        /* Form */
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-label {
+            display: block;
+            color: #333;
+            font-size: 13px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            transition: all 0.3s ease;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #FF0080;
+            box-shadow: 0 0 0 3px rgba(255,0,128,0.1);
+        }
+        
+        .btn-book {
+            width: 100%;
+            background: linear-gradient(135deg, #FF0080, #00D4FF);
+            border: none;
+            color: white;
+            padding: 16px;
+            border-radius: 15px;
+            font-size: 16px;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 6px 25px rgba(255,0,128,0.4);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-book:active { transform: scale(0.98); }
+    </style>
+</head>
+<script type="text/javascript">
+    var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+    (function(){
+    var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+    s1.async=true;
+    s1.src='https://embed.tawk.to/6972347ad23857197b3dab11/1jfj1q09n';
+    s1.charset='UTF-8';
+    s1.setAttribute('crossorigin','*');
+    s0.parentNode.insertBefore(s1,s0);
+    })();
+</script>
+<script>
+    fetch('bottom-nav.html')
+        .then(response => response.text())
+        .then(html => document.body.insertAdjacentHTML('beforeend', html));
+</script>
+<body>
+    <div class="particles-bg">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+    
+    <div class="container">
+        <div class="header">
+            <button class="back-btn" onclick="window.location.href='index.html'">←</button>
+            <div class="header-title">
+                <div class="page-title">💆 Spa & Wellness</div>
+                <div class="page-subtitle">Il tuo momento di puro relax</div>
+            </div>
+        </div>
+        
+        <div class="hero-section">
+            <div class="hero-image"></div>
+            <div class="hero-overlay">
+                <div class="hero-title">Ritrova il tuo equilibrio</div>
+                <div class="hero-tagline">Trattamenti esclusivi per corpo e mente</div>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="hours-card">
+                <div class="hours-title">
+                    <span>🕐</span>
+                    <span>Orari Apertura</span>
+                </div>
+                <div class="hours-row">
+                    <div class="hours-label">Stato</div>
+                    <div class="status-open">APERTO</div>
+                </div>
+                <div class="hours-row">
+                    <div class="hours-label">Lunedì - Venerdì</div>
+                    <div class="hours-value">10:00 - 20:00</div>
+                </div>
+                <div class="hours-row">
+                    <div class="hours-label">Sabato - Domenica</div>
+                    <div class="hours-value">9:00 - 21:00</div>
+                    </div>
+                    </div><div class="premium-package">
+                        <div class="premium-badge">✨ ESCLUSIVO</div>
+                        <div class="package-icon">👑</div>
+                        <div class="package-title">Pacchetto VIP Relax Total</div>
+                        <div class="package-description">
+                            La tua giornata di benessere assoluto! Un'esperienza completa che unisce i migliori trattamenti per corpo e mente.
+                        </div>
+                        
+                        <div class="package-includes">
+                            <div class="includes-title">Il pacchetto include:</div>
+                            <div class="includes-list">
+                                <div class="include-item">
+                                    <div class="include-icon">✓</div>
+                                    <div>Massaggio Rilassante Total Body (60 min)</div>
+                                </div>
+                                <div class="include-item">
+                                    <div class="include-icon">✓</div>
+                                    <div>Trattamento Viso Idratante Luxury (45 min)</div>
+                                </div>
+                                <div class="include-item">
+                                    <div class="include-icon">✓</div>
+                                    <div>Accesso Sauna e Bagno Turco (illimitato)</div>
+                                </div>
+                                <div class="include-item">
+                                    <div class="include-icon">✓</div>
+                                    <div>Tisana Detox e Frutta Fresca</div>
+                                </div>
+                                <div class="include-item">
+                                    <div class="include-icon">✓</div>
+                                    <div>Kit Benessere in omaggio</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="package-pricing">
+                            <div class="original-price">€120</div>
+                            <div class="discounted-price">€85</div>
+                            <div class="savings-badge">Risparmi €35</div>
+                        </div>
+                        
+                        <button class="book-premium-btn" onclick="openBookingModal('Pacchetto VIP Relax Total', 85)">🌟 Prenota il Pacchetto VIP</button>
+                    </div>
+                    
+                    <div class="section-title">
+                        <span>✨</span>
+                        <span>Trattamenti Disponibili</span>
+                    </div>
+                    
+                    <div class="treatments-grid">
+                        <div class="treatment-card">
+                            <div class="treatment-header">
+                                <div class="treatment-icon">💆‍♀️</div>
+                                <div class="treatment-info">
+                                    <div class="treatment-name">Massaggio Rilassante</div>
+                                    <div class="treatment-description">
+                                        Massaggio total body con oli essenziali per sciogliere tensioni e stress
+                                    </div>
+                                    <div class="treatment-details">
+                                        <div class="detail-item">
+                                            <span>⏱️</span>
+                                            <span>60 min</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span>⭐</span>
+                                            <span>Top rated</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="treatment-footer">
+                                <div class="treatment-price">€55</div>
+                                <button class="treatment-book-btn" onclick="openBookingModal('Massaggio Rilassante', 55)">Prenota</button>
+                            </div>
+                        </div>
+                        
+                        <div class="treatment-card">
+                            <div class="treatment-header">
+                                <div class="treatment-icon">🧖‍♀️</div>
+                                <div class="treatment-info">
+                                    <div class="treatment-name">Trattamento Viso Luxury</div>
+                                    <div class="treatment-description">
+                                        Pulizia profonda, peeling delicato e maschera idratante con sieri premium
+                                    </div>
+                                    <div class="treatment-details">
+                                        <div class="detail-item">
+                                            <span>⏱️</span>
+                                            <span>45 min</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span>💎</span>
+                                            <span>Premium</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="treatment-footer">
+                                <div class="treatment-price">€48</div>
+                                <button class="treatment-book-btn" onclick="openBookingModal('Trattamento Viso Luxury', 48)">Prenota</button>
+                            </div>
+                        </div>
+                        
+                        <div class="treatment-card">
+                            <div class="treatment-header">
+                                <div class="treatment-icon">🔥</div>
+                                <div class="treatment-info">
+                                    <div class="treatment-name">Massaggio Hot Stone</div>
+                                    <div class="treatment-description">
+                                        Pietre vulcaniche calde per un rilassamento profondo di muscoli e articolazioni
+                                    </div>
+                                    <div class="treatment-details">
+                                        <div class="detail-item">
+                                            <span>⏱️</span>
+                                            <span>75 min</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span>🔥</span>
+                                            <span>Intenso</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="treatment-footer">
+                                <div class="treatment-price">€68</div>
+                                <button class="treatment-book-btn" onclick="openBookingModal('Massaggio Hot Stone', 68)">Prenota</button>
+                            </div>
+                        </div>
+                        
+                        <div class="treatment-card">
+                            <div class="treatment-header">
+                                <div class="treatment-icon">🌿</div>
+                                <div class="treatment-info">
+                                    <div class="treatment-name">Riflessologia Plantare</div>
+                                    <div class="treatment-description">
+                                        Massaggio zonale dei piedi per stimolare benessere in tutto il corpo
+                                    </div>
+                                    <div class="treatment-details">
+                                        <div class="detail-item">
+                                            <span>⏱️</span>
+                                            <span>40 min</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span>🌿</span>
+                                            <span>Olistico</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="treatment-footer">
+                                <div class="treatment-price">€42</div>
+                                <button class="treatment-book-btn" onclick="openBookingModal('Riflessologia Plantare', 42)">Prenota</button>
+                            </div>
+                        </div>
+                        
+                        <div class="treatment-card">
+                            <div class="treatment-header">
+                                <div class="treatment-icon">💧</div>
+                                <div class="treatment-info">
+                                    <div class="treatment-name">Percorso Sauna & Bagno Turco</div>
+                                    <div class="treatment-description">
+                                        Accesso illimitato a sauna finlandese, bagno turco e docce emozionali
+                                    </div>
+                                    <div class="treatment-details">
+                                        <div class="detail-item">
+                                            <span>⏱️</span>
+                                            <span>2 ore</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span>♨️</span>
+                                            <span>Detox</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="treatment-footer">
+                                <div class="treatment-price">€25</div>
+                                <button class="treatment-book-btn" onclick="openBookingModal('Percorso Sauna & Bagno Turco', 25)">Prenota</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="testimonials-section">
+                        <div class="section-title">
+                            <span>💬</span>
+                            <span>Recensioni</span>
+                        </div>
+                        
+                        <div class="testimonial-card">
+                            <div class="testimonial-header">
+                                <div class="testimonial-name">Laura B.</div>
+                                <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+                            </div>
+                            <div class="testimonial-text">
+                                "Il Pacchetto VIP Relax è stata un'esperienza incredibile! Staff professionale e ambiente da sogno. Tornerò sicuramente!"
+                            </div>
+                        </div>
+                        
+                        <div class="testimonial-card">
+                            <div class="testimonial-header">
+                                <div class="testimonial-name">Alessandro M.</div>
+                                <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+                            </div>
+                            <div class="testimonial-text">
+                                "Il massaggio Hot Stone ha sciolto tutte le mie tensioni. Consigliatissimo dopo una settimana di lavoro intenso!"
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bottom-cta">
+                <button class="cta-btn" onclick="window.location.href='chat.html'">💬 Chiedi a Bubbles un Trattamento Personalizzato</button>
+            </div>
+            
+            <!-- BOOKING MODAL -->
+            <div class="booking-modal" id="bookingModal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div class="modal-title">Prenota Trattamento</div>
+                        <button class="close-btn" onclick="closeBookingModal()">×</button>
+                    </div>
+                    
+                    <div id="treatmentNameDisplay" style="font-size: 16px; font-weight: 700; color: #666; margin-bottom: 20px;"></div>
+                    
+                    <!-- Calendario -->
+                    <div class="calendar">
+                        <div class="calendar-header">
+                            <button class="month-nav" onclick="changeMonth(-1)">‹</button>
+                            <div class="month-display" id="monthDisplay">gennaio 2026</div>
+                            <button class="month-nav" onclick="changeMonth(1)">›</button>
+                        </div>
+                        <div class="calendar-grid" id="calendarGrid"></div>
+                    </div>
+                    
+                    <!-- Selezione Persone -->
+                    <div class="people-selector">
+                        <label class="selector-label">Numero Persone</label>
+                        <div class="people-grid">
+                            <button class="people-btn" onclick="selectPeople(1)">1</button>
+                            <button class="people-btn" onclick="selectPeople(2)">2</button>
+                            <button class="people-btn" onclick="selectPeople(3)">3</button>
+                            <button class="people-btn" onclick="selectPeople(4)">4</button>
+                            <button class="people-btn" onclick="selectPeople(5)">5</button>
+                            <button class="people-btn" onclick="selectPeople(6)">6</button>
+                            <button class="people-btn" onclick="selectPeople(7)">7</button>
+                            <button class="people-btn" onclick="selectPeople(8)">8+</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Points Payment -->
+                    <div class="points-payment">
+                        <div class="points-header">
+                            <div class="points-title">💰 Paga con Punti</div>
+                            <div class="points-available">Hai <span id="userPoints">0</span> punti</div>
+                        </div>
+                        <input type="range" class="points-slider" id="pointsSlider" min="0" max="0" value="0" oninput="updatePriceBreakdown()">
+                        <div class="price-breakdown">
+                            <div class="price-row">
+                                <span>Prezzo originale:</span>
+                                <span id="originalPrice">€0</span>
+                            </div>
+                            <div class="price-row">
+                                <span>Sconto punti (<span id="pointsUsed">0</span> punti):</span>
+                                <span id="discountAmount">-€0</span>
+                            </div>
+                            <div class="price-row">
+                                <span>Totale da pagare:</span>
+                                <span id="finalPrice">€0</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Form -->
+                    <div class="form-group">
+                        <label class="form-label">Nome Completo</label>
+                        <input type="text" class="form-input" id="userName" required placeholder="Mario Rossi">
+                    </div>
+                    
+                    <button class="btn-book" onclick="submitBooking()">✨ Conferma Prenotazione</button>
+                </div>
+            </div>
+            
+            <script src="app.js"></script>
+            <script>
+                const monthNames = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
+                let currentMonth = 0;
+                let currentYear = 2026;
+                let selectedDate = null;
+                let selectedPeople = 0;
+                let currentTreatmentName = '';
+                let currentTreatmentPrice = 0;
+                let userPointsTotal = 0;
+                
+                async function loadUserPoints() {
+                    try {
+                        const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
+                        const { data } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
+                        userPointsTotal = data?.points || 0;
+                        document.getElementById('userPoints').textContent = userPointsTotal;
+                        document.getElementById('pointsSlider').max = Math.min(userPointsTotal, currentTreatmentPrice * 10);
+                    } catch (error) {
+                        console.error('Error loading points:', error);
+                    }
+                }
+                
+                function openBookingModal(treatmentName, price) {
+                    currentTreatmentName = treatmentName;
+                    currentTreatmentPrice = price;
+                    document.getElementById('treatmentNameDisplay').textContent = treatmentName;
+                    document.getElementById('bookingModal').classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                    renderCalendar();
+                    loadUserPoints();
+                    updatePriceBreakdown();
+                }
+                
+                function closeBookingModal() {
+                    document.getElementById('bookingModal').classList.remove('active');
+                    document.body.style.overflow = 'auto';
+                    selectedDate = null;
+                    selectedPeople = 0;
+                    document.getElementById('pointsSlider').value = 0;
+                }
+                
+                function renderCalendar() {
+                    const grid = document.getElementById('calendarGrid');
+                    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+                    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+                    
+                    let html = '';
+                    for (let i = 0; i < firstDay; i++) html += '<div class="calendar-day disabled"></div>';
+                    for (let day = 1; day <= daysInMonth; day++) {
+                        const isSelected = selectedDate === day;
+                        html += `<div class="calendar-day ${isSelected ? 'selected' : ''}" onclick="selectDate(${day})">${day}</div>`;
+                    }
+                    
+                    grid.innerHTML = html;
+                    document.getElementById('monthDisplay').textContent = `${monthNames[currentMonth]} ${currentYear}`;
+                }
+                
+                function changeMonth(delta) {
+                    currentMonth += delta;
+                    if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+                    if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+                    renderCalendar();
+                }
+                
+                function selectDate(day) {
+                    selectedDate = day;
+                    renderCalendar();
+                }
+                
+                function selectPeople(num) {
+                    selectedPeople = num;
+                    document.querySelectorAll('.people-btn').forEach(btn => btn.classList.remove('selected'));
+                    event.target.classList.add('selected');
+                    updatePriceBreakdown();
+                }
+                
+                function updatePriceBreakdown() {
+                    const pointsUsed = parseInt(document.getElementById('pointsSlider').value);
+                    const discount = pointsUsed / 10;
+                    const totalPrice = currentTreatmentPrice * (selectedPeople || 1);
+                    const finalPrice = Math.max(0, totalPrice - discount);
+                    
+                    document.getElementById('originalPrice').textContent = `€${totalPrice}`;
+                    document.getElementById('pointsUsed').textContent = pointsUsed;
+                    document.getElementById('discountAmount').textContent = `-€${discount.toFixed(2)}`;
+                    document.getElementById('finalPrice').textContent = `€${finalPrice.toFixed(2)}`;
+                }
+                
+                async function submitBooking() {
+                    if (!selectedDate || !selectedPeople) {
+                        alert('Seleziona data e numero persone');
+                        return;
+                    }
+                    
+                    const userName = document.getElementById('userName').value;
+                    if (!userName) {
+                        alert('Inserisci il tuo nome');
+                        return;
+                    }
+                    
+                    const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
+                    const pointsUsed = parseInt(document.getElementById('pointsSlider').value);
+                    const discount = pointsUsed / 10;
+                    const totalPrice = currentTreatmentPrice * selectedPeople;
+                    const finalPrice = totalPrice - discount;
+                    
+                    try {
+                        await supabaseClient.from('spa_bookings').insert({
+                            user_email: email,
+                            user_name: userName,
+                            treatment_name: currentTreatmentName,
+                            booking_date: tourDateFormatted,    // ← OBBLIGATORIO
+                            booking_time: '10:00:00',           // ← OBBLIGATORIO
+                            num_people: selectedPeople,
+                            original_price: totalPrice,
+                            points_used: pointsUsed,
+                            discount_amount: discount,
+                            final_price: finalPrice,
+                            status: 'confirmed'
+                            
+                          
+                        });
+                        
+                        if (pointsUsed > 0) {
+                            const { data } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
+                            await supabaseClient.from('user_points').update({ points: data.points - pointsUsed }).eq('user_email', email);
+                        }
+                        
+                        alert(`✅ Prenotazione confermata!\n\n${currentTreatmentName}\nData: ${selectedDate}/${currentMonth+1}/${currentYear}\nPersone: ${selectedPeople}\nTotale: €${finalPrice.toFixed(2)}`);
+                        closeBookingModal();
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Errore nella prenotazione');
+                    }
+                }
+            </script>
+            </body>
+            </html>
+            

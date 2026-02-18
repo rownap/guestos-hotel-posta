@@ -1,0 +1,11 @@
+{
+  "rewrites": [
+    { "source": "/tours", "destination": "/tours.html" },
+    { "source": "/chat", "destination": "/chat.html" },
+    { "source": "/ristorante", "destination": "/ristorante.html" },
+    { "source": "/spa", "destination": "/spa.html" },
+    { "source": "/tour-detail", "destination": "/tour-detail.html" },
+    { "source": "/animazione", "destination": "/animazione.html" },
+    { "source": "/lastminute", "destination": "/lastminute.html" }
+  ]
+}
