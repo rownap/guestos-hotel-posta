@@ -325,12 +325,17 @@
                 Chiedi alla reception 📞
             </div>
             
-            <!-- Demo Credentials -->
-            <div class="demo-credentials">
+            <!-- Demo Credentials (visibili solo con ?demo=1) -->
+            <div class="demo-credentials" id="demoCredentials" style="display:none;">
                 <div class="demo-title">🧪 Credenziali Test:</div>
                 <div class="demo-item">Camera: 101 | Cognome: Rossi | Password: demo123</div>
                 <div class="demo-item">Camera: 205 | Cognome: Bianchi | Password: test123</div>
             </div>
+            <script>
+                if (new URLSearchParams(location.search).has('demo')) {
+                    document.getElementById('demoCredentials').style.display = 'block';
+                }
+            </script>
         </div>
     </div>
     

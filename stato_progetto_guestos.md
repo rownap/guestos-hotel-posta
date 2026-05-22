@@ -1,126 +1,120 @@
-# 🏨 GuestOS Hotel Posta — Stato del Progetto (5 Marzo 2026)
+# 🏨 GuestOS Hotel Posta — Stato del Progetto (22 maggio 2026)
 
-> [!CAUTION]
-> **CODICE LOCALE ≠ CODICE ONLINE!** La versione deployata su Vercel contiene file che NON esistono nella repo locale (es. `guestos-admin-login.html`, `guestos-admin-dashboard.html`). Mentre il file locale `guestos-admin/index.html` restituisce 404 su Vercel. Vercel potrebbe essere collegato a un branch/deploy diverso, oppure la repo locale non è sincronizzata.
-
-## 🌐 Deployment Attuale
+## 🌐 Deployment
 
 | Info | Dettaglio |
 |------|-----------|
 | **Sito Live** | [guestos-hotel-posta-1.vercel.app](https://guestos-hotel-posta-1.vercel.app) |
 | **Repo GitHub** | [umidifire22-cell/guestos-hotel-posta](https://github.com/umidifire22-cell/guestos-hotel-posta) |
-| **Branch** | `main` (unico branch, 1 commit: "Initial commit") |
-| **Vercel Source** | Legge dalla **root** del repo → la cartella `/Users/robertociccarelli/Documents/GitHub/guestos-hotel-posta` |
-| **Tipo Deploy** | Sito statico (HTML/CSS/JS) |
-| **Backend** | Supabase (DB + Auth) |
-| **Meteo API** | OpenWeather (Calabria, lat 39.2, lon 16.25) |
-
-> [!IMPORTANT]
-> **Come funziona il deploy:** Vercel è collegato alla repo GitHub `umidifire22-cell/guestos-hotel-posta`. Ogni push su `main` fa partire un deploy automatico. Tuttavia, il codice online contiene file extra non presenti in locale — potrebbe esserci un deploy manuale o un branch diverso collegato.
-
-### ⚠️ File SOLO online (non nel repo locale)
-| File Online | Stato Locale |
-|---|---|
-| `guestos-admin-login.html` (root) | ❌ Non esiste |
-| `guestos-admin-dashboard.html` (root) | ❌ Non esiste |
-| `guestos-admin/index.html` | ✅ Esiste localmente ma dà **404 su Vercel** |
+| **Branch** | `main` (auto-deploy Vercel ad ogni push) |
+| **Tipo Deploy** | Sito statico HTML/CSS/JS + 1 Vercel Function (`/api/chat`) |
+| **Backend** | Supabase (DB + Auth + RPC pgcrypto) |
+| **AI** | Anthropic Claude Haiku 4.5 |
+| **Meteo** | OpenWeather + weatherwidget.io (Tropea, Calabria) |
 
 ---
 
-## 📂 Struttura File nel Repo
+## 📂 Struttura File
 
 ```
 guestos-hotel-posta/
-├── index.html              ← Homepage (Bubbles Assistant)
-├── login.html              ← Login utente
-├── account.html            ← Profilo account
-├── ristorante.html         ← Menu & prenotazioni ristorante
-├── spa.html                ← Servizi SPA & benessere
-├── tours.html              ← Tour ed escursioni
-├── tour-detail.html        ← Dettagli singolo tour
-├── games.html              ← Giochi e gamification (20+ giochi)
-├── quiz.html               ← Quiz interattivi
-├── chat.html               ← Chat con Bubbles
-├── rewards.html            ← Sistema premi
-├── leaderboard.html        ← Classifica punti
-├── lastminute.html         ← Offerte last minute
-├── animazione.html         ← Animazione hotel
-├── app.js                  ← Logica principale (navigazione, chat, PWA)
-├── tours-enhanced.js       ← Logica avanzata tour
-├── config.js               ← Config Supabase + OpenWeather
-├── common.css              ← Stili condivisi
-├── manifest.json           ← PWA manifest
-├── service-worker.js       ← PWA service worker
-├── vercel.json             ← URL rewrites (/tours → tours.html, ecc.)
-├── assets/                 ← Immagini e risorse
-├── guestos-admin/          ← 🔧 Pannello Admin
-│   ├── index.html          ← Login admin
-│   ├── dashboard.html      ← Dashboard gestione (43KB!)
-│   └── config.js           ← Config admin
-└── README.md
+├── index.html                       ← Homepage (Bubbles)
+├── login.html                       ← Login ospiti (Supabase users)
+├── account.html                     ← Profilo
+├── ristorante.html                  ← Menu + prenotazione tavolo (Supabase)
+├── spa.html                         ← SPA & benessere
+├── tours.html / tour-detail.html    ← Tour ed escursioni
+├── games.html / quiz.html           ← Gamification
+├── chat.html                        ← Chat con Bubbles (AI Claude)
+├── rewards.html / leaderboard.html  ← Premi + classifica
+├── lastminute.html / animazione.html
+├── guestos-admin-login.html         ← Admin login (Supabase RPC)
+├── guestos-admin-dashboard.html     ← Dashboard admin (Yield Mgmt + stats)
+├── app.js                           ← Navigazione + PWA
+├── tours-enhanced.js                ← Logica tour
+├── config.js                        ← Supabase + OpenWeather config
+├── common.css                       ← Stili condivisi
+├── manifest.json + service-worker.js ← PWA
+├── vercel.json                      ← URL rewrites
+├── api/
+│   └── chat.js                      ← Vercel Function AI (Claude)
+└── assets/icon-512.png              ← Icona PWA (220 KB)
 ```
 
 ---
 
-## ✅ Cosa FUNZIONA Già
+## ✅ Cosa funziona
 
-| Feature | Stato | Note |
-|---------|-------|------|
-| 🏠 Homepage | ✅ Funziona | Quick actions, weather widget |
-| 🍽️ Ristorante | ✅ Funziona | Menu, prenotazione tavoli |
-| 💆 SPA | ✅ Funziona | Catalogo trattamenti, booking |
-| 🏛️ Tour & Escursioni | ✅ Funziona | Lista tour, dettagli, booking |
-| 🎮 Gamification | ✅ Funziona | 20+ giochi, punti, leaderboard |
-| 🧩 Quiz | ✅ Funziona | Quiz interattivi |
-| 🎁 Rewards | ✅ Funziona | Sistema premi riscattabili |
-| 🏆 Leaderboard | ✅ Funziona | Classifica giocatori |
-| ⚡ Last Minute | ✅ Funziona | Offerte flash |
-| 🎭 Animazione | ✅ Funziona | Programma animazione |
-| 💬 Chat | ✅ Parziale | Risposte bot basiche (no AI) |
-| 👤 Login Ospiti | ✅ Funziona | Auth via Supabase (tabella `users`) |
-| 📱 PWA | ✅ Funziona | Installabile, service worker |
-| 🔧 Admin Login | ✅ Funziona | Supabase RPC `admin_login` con pgcrypto (`crypt()`) |
-| 🔧 Admin Dashboard | ✅ Funziona | Yield Management, gestione contenuti, statistiche |
-| 🌐 Deploy Vercel | ⚠️ Online ma desincronizzato | Codice online ≠ codice locale |
+| Feature | Stato |
+|---------|-------|
+| 🏠 Homepage + quick actions | ✅ |
+| 🍽️ Ristorante (booking → Supabase) | ✅ |
+| 💆 SPA | ✅ |
+| 🚢 Tour & escursioni | ✅ |
+| 🎮 Gamification (20+ giochi) | ✅ |
+| 🧩 Quiz interattivi | ✅ |
+| 🎁 Rewards + 🏆 Leaderboard | ✅ |
+| ⚡ Last Minute | ✅ |
+| 🎭 Animazione | ✅ |
+| 💬 **Chat AI Bubbles** (Claude Haiku) | ✅ con fallback keyword |
+| 👤 Login ospiti (Supabase) | ✅ |
+| 🔧 Login admin (RPC pgcrypto) | ✅ |
+| 🔧 Admin dashboard | ✅ |
+| 📱 PWA installabile | ✅ |
+| 🌐 Auto-deploy Vercel | ✅ |
 
----
+## 🔧 Lavori fatti il 22/05/2026
 
-## ❌ Cosa MANCA (da analisi strategica precedente)
+- 🗑️ Rimosso `/guestos-admin/` (cartella obsoleta con credenziali hardcoded)
+- 🗑️ Rimosso `spa_old.html`, `tours_old.html`, `bottom-nav-component.txt`
+- 🗑️ Rimossi `.DS_Store` dal repo + aggiunto `.gitignore`
+- 🐛 Fix `chat.html` (doppio `<body>` + Tawk.to legacy rimosso)
+- 🐛 Fix `service-worker.js` (precache completo + fallback offline + cleanup vecchia cache)
+- 🔒 Demo credentials nascoste dietro `?demo=1`
+- 🗜️ `icon-512.png` da 4.9 MB → 220 KB
+- 🤖 Nuova chat AI con Vercel Function `/api/chat` (Anthropic Claude Haiku)
 
-| # | Feature | Valore ROI | Stato |
-|---|---------|------------|-------|
-| 1 | 🤖 **AI Receptionist H24** | €800-1200/mese | ❌ Non implementato |
-| 2 | 📊 **Dynamic Pricing** | +15-25% revenue | ❌ Non implementato |
-| 3 | 👥 **CRM / Customer Data Platform** | €500-800/mese | ❌ Non implementato |
-| 4 | 🔔 **Smart Notifications** | +10-15% ancillary | 🟡 Solo badge base |
-| 5 | 👷 **Staff Operations Dashboard** | €400-600/mese | ❌ Non implementato |
-| 6 | ⭐ **Review Manager** | Inestimabile | ❌ Non implementato |
-| 7 | 📱 **Contactless Suite** | €300-500/mese | 🟡 Booking esiste, no check-in |
-| 8 | 📈 **Analytics Enterprise** | Decision support | 🟡 Stats base in admin |
+## ⚠️ Da configurare su Vercel
 
----
+Per attivare la chat AI vera (sennò usa il fallback keyword):
 
-## 💰 Valutazione
-
-- **Stato attuale**: App da **€800-1200** (bella UI, funzionale ma "commodity")
-- **Con implementazioni AI + Revenue Tools**: App da **€3000-5000+**
-- **Target prezzo**: €3000 one-time + €200/mese SaaS
-- **Payback per hotel**: 2-3 settimane
+```
+Vercel → Project Settings → Environment Variables
+ANTHROPIC_API_KEY = sk-ant-...
+```
 
 ---
 
-## 🔧 Info Tecniche
+## ❌ Cosa manca per arrivare a €3.000+
+
+| # | Feature | Priorità | ROI |
+|---|---------|----------|-----|
+| 1 | 📊 **Dynamic Pricing** | Alta | +15-25% revenue |
+| 2 | 👥 **CRM / Customer Data Platform** | Alta | €500-800/mese |
+| 3 | 🔔 **Smart Notifications push** | Media | +10-15% ancillary |
+| 4 | 👷 **Staff Operations Dashboard** | Media | €400-600/mese |
+| 5 | ⭐ **Review Manager TripAdvisor/Google** | Alta | Inestimabile |
+| 6 | 📱 **Self check-in contactless** | Media | €300-500/mese |
+| 7 | 📈 **Analytics enterprise** | Bassa | Decision support |
+| 8 | 📧 **Email/SMS conferma prenotazioni** | Alta | Trust |
+
+---
+
+## 💰 Posizionamento commerciale
+
+- **Stato attuale**: app premium **€2.000–3.000** chiavi in mano
+- **Con AI + Revenue Tools (mancanti)**: **€4.000–5.000+** una tantum
+- **SaaS recurring**: €200/mese (hosting + AI + supporto)
+- **Setup per nuovo hotel**: 2-3 ore (logo, palette, menu, escursioni, tabella `users` Supabase)
+
+## 🔧 Info tecniche
 
 - **Supabase URL**: `gqqgotvbabgxztrxbozu.supabase.co`
-- **Hotel Location**: Calabria (lat 39.2, lon 16.25)
+- **Hotel Location**: Calabria (lat 39.2, lon 16.25) — widget meteo punta a Tropea
 - **Vercel URL rewrites**: `/tours`, `/chat`, `/ristorante`, `/spa`, `/tour-detail`, `/animazione`, `/lastminute`
-- **Git**: 1 solo commit, branch `main`, working tree pulito
-- **Admin Login**: funzione PostgreSQL `admin_login` con `crypt()` (pgcrypto)
-- **Admin Credentials**: `admin@hotelposta.it` / `demo2024`
 - **Tabella admin**: `admin_users` (id, email, password_hash, hotel_id, full_name, role, active)
 - **Tabella ospiti**: `users` (room_number, last_name, password, active)
-
-## ⚡ Azione Prioritaria
-
-> [!WARNING]
-> **Sincronizzare il codice!** La repo locale non corrisponde a ciò che è online. Prima di fare qualsiasi modifica, serve capire da dove Vercel prende il codice e sincronizzare tutto.
+- **Tabella prenotazioni**: `restaurant_bookings` (user_email, booking_date, booking_time, num_people, status, ...)
+- **Tabella punti**: `user_points` (user_email, points)
+- **Admin login**: Supabase RPC `admin_login(p_email, p_password)` con `crypt()` (pgcrypto)
+- **Admin credentials demo**: `admin@hotelposta.it` / `demo2024`

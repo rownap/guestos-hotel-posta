@@ -463,26 +463,8 @@
             transform: scale(0.95);
         }
     </style>
+    <link rel="stylesheet" href="common.css">
 </head>
-<!--Start of Tawk.to Script-->
-<script type="text/javascript">
-    var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
-    (function(){
-    var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
-    s1.async=true;
-    s1.src='https://embed.tawk.to/6972347ad23857197b3dab11/1jfj1q09n';
-    s1.charset='UTF-8';
-    s1.setAttribute('crossorigin','*');
-    s0.parentNode.insertBefore(s1,s0);
-    })();
-    </script>
-    <!--End of Tawk.to Script-->
-    <!-- Common CSS -->
-<link rel="stylesheet" href="common.css">
-<!-- Main JavaScript -->
-<script src="app.js"></script>
-</body>
-</html>
 <body>
     <!-- Background Bubbles -->
     <div class="bubbles-bg">
@@ -508,68 +490,11 @@
     
     <!-- Chat Messages -->
     <div class="chat-messages" id="chatMessages">
-        <!-- Welcome Message -->
         <div class="message bubbles">
             <div class="message-avatar">💧</div>
             <div class="message-content">
                 <div class="message-bubble">
-                    Ciao! 👋 Benvenuto all'Hotel Posta! Sono Bubbles, il tuo assistente personale. Come posso aiutarti oggi?
-                </div>
-                <div class="message-time">Adesso</div>
-            </div>
-        </div>
-        
-        <!-- User Message -->
-        <div class="message user">
-            <div class="message-avatar">👤</div>
-            <div class="message-content">
-                <div class="message-bubble">
-                    A che ora apre il ristorante stasera?
-                </div>
-                <div class="message-time">Adesso</div>
-            </div>
-        </div>
-        
-        <!-- Bubbles Response -->
-        <div class="message bubbles">
-            <div class="message-avatar">💧</div>
-            <div class="message-content">
-                <div class="message-bubble">
-                    Il ristorante apre alle 19:30 per la cena! 🍽️<br><br>
-                    Stasera abbiamo un menù speciale di pesce fresco con vista mare. Vuoi che ti prenoti un tavolo?
-                </div>
-                <div class="message-time">Adesso</div>
-            </div>
-        </div>
-        
-        <!-- User Message -->
-        <div class="message user">
-            <div class="message-avatar">👤</div>
-            <div class="message-content">
-                <div class="message-bubble">
-                    Ci sono escursioni domani?
-                </div>
-                <div class="message-time">Adesso</div>
-            </div>
-        </div>
-        
-        <!-- Bubbles with Offer Card -->
-        <div class="message bubbles">
-            <div class="message-avatar">💧</div>
-            <div class="message-content">
-                <div class="message-bubble">
-                    Sì! Domani abbiamo un'escursione fantastica! 🚢
-                </div>
-                <div class="offer-card">
-                    <div class="offer-title">
-                        <span>🌊</span>
-                        <span>Giro delle Isole</span>
-                    </div>
-                    <div class="offer-description">
-                        Tour in barca delle isole più belle della costa. Include pranzo a bordo, aperitivo al tramonto e bagno in acque cristalline!
-                    </div>
-                    <div class="offer-price">€45/persona</div>
-                    <button class="offer-btn" onclick="bookTour()">✨ Prenota ora</button>
+                    Ciao! 👋 Sono Bubbles, l'assistente dell'Hotel Posta. Chiedimi qualunque cosa: orari, prenotazioni, escursioni, consigli su Tropea...
                 </div>
                 <div class="message-time">Adesso</div>
             </div>
@@ -598,12 +523,130 @@
     <!-- Input Area -->
     <div class="chat-input-area">
         <div class="input-wrapper">
-            <input type="text" class="chat-input" placeholder="Scrivi un messaggio...">
-            <button class="attach-btn">📎</button>
+            <input type="text" class="chat-input" id="chatInput" placeholder="Scrivi un messaggio...">
+            <button class="attach-btn" title="Allegato (presto)">📎</button>
         </div>
-        <button class="send-btn" onclick="sendMessage()">➤</button>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
     </div>
-    
-   
+
+    <script>
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const typingIndicator = document.getElementById('typingIndicator');
+
+        const history = [];
+        let aiAvailable = true;
+
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function addMessage(role, text) {
+            const isUser = role === 'user';
+            const html = `
+                <div class="message ${isUser ? 'user' : 'bubbles'}">
+                    <div class="message-avatar">${isUser ? '👤' : '💧'}</div>
+                    <div class="message-content">
+                        <div class="message-bubble">${escapeHtml(text).replace(/\n/g, '<br>')}</div>
+                        <div class="message-time">Adesso</div>
+                    </div>
+                </div>`;
+            chatMessages.insertAdjacentHTML('beforeend', html);
+            scrollToBottom();
+        }
+
+        function showTyping(show) {
+            if (!typingIndicator) return;
+            typingIndicator.style.display = show ? 'flex' : 'none';
+            if (show) scrollToBottom();
+        }
+
+        function fallbackReply(msg) {
+            const m = msg.toLowerCase();
+            if (/ristorante|cena|pranzo|mangiare|tavolo/.test(m))
+                return "Il ristorante apre 12:30–14:30 e 19:30–22:00. 🍽️ Vai alla pagina Ristorante per prenotare un tavolo.";
+            if (/spa|massaggio|relax|sauna|bagno turco/.test(m))
+                return "La SPA è aperta 10:00–20:00. 💆 Dalla pagina Spa puoi prenotare massaggi e trattamenti.";
+            if (/escursion|tour|gita|barca|isole/.test(m))
+                return "Abbiamo escursioni in barca, trekking e tour enogastronomici. 🚢 Dai un'occhiata alla pagina Escursioni!";
+            if (/animaz|spettacolo|serata|evento/.test(m))
+                return "L'animazione parte tutte le sere alle 21:30 in piazzetta. 🎭 Trovi il programma nella pagina Animazione.";
+            if (/last minute|offerta|sconto/.test(m))
+                return "Ci sono offerte flash fino al 40% nella pagina Last Minute! ⚡";
+            if (/ciao|buongiorno|buonasera|salve|hey/.test(m))
+                return "Ciao! 👋 Come posso aiutarti?";
+            if (/grazie/.test(m))
+                return "Figurati! 😊 Sono qui se ti serve altro.";
+            return "Posso aiutarti con ristorante, spa, escursioni, animazione e offerte. Cosa ti serve? 😊";
+        }
+
+        async function askAI(userMsg) {
+            if (!aiAvailable) return fallbackReply(userMsg);
+            try {
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: [...history, { role: 'user', content: userMsg }] })
+                });
+                if (res.status === 503 || res.status === 502) {
+                    aiAvailable = false;
+                    return fallbackReply(userMsg);
+                }
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                return data.reply || fallbackReply(userMsg);
+            } catch (err) {
+                console.warn('AI fallback:', err);
+                return fallbackReply(userMsg);
+            }
+        }
+
+        async function sendMessage() {
+            const text = chatInput.value.trim();
+            if (!text) return;
+
+            chatInput.value = '';
+            sendBtn.disabled = true;
+            addMessage('user', text);
+            history.push({ role: 'user', content: text });
+            showTyping(true);
+
+            const reply = await askAI(text);
+
+            showTyping(false);
+            addMessage('assistant', reply);
+            history.push({ role: 'assistant', content: reply });
+            sendBtn.disabled = false;
+            chatInput.focus();
+        }
+
+        chatInput.addEventListener('keypress', e => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        document.querySelectorAll('.quick-reply-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                chatInput.value = btn.textContent.trim();
+                sendMessage();
+            });
+        });
+
+        document.querySelector('.back-btn')?.addEventListener('click', () => {
+            if (window.history.length > 1) window.history.back();
+            else window.location.href = 'index.html';
+        });
+    </script>
+
+    <script src="app.js"></script>
 </body>
 </html>
