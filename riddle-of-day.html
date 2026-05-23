@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indovinello del Giorno - Hotel Posta</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Space+Grotesk:wght@600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="game-leaderboard.js" defer></script>
+    <style>
+        :root {
+            --bg-primary: #0a0a12;
+            --bg-secondary: #13131f;
+            --accent-primary: #6366f1;
+            --accent-secondary: #8b5cf6;
+            --success: #10b981;
+            --error: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .riddle-card {
+            background: var(--bg-secondary);
+            padding: 40px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .riddle-icon {
+            font-size: 64px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 28px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .timer-display {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 16px;
+            border-radius: 16px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .timer-value {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--error);
+        }
+
+        .timer-label {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 8px;
+        }
+
+        .riddle-text {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 24px;
+            border-radius: 16px;
+            font-size: 18px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+
+        .answer-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            padding: 16px;
+            border-radius: 12px;
+            color: white;
+            font-size: 16px;
+            margin-bottom: 20px;
+            outline: none;
+        }
+
+        .answer-input:focus {
+            border-color: var(--accent-primary);
+        }
+
+        .submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .result-message {
+            padding: 16px;
+            border-radius: 12px;
+            margin-top: 20px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .result-message.success {
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            color: var(--success);
+        }
+
+        .result-message.error {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: var(--error);
+        }
+
+        #gameScreen {
+            display: none;
+        }
+
+        #resultsScreen {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="back-btn" onclick="window.location.href='games.html'">
+                <i data-lucide="arrow-left"></i>
+            </button>
+            <div style="text-align: right;">
+                <div style="font-size: 14px; opacity: 0.6;">Brain Game</div>
+                <div style="font-weight: 700;">Indovinello del Giorno</div>
+            </div>
+        </div>
+
+        <div class="game-area">
+            <div id="startScreen" class="riddle-card">
+                <div class="riddle-icon">🤔</div>
+                <h1>Indovinello del Giorno</h1>
+                <p style="text-align: center; opacity: 0.8; margin-bottom: 30px;">
+                    Un nuovo enigma ogni giorno. Hai 30 minuti per risolverlo!
+                </p>
+                <div
+                    style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 16px; margin-bottom: 30px;">
+                    <div style="font-size: 12px; opacity: 0.5; text-transform: uppercase;">Premio</div>
+                    <div style="font-size: 24px; font-weight: 700; color: #fbbf24;">+50 Punti</div>
+                </div>
+                <button class="submit-btn" onclick="startRiddle()">INIZIA</button>
+            </div>
+
+            <div id="gameScreen" class="riddle-card">
+                <div class="timer-display">
+                    <div class="timer-value" id="timerDisplay">30:00</div>
+                    <div class="timer-label">Tempo rimanente</div>
+                </div>
+                <div class="riddle-text" id="riddleText">Caricamento...</div>
+                <input type="text" id="answerInput" class="answer-input" placeholder="La tua risposta...">
+                <button class="submit-btn" onclick="checkAnswer()">VERIFICA RISPOSTA</button>
+                <div id="resultMessage"></div>
+            </div>
+
+            <div id="resultsScreen" class="riddle-card">
+                <div class="riddle-icon">🎉</div>
+                <h1>Complimenti!</h1>
+                <p style="text-align: center; opacity: 0.8; margin: 20px 0;">Hai risolto l'indovinello!</p>
+                <div style="background: var(--success); padding: 20px; border-radius: 16px; margin-bottom: 30px;">
+                    <div style="font-size: 32px; font-weight: 900; color: white;">+50 Punti</div>
+                </div>
+                <button class="submit-btn" onclick="window.location.href='games.html'">TORNA AI GIOCHI</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // Extended fallback riddles (35 total - validated pool)
+        const fallbackRiddles = [
+            { question: "Ho un collo ma non ho testa, due braccia ma nessuna mano. Chi sono?", answer: "camicia" },
+            { question: "Più è grande, meno si vede. Cos'è?", answer: "buio" },
+            { question: "Vola senza ali, piange senza occhi. Ovunque va, il vento lo segue. Cos'è?", answer: "nuvola" },
+            { question: "Ho città ma nessuna casa, boschi ma nessun albero, fiumi ma nessuna acqua. Cosa sono?", answer: "mappa" },
+            { question: "Più ne prendi, più ne lasci. Cosa sono?", answer: "passi" },
+            { question: "Sono ricco quando sono usato, ma povero quando no. Chi sono?", answer: "tempo" },
+            { question: "Corro ma non cammino mai, ho un letto ma non dormo mai. Cosa sono?", answer: "fiume" },
+            { question: "Sono alto quando sono giovane, piccolo quando sono vecchio. Cos'è?", answer: "candela" },
+            { question: "Ho quattro dita e un pollice, ma non sono vivo. Cosa sono?", answer: "guanto" },
+            { question: "Puoi tenermi, ma non toccarmi. Puoi darmi, ma non vendermi. Cosa sono?", answer: "parola" },
+            { question: "Vengo una volta al minuto, due volte al momento, ma mai in mille anni. Cosa sono?", answer: "lettera m" },
+            { question: "Più lavo, più divento piccolo. Cosa sono?", answer: "sapone" },
+            { question: "Ho chiavi ma non serrature, spazio ma nessuna stanza. Cosa sono?", answer: "tastiera" },
+            { question: "Sono pieno di buchi ma trattengo l'acqua. Cosa sono?", answer: "spugna" },
+            { question: "Puoi rompermi senza toccarmi o vedermi. Cosa sono?", answer: "promessa" },
+            { question: "Ho una faccia e due mani, ma nessun braccio o gambe. Cosa sono?", answer: "orologio" },
+            { question: "Appartengo a te, ma gli altri lo usano più di te. Cosa sono?", answer: "nome" },
+            { question: "Cosa ha 88 tasti ma non può aprire una porta?", answer: "pianoforte" },
+            { question: "Più è nero, più è pulito. Cosa?", answer: "lavagna" },
+            { question: "Cosa inizia e finisce con la E ma ha una sola lettera dentro?", answer: "busta" },
+            { question: "Ho un cappello ma nessuna testa, un piede ma nessuna scarpa. Cosa sono?", answer: "fungo" },
+            { question: "Cosa diventa bagnato mentre asciuga?", answer: "asciugamano" },
+            { question: "Vengo dal mare ma odio l'acqua. Chi sono?", answer: "sale" },
+            { question: "Ho ali ma non sono un uccello, volo ma non ho piume. Cosa sono?", answer: "aereo" },
+            { question: "Più mi nutri, più cresco. Ma se mi dai acqua, muoio. Cosa sono?", answer: "fuoco" },
+            { question: "Ho un occhio ma non posso vedere. Cosa sono?", answer: "ago" },
+            { question: "Cosa cade ma non si fa mai male?", answer: "pioggia" },
+            { question: "Sono sempre davanti a te ma non mi puoi vedere. Cosa sono?", answer: "futuro" },
+            { question: "Ho spine ma non sono un pesce, ho corone ma non sono un re. Cosa sono?", answer: "carciofo" },
+            { question: "Puoi servirmi ma non mangiarmi mai. Cosa sono?", answer: "palla da tennis" },
+            { question: "Ho radici che nessuno vede, sono più alto degli alberi. Salgo e salgo ma non cresco mai. Cosa sono?", answer: "montagna" },
+            { question: "Cosa ha 13 cuori ma nessun altro organo?", answer: "mazzo di carte" },
+            { question: "Rompi il tuo silenzio per dirmi, ma ti rompo quando mi dici. Cosa sono?", answer: "segreto" },
+            { question: "Cosa viaggia in tutto il mondo ma resta sempre in un angolo?", answer: "francobollo" },
+            { question: "Ho un collo lungo e un nome da donna. Chi sono?", answer: "bottiglia" }
+        ];
+
+        let timerInterval;
+        let timeLeft = 30 * 60; // 30 minutes in seconds
+        let currentRiddle;
+
+        function getTodayKey() {
+            const today = new Date();
+            return `riddle_${today.getFullYear()}_${today.getMonth()}_${today.getDate()}`;
+        }
+
+        function getTodayDateString() {
+            const today = new Date();
+            return today.toISOString().split('T')[0]; // YYYY-MM-DD
+        }
+
+        function loadSavedState() {
+            const key = getTodayKey();
+            const saved = localStorage.getItem(key);
+            if (saved) {
+                const state = JSON.parse(saved);
+                return state;
+            }
+            return null;
+        }
+
+        function saveState() {
+            const key = getTodayKey();
+            const state = {
+                timeLeft: timeLeft,
+                riddleText: currentRiddle.question,
+                riddleAnswer: currentRiddle.answer,
+                startTime: Date.now()
+            };
+            localStorage.setItem(key, JSON.stringify(state));
+        }
+
+        async function fetchTodayRiddle() {
+            try {
+                const todayDate = getTodayDateString();
+
+                // Try to fetch scheduled riddle for today
+                const { data: scheduled, error: schedError } = await supabaseClient
+                    .from('daily_riddles')
+                    .select('riddle_text, answer')
+                    .eq('scheduled_date', todayDate)
+                    .eq('is_active', true)
+                    .single();
+
+                if (scheduled && !schedError) {
+                    console.log('Using scheduled riddle from database');
+                    return { question: scheduled.riddle_text, answer: scheduled.answer };
+                }
+
+                // Try to fetch random riddle from database
+                const { data: riddles, error: randomError } = await supabaseClient
+                    .from('daily_riddles')
+                    .select('riddle_text, answer, usage_count')
+                    .eq('is_active', true)
+                    .is('scheduled_date', null)
+                    .order('usage_count', { ascending: true })
+                    .limit(10);
+
+                if (riddles && riddles.length > 0 && !randomError) {
+                    console.log('Using random riddle from database');
+                    const randomRiddle = riddles[Math.floor(Math.random() * riddles.length)];
+                    return { question: randomRiddle.riddle_text, answer: randomRiddle.answer };
+                }
+
+                throw new Error('No riddles in database');
+            } catch (err) {
+                console.log('Database unavailable, using local fallback:', err);
+                // Fallback to local riddles
+                const dayIndex = new Date().getDate() % fallbackRiddles.length;
+                return fallbackRiddles[dayIndex];
+            }
+        }
+
+        async function startRiddle() {
+            const saved = loadSavedState();
+
+            if (saved && saved.riddleText) {
+                // Resume from saved state
+                const elapsed = Math.floor((Date.now() - saved.startTime) / 1000);
+                timeLeft = Math.max(0, saved.timeLeft - elapsed);
+                currentRiddle = { question: saved.riddleText, answer: saved.riddleAnswer };
+            } else {
+                // Fetch new riddle
+                currentRiddle = await fetchTodayRiddle();
+                timeLeft = 30 * 60;
+            }
+
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'block';
+            document.getElementById('riddleText').textContent = currentRiddle.question;
+
+            startTimer();
+        }
+
+        function startTimer() {
+            updateTimerDisplay();
+            saveState();
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                saveState();
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    showResult(false, "Tempo scaduto! Riprova domani con un nuovo indovinello.");
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            document.getElementById('timerDisplay').textContent =
+                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        function checkAnswer() {
+            const userAnswer = document.getElementById('answerInput').value.trim().toLowerCase();
+            const correctAnswer = currentRiddle.answer.toLowerCase();
+
+            if (userAnswer === correctAnswer) {
+                clearInterval(timerInterval);
+                showResult(true, "Esatto! Hai risolto l'indovinello!");
+                awardPoints();
+            } else {
+                showResult(false, "Risposta errata. Riprova!");
+            }
+        }
+
+        function showResult(isCorrect, message) {
+            const resultDiv = document.getElementById('resultMessage');
+            resultDiv.className = 'result-message ' + (isCorrect ? 'success' : 'error');
+            resultDiv.textContent = message;
+
+            if (isCorrect) {
+                setTimeout(() => {
+                    document.getElementById('gameScreen').style.display = 'none';
+                    document.getElementById('resultsScreen').style.display = 'block';
+                    // Clear saved state
+                    localStorage.removeItem(getTodayKey());
+                }, 1500);
+            }
+        }
+
+        async function awardPoints() {
+            const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
+            try {
+                const { data: current } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
+                const newPoints = (current?.points || 0) + 50;
+                await supabaseClient.from('user_points').update({ points: newPoints }).eq('user_email', email);
+
+                if (typeof saveGameScore === 'function') {
+                    saveGameScore('riddle_of_day', 100);
+                }
+            } catch (err) {
+                console.error('Error awarding points:', err);
+            }
+        }
+    </script>
+</body>
+
+</html>

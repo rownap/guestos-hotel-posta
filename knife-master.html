@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Knife Master - Hotel Posta</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;900&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="game-leaderboard.js" defer></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: #0a0a12;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: white;
+        }
+
+        .ambient-bg {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at 50% 50%, #171717 0%, #0a0a12 100%);
+            z-index: 0;
+        }
+
+        .header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .game-title {
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #fbbf24, #f87171);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        #gameCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .score-display {
+            position: absolute;
+            top: 100px;
+            font-size: 80px;
+            font-weight: 900;
+            color: white;
+            opacity: 0.2;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .knife-count {
+            position: absolute;
+            bottom: 40px;
+            left: 20px;
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 8px;
+            z-index: 10;
+        }
+
+        .knife-icon {
+            width: 8px;
+            height: 30px;
+            background: white;
+            border-radius: 4px;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+
+        .knife-spent {
+            opacity: 0.1;
+            transform: scale(0.8);
+        }
+
+        .ui-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(10, 10, 18, 0.85);
+            backdrop-filter: blur(20px);
+            z-index: 110;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 32px;
+            padding: 40px 30px;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .action-btn {
+            background: white;
+            color: #0a0a12;
+            border: none;
+            width: 100%;
+            padding: 20px;
+            border-radius: 16px;
+            font-size: 18px;
+            font-weight: 900;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+
+        .action-btn:active {
+            transform: scale(0.98);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .how-to-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            text-align: left;
+        }
+
+        .how-to-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .how-to-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .how-to-icon {
+            width: 32px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fbbf24;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="ambient-bg"></div>
+    <div class="header">
+        <button class="back-btn" onclick="window.location.href='games.html'"><i data-lucide="arrow-left"></i></button>
+        <div class="game-title">Knife Master</div>
+        <div style="width: 44px;"></div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+    <div class="score-display" id="scoreDisplay">0</div>
+    <div class="knife-count" id="knifeCountUI"></div>
+
+    <!-- Start Overlay -->
+    <div id="startOverlay" class="ui-overlay">
+        <div class="glass-panel">
+            <div style="font-size: 60px; margin-bottom: 20px;">🗡️</div>
+            <h2 style="font-size: 32px; font-weight: 900; margin-bottom: 8px;">Knife Master</h2>
+            <p style="color: rgba(255,255,255,0.5); font-size: 14px; margin-bottom: 24px;">Precisione letale</p>
+
+            <div class="how-to-box">
+                <div class="how-to-item">
+                    <div class="how-to-icon"><i data-lucide="mouse-pointer-2" style="width:16px;"></i></div>
+                    <div>Tocca per <b>lanciare</b> il coltello</div>
+                </div>
+                <div class="how-to-item">
+                    <div class="how-to-icon"><i data-lucide="target" style="width:16px;"></i></div>
+                    <div>Colpisci il bersaglio rotante</div>
+                </div>
+                <div class="how-to-item">
+                    <div class="how-to-icon"><i data-lucide="shield-alert" style="width:16px;"></i></div>
+                    <div>Non colpire gli altri coltelli!</div>
+                </div>
+            </div>
+
+            <button class="action-btn" onclick="startGame()">INIZIA SFIDA</button>
+        </div>
+    </div>
+
+    <!-- Game Over Overlay -->
+    <div id="gameOverOverlay" class="ui-overlay hidden">
+        <div class="glass-panel">
+            <h2 id="overTitle" style="font-size: 24px; font-weight: 800; margin-bottom: 12px; color: #ef4444;">
+                COLLISIONE</h2>
+            <div id="finalScoreDisplay" style="font-size: 64px; font-weight: 900; color: #fbbf24; margin-bottom: 24px;">
+                0</div>
+            <div id="hotelPointsDisplay"
+                style="color: #facc15; font-weight: 800; font-size: 20px; margin-bottom: 32px;">+0 Punti Hotel</div>
+            <button class="action-btn" onclick="startGame()">RITENTA</button>
+            <button class="action-btn" style="margin-top: 12px; background: rgba(255,255,255,0.1); color: white;"
+                onclick="window.location.href='games.html'">ESCI</button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height, dpr;
+
+        function resize() {
+            dpr = window.devicePixelRatio || 1;
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            ctx.scale(dpr, dpr);
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        let gameState = 'start';
+        let score = 0;
+        let rotation = 0;
+        let rotationSpeed = 0.03;
+        let knivesOnTarget = [];
+        let activeKnife = null;
+        let knivesRemaining = 7;
+        let level = 1;
+
+        class Knife {
+            constructor(x, y, angle = 0) {
+                this.x = x;
+                this.y = y;
+                this.angle = angle;
+                this.w = 12;
+                this.h = 60;
+                this.speed = 25;
+            }
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+
+                // Blade
+                ctx.fillStyle = '#e5e7eb';
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#fff';
+                ctx.beginPath();
+                ctx.moveTo(-this.w / 2, 0);
+                ctx.lineTo(this.w / 2, 0);
+                ctx.lineTo(0, -this.h);
+                ctx.closePath();
+                ctx.fill();
+
+                // Handle
+                ctx.fillStyle = '#4b5563';
+                ctx.shadowBlur = 0;
+                ctx.fillRect(-this.w / 4, 0, this.w / 2, 20);
+                
+                ctx.restore();
+            }
+        }
+
+        function initLevel() {
+            knivesOnTarget = [];
+            knivesRemaining = 6 + level;
+            targetRotationSpeed = (0.02 + Math.random() * 0.04 + (level * 0.005)) * (Math.random() > 0.5 ? 1 : -1);
+            rotationSpeed = targetRotationSpeed;
+            updateUI();
+        }
+
+        let targetRotationSpeed = 0.03;
+        let shake = 0;
+
+        function updateUI() {
+            const container = document.getElementById('knifeCountUI');
+            container.innerHTML = '';
+            for (let i = 0; i < knivesRemaining; i++) {
+                const k = document.createElement('div');
+                k.className = 'knife-icon';
+                container.appendChild(k);
+            }
+        }
+
+        function startGame() {
+            gameState = 'playing';
+            score = 0;
+            level = 1;
+            initLevel();
+            document.getElementById('startOverlay').classList.add('hidden');
+            document.getElementById('gameOverOverlay').classList.add('hidden');
+            document.getElementById('scoreDisplay').textContent = "0";
+            requestAnimationFrame(loop);
+        }
+
+        function loop() {
+            if (gameState !== 'playing') return;
+            ctx.clearRect(0, 0, width, height);
+
+            // Dynamic rotation logic
+            if (Math.random() < 0.02) {
+                targetRotationSpeed = (Math.random() > 0.5 ? 1 : -1) * (0.02 + Math.random() * 0.05 + level * 0.005);
+            }
+            rotationSpeed += (targetRotationSpeed - rotationSpeed) * 0.05;
+            rotation += rotationSpeed;
+
+            // Screenshake
+            ctx.save();
+            if (shake > 0) {
+                ctx.translate(Math.random() * shake - shake/2, Math.random() * shake - shake/2);
+                shake *= 0.9;
+            }
+
+            // Draw Target
+            ctx.save();
+            ctx.translate(width / 2, height * 0.3);
+            ctx.rotate(rotation);
+
+            // Outer ring
+            ctx.beginPath();
+            ctx.lineWidth = 15;
+            ctx.strokeStyle = '#fbbf24';
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#fbbf24';
+            ctx.arc(0, 0, 90, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Inner Core
+            ctx.beginPath();
+            ctx.fillStyle = '#171717';
+            ctx.arc(0, 0, 85, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Knives on target
+            knivesOnTarget.forEach(k => {
+                ctx.save();
+                ctx.rotate(k.hitAngle);
+                ctx.translate(0, 85);
+
+                // Draw knife sticking out
+                ctx.fillStyle = '#e5e7eb';
+                ctx.beginPath();
+                ctx.moveTo(-6, 0); ctx.lineTo(6, 0); ctx.lineTo(0, -10);
+                ctx.closePath(); ctx.fill();
+                
+                ctx.fillStyle = '#4b5563';
+                ctx.fillRect(-3, 0, 6, 20);
+                ctx.restore();
+            });
+
+            ctx.restore();
+            ctx.restore(); // for screenshake
+
+            // Active Knife
+            if (activeKnife) {
+                activeKnife.y -= activeKnife.speed;
+                if (activeKnife.y <= height * 0.3 + 90) {
+                    // Collision check with target
+                    const hitAngle = (Math.PI / 2 - rotation) % (Math.PI * 2);
+                    const normalizedHitAngle = hitAngle < 0 ? hitAngle + Math.PI * 2 : hitAngle;
+
+                    // Check collision with other knives
+                    let collided = false;
+                    knivesOnTarget.forEach(k => {
+                        let diff = Math.abs(k.hitAngle - normalizedHitAngle);
+                        if (diff > Math.PI) diff = Math.PI * 2 - diff;
+                        if (diff < 0.25) collided = true;
+                    });
+
+                    if (collided) {
+                        shake = 20;
+                        gameOver();
+                    } else {
+                        knivesOnTarget.push({ hitAngle: normalizedHitAngle });
+                        activeKnife = null;
+                        score++;
+                        shake = 5;
+                        document.getElementById('scoreDisplay').textContent = score;
+                        if (knivesRemaining <= 0) {
+                            level++;
+                            setTimeout(initLevel, 500);
+                        }
+                    }
+                } else {
+                    activeKnife.draw();
+                }
+            } else if (knivesRemaining > 0) {
+                // Next knife ready to throw
+                new Knife(width / 2, height - 100).draw();
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        window.addEventListener('mousedown', throwKnife);
+        window.addEventListener('touchstart', throwKnife);
+
+        function throwKnife(e) {
+            if (gameState !== 'playing' || activeKnife || knivesRemaining <= 0) return;
+            activeKnife = new Knife(width / 2, height - 100);
+            knivesRemaining--;
+            updateUI();
+        }
+
+        async function gameOver() {
+            if (gameState === 'over') return;
+            gameState = 'over';
+            const hotelPoints = Math.min(Math.floor(score / 5), 20);
+            document.getElementById('finalScoreDisplay').textContent = score;
+            document.getElementById('hotelPointsDisplay').textContent = `+${hotelPoints} Punti Hotel`;
+            document.getElementById('gameOverOverlay').classList.remove('hidden');
+            document.getElementById('overTitle').textContent = knivesRemaining === 0 && knivesOnTarget.length === level + 6 ? "PROSSIMO LIVELLO!" : "COLLISIONE";
+            document.getElementById('overTitle').style.color = document.getElementById('overTitle').textContent === "COLLISIONE" ? "#ef4444" : "#4ade80";
+
+            if (hotelPoints > 0) await savePoints(hotelPoints);
+            if (typeof saveGameScore === 'function') saveGameScore('knife_master', score);
+        }
+
+        async function savePoints(pts) {
+            const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
+            try {
+                const { data } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
+                const newPts = (data?.points || 0) + pts;
+                await supabaseClient.from('user_points').update({ points: newPts }).eq('user_email', email);
+            } catch (e) { console.error(e); }
+        }
+    </script>
+</body>
+
+</html>

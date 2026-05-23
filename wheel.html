@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ruota della Fortuna - Hotel Posta</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .header {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+
+        .game-title {
+            font-size: 26px;
+            font-weight: 900;
+            text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .info-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 30px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+        }
+
+        .info-title {
+            font-size: 16px;
+            font-weight: 800;
+            margin-bottom: 12px;
+            text-align: center;
+            opacity: 0.95;
+        }
+
+        .spins-left {
+            font-size: 18px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .hint {
+            font-size: 13px;
+            text-align: center;
+            opacity: 0.85;
+        }
+
+        .wheel-container {
+            position: relative;
+            width: 340px;
+            height: 340px;
+            margin: 30px 0;
+        }
+
+        .wheel-marker {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 35px solid white;
+            z-index: 10;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+        }
+
+        .wheel {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 8px solid rgba(255, 255, 255, 0.4);
+            position: relative;
+            overflow: hidden;
+            transition: transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+            box-shadow:
+                0 20px 60px rgba(0, 0, 0, 0.4),
+                inset 0 0 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .wheel-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            background: white;
+            border-radius: 50%;
+            z-index: 5;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .wheel-inner {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .segment-label {
+            position: absolute;
+            left: 50%;
+            top: 15%;
+            transform: translateX(-50%) rotate(90deg);
+            font-size: 24px;
+            font-weight: 900;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+            width: 100%;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 40px;
+        }
+
+        .segment {
+            position: absolute;
+            width: 50%;
+            height: 50%;
+            transform-origin: 100% 100%;
+            left: 0;
+            top: 0;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            clip-path: polygon(0 0, 100% 0, 100% 100%);
+        }
+
+        .spin-btn {
+            margin-top: 20px;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            border: none;
+            padding: 20px 60px;
+            border-radius: 16px;
+            font-size: 22px;
+            font-weight: 900;
+            color: #333;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.4);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            text-transform: uppercase;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .spin-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 15px 40px rgba(255, 215, 0, 0.6);
+        }
+
+        .spin-btn:disabled {
+            background: linear-gradient(135deg, #999, #666);
+            color: #ddd;
+            cursor: not-allowed;
+            opacity: 0.6;
+            transform: none;
+        }
+
+        .win-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 10, 18, 0.6);
+            backdrop-filter: blur(20px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .win-content {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(40px);
+            color: #333;
+            padding: 50px;
+            border-radius: 28px;
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+            animation: bounceIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .win-points {
+            font-size: 72px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 20px 0;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes bounceIn {
+            0% {
+                transform: scale(0.3);
+                opacity: 0;
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            70% {
+                transform: scale(0.9);
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .daily-hint {
+            margin-top: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            opacity: 0.9;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            padding: 12px 24px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <button class="back-btn" onclick="window.location.href='games.html'"><i data-lucide="arrow-left"></i></button>
+        <div class="game-title">🎡 Ruota della Fortuna</div>
+        <div style="width: 48px;"></div>
+    </div>
+
+    <div class="info-card">
+        <div class="info-title">💫 Come Funziona</div>
+        <div class="hint">Gira la ruota e vinci punti!<br>Trova 3 simboli uguali per il jackpot.</div>
+    </div>
+
+    <div class="info-card">
+        <div class="spins-left" id="spinsLeft">Giri rimanenti oggi: 1/1</div>
+        <div class="hint">✨ 1 giro gratis al giorno!</div>
+    </div>
+
+    <div class="wheel-container">
+        <div class="wheel-marker"></div>
+        <div class="wheel" id="wheel">
+            <div class="wheel-inner" id="wheelInner"></div>
+            <div class="wheel-center">🎯</div>
+        </div>
+    </div>
+
+    <button class="spin-btn" id="spinBtn" onclick="spin()">GIRA LA RUOTA!</button>
+
+    <div class="daily-hint">Torna domani per girare di nuovo! 🎁</div>
+
+    <div class="win-overlay" id="winOverlay">
+        <div class="win-content">
+            <div style="font-size: 80px;">🎉</div>
+            <h2 style="font-weight: 900; margin: 20px 0;">Complimenti!</h2>
+            <p style="font-size: 18px; margin-bottom: 10px;">Hai vinto:</p>
+            <div class="win-points" id="winPointsDisplay">0 Punti</div>
+            <button class="spin-btn" style="width: 100%; margin: 0;" onclick="location.reload()">Chiudi</button>
+        </div>
+    </div>
+
+    <script src="game-leaderboard.js" defer></script>
+    <script>
+        lucide.createIcons();
+
+        const rewards = [
+            { pts: 1, color: '#FF0080' },
+            { pts: 0, color: '#666666' },   // Losing segment
+            { pts: 5, color: '#7928CA' },
+            { pts: 1, color: '#00D4FF' },
+            { pts: 0, color: '#666666' },   // Losing segment
+            { pts: 10, color: '#FF0080' },
+            { pts: 1, color: '#7928CA' },
+            { pts: 5, color: '#00D4FF' },
+            { pts: 0, color: '#666666' },   // Losing segment
+            { pts: 25, color: '#FFD700' },  // Gold
+            { pts: 1, color: '#7928CA' },
+            { pts: 50, color: '#FF4D4D' }  // Red Jackpot
+        ];
+
+        const wheelInner = document.getElementById('wheelInner');
+        const numSegments = rewards.length;
+        const segmentAngle = 360 / numSegments;
+
+        // Initialize Wheel with Conic Gradient
+        const gradientParts = rewards.map((r, i) => {
+            const start = i * segmentAngle;
+            const end = (i + 1) * segmentAngle;
+            return `${r.color} ${start}deg ${end}deg`;
+        });
+
+        wheelInner.style.background = `conic-gradient(${gradientParts.join(', ')})`;
+        wheelInner.style.borderRadius = '50%';
+        wheelInner.style.boxShadow = 'inset 0 0 20px rgba(0,0,0,0.2)';
+
+        // Add Labels
+        rewards.forEach((reward, i) => {
+            const label = document.createElement('div');
+            label.className = 'segment-label';
+            // Show emoji for 0 points
+            label.textContent = reward.pts > 0 ? reward.pts : '😢';
+
+            // Calculate position
+            const angle = i * segmentAngle + segmentAngle / 2;
+
+            // Transform logic: Rotate to angle, push out by radius, optimize rotation for readability
+            // We want text to be readable.
+            // -translateY(110px) pushes it towards the edge (wheel is 340px, radius 170px)
+            // rotate(angle + 90deg) makes the text perpendicular to the radius (tangential)? No.
+            // Let's try simple radial alignment first: rotate(angle) -> text top points to center?
+            // If we use writing-mode or just transform.
+
+            // Best for numbers: Upright radial.
+            label.style.position = 'absolute';
+            label.style.left = '50%';
+            label.style.top = '50%';
+            label.style.transformOrigin = 'center center';
+            label.style.width = '40px';
+            label.style.height = '40px';
+            label.style.display = 'flex';
+            label.style.alignItems = 'center';
+            label.style.justifyContent = 'center';
+            label.style.fontWeight = 'bold';
+            label.style.fontSize = '24px'; // Bigger font
+            label.style.color = 'white';
+            label.style.textShadow = '0 1px 3px rgba(0,0,0,0.4)';
+            label.style.zIndex = '2';
+
+            // Math for position
+            // r = 110 (170 is max radius, minus padding)
+            // We rotate the CONTEXT, then translate.
+            label.style.transform = `translate(-50%, -50%) rotate(${angle}deg) translateY(-110px)`;
+
+            // Add icon for Jackpot?
+            if (reward.pts >= 50) {
+                label.style.fontSize = '28px';
+                label.style.color = '#fff';
+                label.style.textShadow = '0 0 5px #ffd700';
+            }
+
+            wheelInner.appendChild(label);
+        });
+
+        // Controllo giri
+        const lastSpin = localStorage.getItem('guestos_last_spin');
+        const today = new Date().toDateString();
+        const hasSpunToday = lastSpin === today;
+
+        if (hasSpunToday) {
+            const btn = document.getElementById('spinBtn');
+            btn.disabled = true;
+            btn.textContent = 'TORNA DOMANI!';
+            document.getElementById('spinsLeft').textContent = 'Giri rimanenti oggi: 0/1';
+        }
+
+        let currentRotation = 0;
+
+        async function spin() {
+            const btn = document.getElementById('spinBtn');
+            if (btn.disabled) return;
+
+            btn.disabled = true;
+            btn.textContent = 'GIRANDO...';
+
+            const spins = 5 + Math.floor(Math.random() * 3);
+            const extraDegrees = Math.floor(Math.random() * 360);
+            currentRotation += spins * 360 + extraDegrees;
+
+            const wheel = document.getElementById('wheel');
+            wheel.style.transform = `rotate(${currentRotation}deg)`;
+
+            setTimeout(() => {
+                const finalAngle = (360 - (currentRotation % 360)) % 360;
+                // FIX: Use segmentAngle instead of degreesPerSegment
+                const segmentIndex = Math.floor(finalAngle / segmentAngle) % numSegments;
+                const winningReward = rewards[segmentIndex];
+
+                showWin(winningReward.pts);
+                localStorage.setItem('guestos_last_spin', today);
+                document.getElementById('spinsLeft').textContent = 'Giri rimanenti oggi: 0/1';
+            }, 4000);
+        }
+
+        async function showWin(pts) {
+            const overlay = document.getElementById('winOverlay');
+            const content = overlay.querySelector('.win-content');
+
+            if (pts > 0) {
+                content.innerHTML = `
+                    <div style="font-size: 80px;">🎉</div>
+                    <h2 style="font-weight: 900; margin: 20px 0;">Complimenti!</h2>
+                    <p style="font-size: 18px; margin-bottom: 10px;">Hai vinto:</p>
+                    <div class="win-points" id="winPointsDisplay">+${pts} Punti</div>
+                    <button class="spin-btn" style="width: 100%; margin: 0;" onclick="location.reload()">Prendi</button>
+                `;
+                await addPoints(pts);
+            } else {
+                content.innerHTML = `
+                    <div style="font-size: 80px;">😢</div>
+                    <h2 style="font-weight: 900; margin: 20px 0;">Peccato!</h2>
+                    <p style="font-size: 18px; margin-bottom: 10px;">Non hai vinto nulla questa volta.</p>
+                    <button class="spin-btn" style="width: 100%; margin-top: 20px;" onclick="location.reload()">Riprova Domani</button>
+                `;
+            }
+            overlay.style.display = 'flex';
+        }
+
+        async function addPoints(pts) {
+            const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
+            try {
+                const { data: current } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
+                const newPoints = (current?.points || 0) + pts;
+                await supabaseClient.from('user_points').update({ points: newPoints, updated_at: new Date().toISOString() }).eq('user_email', email);
+            } catch (err) {
+                console.error('Error adding points:', err);
+            }
+        }
+    </script>
+</body>
+
+</html>

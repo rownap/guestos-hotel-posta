@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ZigZag Neon - Hotel Posta</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;900&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="game-leaderboard.js" defer></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: #0a0a12;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: white;
+        }
+
+        .ambient-bg {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, #1e1b4b 0%, #0a0a12 100%);
+            z-index: 0;
+        }
+
+        .header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .game-title {
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #ec4899, #8b5cf6);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        #gameCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .score-display {
+            position: absolute;
+            top: 100px;
+            font-size: 80px;
+            font-weight: 900;
+            color: white;
+            opacity: 0.2;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(10, 10, 18, 0.85);
+            backdrop-filter: blur(20px);
+            z-index: 110;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 32px;
+            padding: 40px 30px;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .action-btn {
+            background: white;
+            color: #0a0a12;
+            border: none;
+            width: 100%;
+            padding: 20px;
+            border-radius: 16px;
+            font-size: 18px;
+            font-weight: 900;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+
+        .action-btn:active {
+            transform: scale(0.98);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .how-to-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            text-align: left;
+        }
+
+        .how-to-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .how-to-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .how-to-icon {
+            width: 32px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ec4899;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="ambient-bg"></div>
+    <div class="header">
+        <button class="back-btn" onclick="window.location.href='games.html'"><i data-lucide="arrow-left"></i></button>
+        <div class="game-title">ZigZag Neon</div>
+        <div style="width: 44px;"></div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+    <div class="score-display" id="scoreDisplay">0</div>
+    <div id="gameHint"
+        style="position: absolute; bottom: 100px; width: 100%; text-align: center; font-size: 24px; font-weight: 800; color: rgba(255,255,255,0.5); z-index: 10; pointer-events: none; transition: opacity 0.5s;">
+        TOCCA PER CURVARE</div>
+
+    <!-- Start Overlay -->
+    <div id="startOverlay" class="ui-overlay">
+        <div class="glass-panel">
+            <div style="font-size: 60px; margin-bottom: 20px;">⚡</div>
+            <h2 style="font-size: 32px; font-weight: 900; margin-bottom: 8px;">ZigZag Neon</h2>
+            <p style="color: rgba(255,255,255,0.5); font-size: 14px; margin-bottom: 24px;">Resta sul percorso</p>
+
+            <div class="how-to-box">
+                <div class="how-to-item">
+                    <div class="how-to-icon"><i data-lucide="mouse-pointer-2" style="width:16px;"></i></div>
+                    <div>Tocca per <b>cambiare direzione</b></div>
+                </div>
+                <div class="how-to-item">
+                    <div class="how-to-icon"><i data-lucide="zap" style="width:16px;"></i></div>
+                    <div>Resta sulla piattaforma luminosa</div>
+                </div>
+                <div class="how-to-item">
+                    <div class="how-to-icon"><i data-lucide="shield-alert" style="width:16px;"></i></div>
+                    <div>Non cadere nel buio!</div>
+                </div>
+            </div>
+
+            <button class="action-btn" onclick="startGame()">FAI ZIG-ZAG</button>
+        </div>
+    </div>
+
+    <!-- Game Over Overlay -->
+    <div id="gameOverOverlay" class="ui-overlay hidden">
+        <div class="glass-panel">
+            <h2 style="font-size: 24px; font-weight: 800; margin-bottom: 12px; color: #ef4444;">DISINTEGRATO</h2>
+            <div id="finalScoreDisplay" style="font-size: 64px; font-weight: 900; color: #ec4899; margin-bottom: 24px;">
+                0</div>
+            <div id="hotelPointsDisplay"
+                style="color: #facc15; font-weight: 800; font-size: 20px; margin-bottom: 32px;">+0 Punti Hotel</div>
+            <button class="action-btn" onclick="startGame()">RITENTA</button>
+            <button class="action-btn" style="margin-top: 12px; background: rgba(255,255,255,0.1); color: white;"
+                onclick="window.location.href='games.html'">ESCI</button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height, dpr;
+
+        function resize() {
+            dpr = window.devicePixelRatio || 1;
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            ctx.scale(dpr, dpr);
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        let gameState = 'start';
+        let score = 0;
+        let ball = { x: 0, y: 0, radius: 10, speed: 2, dir: 1 }; // dir 1 or -1
+        let path = [];
+        let viewOffset = 0;
+        const PATH_WIDTH = 80;
+
+        function startGame() {
+            gameState = 'playing';
+            score = 0;
+            ball.x = 0;
+            ball.y = 0;
+            ball.speed = 1.8;
+            ball.dir = 1;
+            viewOffset = 0;
+            path = [];
+            document.getElementById('gameHint').style.opacity = '1';
+
+            // Initial path - Runway start (long straight section)
+            let curX = 0;
+            let curY = 0;
+            path.push({ x: -100, y: 0, isRight: true, len: 350, color: 'rgba(255,255,255,0.2)' });
+            curX = 250;
+
+            for (let i = 0; i < 20; i++) {
+                const isRight = Math.random() > 0.5;
+                const len = 70 + Math.random() * 50;
+                path.push({
+                    x: curX,
+                    y: curY,
+                    isRight: isRight,
+                    len: len,
+                    color: `hsl(${280 + Math.random() * 60}, 70%, 60%)`
+                });
+                if (isRight) curX += len; else curY -= len;
+            }
+
+            document.getElementById('startOverlay').classList.add('hidden');
+            document.getElementById('gameOverOverlay').classList.add('hidden');
+            document.getElementById('scoreDisplay').textContent = "0";
+            requestAnimationFrame(loop);
+        }
+
+        function loop() {
+            if (gameState !== 'playing') return;
+            ctx.clearRect(0, 0, width, height);
+
+            // Update Ball
+            if (ball.dir === 1) ball.x += ball.speed;
+            else ball.y -= ball.speed;
+
+            ball.speed += 0.001;
+
+            // Check if ball is on path
+            let onPath = false;
+            path.forEach(p => {
+                if (p.isRight) {
+                    if (ball.x >= p.x - ball.radius && ball.x <= p.x + p.len + ball.radius &&
+                        ball.y >= p.y - PATH_WIDTH / 2 - ball.radius && ball.y <= p.y + PATH_WIDTH / 2 + ball.radius) onPath = true;
+                } else {
+                    if (ball.x >= p.x - PATH_WIDTH / 2 - ball.radius && ball.x <= p.x + PATH_WIDTH / 2 + ball.radius &&
+                        ball.y <= p.y + ball.radius && ball.y >= p.y - p.len - ball.radius) onPath = true;
+                }
+            });
+
+            if (!onPath) gameOver();
+
+            // Auto-scroll
+            const targetOffset = -ball.x + width / 2;
+            const targetOffsetY = -ball.y + height / 2;
+
+            // Add new path segments
+            if (path.length < 50) {
+                const last = path[path.length - 1];
+                const isRight = Math.random() > 0.5;
+                const len = 60 + Math.random() * 40;
+                let nextX = last.x + (last.isRight ? last.len : 0);
+                let nextY = last.y - (last.isRight ? 0 : last.len);
+                path.push({
+                    x: nextX,
+                    y: nextY,
+                    isRight: isRight,
+                    len: len,
+                    color: `hsl(${280 + Math.random() * 60}, 70%, 60%)`
+                });
+            }
+
+            // Draw
+            ctx.save();
+            ctx.translate(width / 2 - ball.x, height / 2 - ball.y);
+
+            path.forEach(p => {
+                ctx.beginPath();
+                ctx.lineWidth = PATH_WIDTH;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = p.color;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = p.color;
+                ctx.moveTo(p.x, p.y);
+                if (p.isRight) ctx.lineTo(p.x + p.len, p.y);
+                else ctx.lineTo(p.x, p.y - p.len);
+                ctx.stroke();
+            });
+
+            // Ball
+            ctx.beginPath();
+            ctx.fillStyle = '#fff';
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#fff';
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+
+            score++;
+            if (score % 10 === 0) document.getElementById('scoreDisplay').textContent = Math.floor(score / 10);
+
+            requestAnimationFrame(loop);
+        }
+
+        window.addEventListener('mousedown', () => {
+            ball.dir *= -1;
+            document.getElementById('gameHint').style.opacity = '0';
+        });
+        window.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            ball.dir *= -1;
+            document.getElementById('gameHint').style.opacity = '0';
+        }, { passive: false });
+
+        async function gameOver() {
+            if (gameState === 'over') return;
+            gameState = 'over';
+            const finalScore = Math.floor(score / 10);
+            const hotelPoints = Math.min(Math.floor(finalScore / 5), 20);
+            document.getElementById('finalScoreDisplay').textContent = finalScore;
+            document.getElementById('hotelPointsDisplay').textContent = `+${hotelPoints} Punti Hotel`;
+            document.getElementById('gameOverOverlay').classList.remove('hidden');
+
+            if (hotelPoints > 0) await savePoints(hotelPoints);
+            if (typeof saveGameScore === 'function') saveGameScore('zigzag_neon', finalScore);
+        }
+
+        async function savePoints(pts) {
+            const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
+            try {
+                const { data } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
+                const newPts = (data?.points || 0) + pts;
+                await supabaseClient.from('user_points').update({ points: newPts }).eq('user_email', email);
+            } catch (e) { console.error(e); }
+        }
+    </script>
+</body>
+
+</html>

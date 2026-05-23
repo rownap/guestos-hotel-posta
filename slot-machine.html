@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slot Machine - Hotel Posta</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="game-leaderboard.js" defer></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .header {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+
+        .game-title {
+            font-size: 26px;
+            font-weight: 900;
+            text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .slot-machine {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 30px;
+            padding: 40px 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .reels-container {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            box-shadow: inset 0 4px 20px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        /* Payline indicator */
+        /* Payline indicator removed as per user feedback */
+
+
+        .reel {
+            background: white;
+            width: 100px;
+            /* Increased width */
+            height: 120px;
+            /* Increased height */
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .reel-symbols {
+            position: absolute;
+            width: 100%;
+            transition: transform 0.1s linear;
+            will-change: transform;
+        }
+
+        .reel.spinning .reel-symbols {
+            animation: spin 0.1s linear infinite;
+        }
+
+        .symbol {
+            height: 120px;
+            /* Match reel height */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            /* Bigger font */
+            background: linear-gradient(180deg, #fff 0%, #f4f4f4 100%);
+            /* border-bottom removed */
+        }
+
+        @keyframes spin {
+            0% {
+                transform: translateY(0);
+            }
+
+            100% {
+                transform: translateY(-120px);
+                /* Match symbol height */
+            }
+        }
+
+        .spin-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            border: none;
+            padding: 20px;
+            border-radius: 15px;
+            font-size: 22px;
+            font-weight: 900;
+            color: #333;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.4);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-transform: uppercase;
+        }
+
+        .spin-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 15px 40px rgba(255, 215, 0, 0.6);
+        }
+
+        .spin-btn:disabled {
+            background: #999;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .info-panel {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .spins-left {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .hint {
+            font-size: 13px;
+            opacity: 0.8;
+        }
+
+        .win-panel {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(15px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            animation: fadeIn 0.3s;
+        }
+
+        .win-content {
+            background: white;
+            color: #333;
+            padding: 40px;
+            border-radius: 30px;
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+            animation: bounceIn 0.6s;
+        }
+
+        .win-emoji {
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: pulse 1s infinite;
+        }
+
+        .win-text {
+            font-size: 28px;
+            font-weight: 900;
+            margin-bottom: 10px;
+        }
+
+        .win-points {
+            font-size: 48px;
+            font-weight: 900;
+            color: #FFD700;
+            margin: 20px 0;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes bounceIn {
+            0% {
+                transform: scale(0.3);
+                opacity: 0;
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            70% {
+                transform: scale(0.9);
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        .close-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            padding: 15px;
+            border-radius: 12px;
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        .paytable {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            font-size: 13px;
+        }
+
+        .paytable-title {
+            font-weight: 800;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 15px;
+        }
+
+        .paytable-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .paytable-row:last-child {
+            border-bottom: none;
+        }
+
+        .symbols-display {
+            font-size: 24px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <button class="back-btn" onclick="window.location.href='games.html'"><i data-lucide="arrow-left"></i></button>
+        <div class="game-title">🎰 Slot Machine</div>
+        <div style="width: 45px;"></div>
+    </div>
+
+    <div class="slot-machine">
+        <div class="info-panel"
+            style="background: rgba(255, 215, 0, 0.15); border: 2px solid rgba(255, 215, 0, 0.3); margin-bottom: 20px;">
+            <div style="font-size: 18px; font-weight: 800; margin-bottom: 10px; text-align: center;">💫 Come Funziona
+            </div>
+            <div style="font-size: 14px; text-align: center; line-height: 1.6;">
+                Trova <strong>3 simboli uguali</strong> sui rulli per vincere!<br>
+                Simboli rari = Premi maggiori 🎰
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <div class="spins-left" id="spinsLeft">Giri rimanenti: 5/5</div>
+            <div class="hint">✨ 5 giri gratis al giorno!</div>
+        </div>
+
+        <div class="reels-container">
+            <div class="reel" id="reel1">
+                <div class="reel-symbols" id="symbols1"></div>
+            </div>
+            <div class="reel" id="reel2">
+                <div class="reel-symbols" id="symbols2"></div>
+            </div>
+            <div class="reel" id="reel3">
+                <div class="reel-symbols" id="symbols3"></div>
+            </div>
+        </div>
+
+        <button class="spin-btn" id="spinBtn" onclick="spinReels()">GIRA I RULLI!</button>
+
+        <style>
+            .paytable-grid {
+                display: grid;
+                grid-template-columns: auto 1fr auto;
+                gap: 10px;
+                align-items: center;
+                text-align: left;
+            }
+
+            .paytable-row {
+                background: rgba(255, 255, 255, 0.05);
+                padding: 12px;
+                border-radius: 12px;
+                margin-bottom: 8px;
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .symbols-combo {
+                display: flex;
+                gap: 8px;
+                font-size: 26px;
+                background: rgba(0, 0, 0, 0.2);
+                padding: 5px 10px;
+                border-radius: 8px;
+                justify-content: center;
+            }
+
+            .win-value {
+                font-weight: 800;
+                font-size: 20px;
+                text-align: center;
+            }
+        </style>
+
+        <div class="paytable">
+            <div class="paytable-title">💰 TABELLA PREMI</div>
+
+            <div class="paytable-row">
+                <div style="font-size: 12px; opacity: 0.8; text-align: center;">COMUNI (🌶️ 🍋 🍕 🏖️)</div>
+                <div class="symbols-combo">
+                    <span>🍋</span><span>🍋</span><span>🍋</span>
+                </div>
+                <div class="win-value" style="color: #4ECDC4;">+5pt</div>
+            </div>
+
+            <div class="paytable-row">
+                <div style="font-size: 12px; opacity: 0.8; text-align: center;">RARI (⚓ 🎭 🌊)</div>
+                <div class="symbols-combo">
+                    <span>⚓</span><span>⚓</span><span>⚓</span>
+                </div>
+                <div class="win-value" style="color: #4ECDC4;">+20pt</div>
+            </div>
+
+            <div class="paytable-row"
+                style="background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 165, 0, 0.2)); border: 1px solid rgba(255, 215, 0, 0.4);">
+                <div style="font-size: 12px; opacity: 0.8; text-align: center; color: #FFD700; font-weight: bold;">
+                    JACKPOT</div>
+                <div class="symbols-combo">
+                    <span>💎</span><span>💎</span><span>💎</span>
+                </div>
+                <div class="win-value"
+                    style="color: #FF4500; font-size: 24px; text-shadow: 0 0 10px rgba(255,69,0,0.5);">+50pt</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="win-panel" id="winPanel">
+        <div class="win-content">
+            <div class="win-emoji" id="winEmoji">🎉</div>
+            <div class="win-text" id="winText">HAI VINTO!</div>
+            <div class="win-points" id="winPoints">+0 Punti</div>
+            <button class="close-btn" onclick="closeWinPanel()">Chiudi</button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        const SYMBOLS = ['🌶️', '🍋', '🍕', '🏖️', '⚓', '🎭', '🌊', '💎'];
+        const MAX_SPINS_PER_DAY = 5;
+        let spinsRemaining = MAX_SPINS_PER_DAY;
+        let isSpinning = false;
+
+        // Inizializza i rulli
+        function initReels() {
+            for (let i = 1; i <= 3; i++) {
+                const container = document.getElementById(`symbols${i}`);
+                container.innerHTML = '';
+                // Crea 20 simboli casuali per l'effetto spinning
+                for (let j = 0; j < 20; j++) {
+                    const symbol = document.createElement('div');
+                    symbol.className = 'symbol';
+                    symbol.textContent = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+                    container.appendChild(symbol);
+                }
+            }
+        }
+
+        // Controlla i giri rimanenti
+        function checkSpinsRemaining() {
+            const lastPlayDate = localStorage.getItem('guestos_slot_last_date');
+            const today = new Date().toDateString();
+
+            if (lastPlayDate !== today) {
+                spinsRemaining = MAX_SPINS_PER_DAY;
+                localStorage.setItem('guestos_slot_last_date', today);
+                localStorage.setItem('guestos_slot_spins', spinsRemaining);
+            } else {
+                spinsRemaining = parseInt(localStorage.getItem('guestos_slot_spins') || MAX_SPINS_PER_DAY);
+            }
+
+            updateSpinsDisplay();
+        }
+
+        function updateSpinsDisplay() {
+            document.getElementById('spinsLeft').textContent = `Giri rimanenti: ${spinsRemaining}/${MAX_SPINS_PER_DAY}`;
+            if (spinsRemaining <= 0) {
+                const btn = document.getElementById('spinBtn');
+                btn.disabled = true;
+                btn.textContent = 'TORNA DOMANI!';
+            }
+        }
+
+        async function spinReels() {
+            if (isSpinning || spinsRemaining <= 0) return;
+
+            isSpinning = true;
+            const btn = document.getElementById('spinBtn');
+            btn.disabled = true;
+            btn.textContent = 'GIRANDO...';
+
+            // Aggiungi classe spinning
+            for (let i = 1; i <= 3; i++) {
+                document.getElementById(`reel${i}`).classList.add('spinning');
+            }
+
+            // Genera risultato
+            const result = generateResult();
+
+            // Simula spin con diversi tempi di stop
+            setTimeout(() => stopReel(1, result[0]), 1000);
+            setTimeout(() => stopReel(2, result[1]), 1500);
+            setTimeout(() => {
+                stopReel(3, result[2]);
+                checkWin(result);
+                isSpinning = false;
+                btn.disabled = false;
+                btn.textContent = 'GIRA I RULLI!';
+
+                // Decrementa giri
+                spinsRemaining--;
+                localStorage.setItem('guestos_slot_spins', spinsRemaining);
+                updateSpinsDisplay();
+            }, 2000);
+        }
+
+        function generateResult() {
+            const rand = Math.random() * 100;
+
+            // 0.1% Jackpot 💎💎💎
+            if (rand < 0.1) {
+                return ['💎', '💎', '💎'];
+            }
+            // 0.5% Simboli rari (⚓🎭🌊)
+            else if (rand < 0.6) {
+                const rareSymbols = ['⚓', '🎭', '🌊'];
+                const symbol = rareSymbols[Math.floor(Math.random() * rareSymbols.length)];
+                return [symbol, symbol, symbol];
+            }
+            // 2% Simboli comuni (🌶️🍋🍕🏖️)
+            else if (rand < 2.6) {
+                const commonSymbols = ['🌶️', '🍋', '🍕', '🏖️'];
+                const symbol = commonSymbols[Math.floor(Math.random() * commonSymbols.length)];
+                return [symbol, symbol, symbol];
+            }
+            // 97.4% Perdita (mix casuale, ma occasionalmente 2 uguali per suspense!)
+            else {
+                if (Math.random() < 0.3) {
+                    // 30% delle perdite hanno 2 simboli uguali (quasi vincita!)
+                    const twoSame = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+                    const different = SYMBOLS.filter(s => s !== twoSame)[Math.floor(Math.random() * (SYMBOLS.length - 1))];
+                    return [twoSame, twoSame, different];
+                } else {
+                    return [
+                        SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)],
+                        SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)],
+                        SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]
+                    ].filter((v, i, a) => a.indexOf(v) === i || Math.random() < 0.5); // Evita triple casuali
+                }
+            }
+        }
+
+        function stopReel(reelNum, finalSymbol) {
+            const reel = document.getElementById(`reel${reelNum}`);
+            const container = document.getElementById(`symbols${reelNum}`);
+
+            reel.classList.remove('spinning');
+
+            // Posiziona il simbolo finale al centro
+            container.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const symbol = document.createElement('div');
+                symbol.className = 'symbol';
+                symbol.textContent = i === 1 ? finalSymbol : SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+                container.appendChild(symbol);
+            }
+            container.style.transform = 'translateY(-120px)';
+        }
+
+        function checkWin(result) {
+            if (result[0] === result[1] && result[1] === result[2]) {
+                let points = 0;
+                let emoji = '🎉';
+
+                if (result[0] === '💎') {
+                    points = 50;
+                    emoji = '💎';
+                } else if (['⚓', '🎭', '🌊'].includes(result[0])) {
+                    points = 20;
+                    emoji = '⭐';
+                } else {
+                    points = 5;
+                    emoji = '🎊';
+                }
+
+                showWin(points, emoji);
+            }
+        }
+
+        function showWin(points, emoji) {
+            document.getElementById('winEmoji').textContent = emoji;
+            document.getElementById('winPoints').textContent = `+${points} Punti`;
+            document.getElementById('winPanel').style.display = 'flex';
+            addPoints(points);
+
+            // Save to leaderboard (Big Wins)
+            if (typeof saveGameScore === 'function' && points > 0) {
+                saveGameScore('slot', points);
+            }
+        }
+
+        function closeWinPanel() {
+            document.getElementById('winPanel').style.display = 'none';
+        }
+
+        async function addPoints(pts) {
+            const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
+            try {
+                const { data: current } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
+                const newPoints = (current?.points || 0) + pts;
+                await supabaseClient.from('user_points').update({ points: newPoints, updated_at: new Date().toISOString() }).eq('user_email', email);
+            } catch (err) {
+                console.error('Error adding points:', err);
+            }
+        }
+
+        initReels();
+        checkSpinsRemaining();
+    </script>
+</body>
+
+</html>

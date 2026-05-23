@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Dash - Hotel Posta</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;900&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="game-leaderboard.js" defer></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: #0a0a12;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: white;
+        }
+
+        /* Ambient Background */
+        .ambient-bg {
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.1) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(236, 72, 153, 0.1) 0%, transparent 40%);
+            z-index: 0;
+        }
+
+        .header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .back-btn:active {
+            transform: scale(0.95);
+        }
+
+        .game-title {
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #6366f1, #ec4899);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        #gameCanvas {
+            max-width: 400px;
+            width: 100%;
+            height: 100%;
+            max-height: 700px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 24px;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+            display: block;
+        }
+
+        .score-display {
+            position: absolute;
+            top: 100px;
+            font-size: 64px;
+            font-weight: 900;
+            color: white;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            z-index: 5;
+            pointer-events: none;
+            font-family: 'Space Grotesk', sans-serif;
+            opacity: 0.8;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(10, 10, 18, 0.8);
+            backdrop-filter: blur(20px);
+            z-index: 110;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 32px;
+            padding: 40px 30px;
+            width: 100%;
+            max-width: 350px;
+        }
+
+        .neon-icon {
+            font-size: 80px;
+            margin-bottom: 24px;
+            filter: drop-shadow(0 0 20px #6366f1);
+        }
+
+        .title-large {
+            font-size: 32px;
+            font-weight: 900;
+            margin-bottom: 12px;
+        }
+
+        .desc-text {
+            color: rgba(255, 255, 255, 0.6);
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+
+        .action-btn {
+            background: white;
+            color: #0a0a12;
+            border: none;
+            width: 100%;
+            padding: 20px;
+            border-radius: 16px;
+            font-size: 18px;
+            font-weight: 900;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            margin-bottom: 16px;
+        }
+
+        .action-btn:active {
+            transform: scale(0.98);
+        }
+
+        .secondary-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .stats-summary {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 24px;
+            width: 100%;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .points-earned {
+            font-size: 32px;
+            font-weight: 900;
+            color: #facc15;
+            margin-bottom: 24px;
+        }
+
+        .how-to-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            text-align: left;
+            width: 100%;
+        }
+
+        .how-to-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .how-to-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .how-to-icon {
+            width: 32px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6366f1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="ambient-bg"></div>
+
+    <div class="header">
+        <button class="back-btn" onclick="window.location.href='games.html'">
+            <i data-lucide="arrow-left"></i>
+        </button>
+        <div class="game-title">Neon Dash</div>
+        <div style="width: 44px;"></div>
+    </div>
+
+    <div class="game-container">
+        <canvas id="gameCanvas" width="400" height="600"></canvas>
+        <div class="score-display" id="scoreDisplay">0</div>
+
+        <!-- Start Overlay -->
+        <div class="ui-overlay" id="startOverlay">
+            <div class="glass-panel">
+                <div style="font-size: 60px; margin-bottom: 20px;">🚀</div>
+                <h2 class="title-large">Neon Dash</h2>
+                <p style="color: rgba(255,255,255,0.5); font-size: 14px; margin-bottom: 24px;">Schiva i portali</p>
+
+                <div class="how-to-box">
+                    <div class="how-to-item">
+                        <div class="how-to-icon"><i data-lucide="mouse-pointer-2" style="width:16px;"></i></div>
+                        <div>Tocca per <b>scattare in alto</b></div>
+                    </div>
+                    <div class="how-to-item">
+                        <div class="how-to-icon"><i data-lucide="shield-alert" style="width:16px;"></i></div>
+                        <div>Evita i <b>portali laser</b></div>
+                    </div>
+                    <div class="how-to-item">
+                        <div class="how-to-icon"><i data-lucide="zap" style="width:16px;"></i></div>
+                        <div>Non toccare i bordi!</div>
+                    </div>
+                </div>
+
+                <button class="action-btn" onclick="startGame()">INIZIA SFIDA</button>
+                <div id="gamesRemainingText" style="font-size: 12px; color: rgba(255,255,255,0.4);">Punti Disp.: --/10
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Over Overlay -->
+        <div class="ui-overlay hidden" id="gameOverOverlay">
+            <div class="glass-panel">
+                <h2 class="title-large" style="color: #ef4444;">Sistema Offline</h2>
+                <div class="stats-summary">
+                    <div class="stat-row"><span>Punteggio</span><strong id="finalScore">0</strong></div>
+                    <div class="stat-row"><span>Record</span><strong id="highScore">0</strong></div>
+                </div>
+                <div class="points-earned" id="pointsEarned">+0</div>
+                <div style="margin-bottom: 24px; font-size: 14px; color: rgba(255,255,255,0.4);">Punti Hotel</div>
+                <div id="limitMessage" style="color: #6366f1; font-size: 12px; margin-bottom: 12px; display: none;">
+                    Limite punti giornaliero raggiunto, gioca per la gloria! 🏆</div>
+                <button class="action-btn" onclick="startGame()">RIPROVA</button>
+                <button class="action-btn secondary-btn" onclick="window.location.href='games.html'">ESCI</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const MAX_SCORED_GAMES = 10;
+        const POINTS_PER_GAME = 1;
+        let gamesLeft = MAX_SCORED_GAMES;
+        let gameActive = false;
+        let score = 0;
+        let highScore = parseInt(localStorage.getItem('neon_dash_highscore') || '0');
+        let gameHasStarted = false;
+
+        const player = {
+            x: 80,
+            y: 300,
+            radius: 12,
+            velocity: 0,
+            gravity: 0.45,
+            jump: -8,
+            rotation: 0
+        };
+
+        const pipes = [];
+        const pipeWidth = 50;
+        const pipeGap = 170;
+        const pipeSpeed = 3.5;
+        let frame = 0;
+
+        function checkDailyLimit() {
+            const lastDate = localStorage.getItem('neon_dash_date');
+            const today = new Date().toDateString();
+
+            if (lastDate !== today) {
+                gamesLeft = MAX_SCORED_GAMES;
+                localStorage.setItem('neon_dash_date', today);
+                localStorage.setItem('neon_dash_games', gamesLeft);
+            } else {
+                gamesLeft = parseInt(localStorage.getItem('neon_dash_games') || MAX_SCORED_GAMES);
+            }
+            updateLimitUI();
+        }
+
+        function updateLimitUI() {
+            const text = gamesLeft > 0 ? `Punti Disp.: ${gamesLeft}/${MAX_SCORED_GAMES}` : 'Punti esauriti per oggi (Gioca for fun!)';
+            document.getElementById('gamesRemainingText').textContent = text;
+            // Never disable button, just update text
+        }
+
+        function startGame() {
+            // Remove check for gamesLeft <= 0 to allow unlimited play
+            document.getElementById('startOverlay').classList.add('hidden');
+            document.getElementById('gameOverOverlay').classList.add('hidden');
+
+            gameActive = true;
+            score = 0;
+            document.getElementById('scoreDisplay').textContent = "0";
+            player.y = canvas.height / 2;
+            player.velocity = 0;
+            pipes.length = 0;
+            frame = 0;
+            gameHasStarted = false;
+            loop();
+        }
+
+        function jump() {
+            if (gameActive) {
+                gameHasStarted = true;
+                player.velocity = player.jump;
+            }
+        }
+
+        window.addEventListener('mousedown', (e) => { if (e.target.tagName !== 'BUTTON') jump(); });
+        window.addEventListener('touchstart', (e) => { if (e.target.tagName !== 'BUTTON') jump(); });
+        window.addEventListener('keydown', (e) => { if (e.code === 'Space') jump(); });
+
+        function loop() {
+            if (!gameActive) return;
+
+            update();
+            draw();
+            frame++;
+            requestAnimationFrame(loop);
+        }
+
+        function update() {
+            if (gameHasStarted) {
+                player.velocity += player.gravity;
+                player.y += player.velocity;
+            }
+            player.rotation = Math.min(Math.PI / 4, Math.max(-Math.PI / 4, player.velocity * 0.1));
+
+            if (player.y + player.radius > canvas.height || player.y - player.radius < 0) {
+                end();
+            }
+
+            if (gameHasStarted && frame % 100 === 0) {
+                const h = Math.random() * (canvas.height - pipeGap - 100) + 50;
+                pipes.push({ x: canvas.width, h: h, scored: false });
+            }
+
+            for (let i = pipes.length - 1; i >= 0; i--) {
+                if (gameHasStarted) {
+                    pipes[i].x -= pipeSpeed;
+                }
+
+                // Collision
+                const p = pipes[i];
+                if (player.x + player.radius > p.x && player.x - player.radius < p.x + pipeWidth) {
+                    if (player.y - player.radius < p.h || player.y + player.radius > p.h + pipeGap) {
+                        end();
+                    }
+                }
+
+                if (!p.scored && p.x + pipeWidth < player.x) {
+                    p.scored = true;
+                    score++;
+                    document.getElementById('scoreDisplay').textContent = score;
+                }
+
+                if (p.x + pipeWidth < 0) pipes.splice(i, 1);
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Back Grid
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < canvas.width; i += 40) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke(); }
+            for (let i = 0; i < canvas.height; i += 40) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke(); }
+
+            // Pipes
+            pipes.forEach(p => {
+                ctx.shadowBlur = 15;
+                ctx.lineWidth = 2;
+
+                // Portal Color (alternating)
+                const neonColor = (Math.floor(frame / 10) % 2 === 0) ? '#6366f1' : '#ec4899';
+                ctx.strokeStyle = neonColor;
+                ctx.shadowColor = neonColor;
+
+                // Top
+                ctx.strokeRect(p.x, 0, pipeWidth, p.h);
+                // Bottom
+                ctx.strokeRect(p.x, p.h + pipeGap, pipeWidth, canvas.height - (p.h + pipeGap));
+
+                // End caps
+                ctx.fillStyle = neonColor;
+                ctx.fillRect(p.x - 5, p.h - 10, pipeWidth + 10, 10);
+                ctx.fillRect(p.x - 5, p.h + pipeGap, pipeWidth + 10, 10);
+            });
+
+            // Player
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            ctx.rotate(player.rotation);
+
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#fff';
+            ctx.fillStyle = '#fff';
+
+            // Neon Shape (Triangle)
+            ctx.beginPath();
+            ctx.moveTo(15, 0);
+            ctx.lineTo(-10, -10);
+            ctx.lineTo(-10, 10);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.restore();
+            ctx.shadowBlur = 0;
+        }
+
+        async function end() {
+            gameActive = false;
+
+            // Calc points only if gamesLeft > 0
+            const hotelPoints = (gamesLeft > 0 && score > 0) ? Math.min(score, POINTS_PER_GAME) : 0;
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('neon_dash_highscore', highScore);
+            }
+
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('highScore').textContent = highScore;
+            document.getElementById('pointsEarned').textContent = `+${hotelPoints}`;
+            document.getElementById('gameOverOverlay').classList.remove('hidden');
+
+            if (gamesLeft > 0 && hotelPoints > 0) {
+                gamesLeft--;
+                localStorage.setItem('neon_dash_games', gamesLeft);
+            }
+            updateLimitUI();
+
+            const limitMsg = document.getElementById('limitMessage');
+            if (gamesLeft <= 0 && hotelPoints === 0) {
+                limitMsg.style.display = 'block';
+            } else {
+                limitMsg.style.display = 'none';
+            }
+
+            if (hotelPoints > 0) await savePoints(hotelPoints);
+            if (typeof saveGameScore === 'function') saveGameScore('neon_dash', score);
+        }
+
+        async function savePoints(pts) {
+            const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
+            try {
+                const { data } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
+                const newPts = (data?.points || 0) + pts;
+                await supabaseClient.from('user_points').update({ points: newPts }).eq('user_email', email);
+            } catch (e) { console.error(e); }
+        }
+
+        checkDailyLimit();
+    </script>
+</body>
+
+</html>

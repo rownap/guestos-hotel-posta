@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Jumper - Hotel Posta</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;900&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="game-leaderboard.js" defer></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: #0a0a12;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: white;
+        }
+
+        .ambient-bg {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(180deg, #0a0a12 0%, #1e1b4b 100%);
+            z-index: 0;
+        }
+
+        .header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .game-title {
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #06b6d4, #3b82f6);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        #gameCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .score-display {
+            position: absolute;
+            top: 100px;
+            font-size: 80px;
+            font-weight: 900;
+            color: white;
+            opacity: 0.2;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(10, 10, 18, 0.85);
+            backdrop-filter: blur(20px);
+            z-index: 110;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 32px;
+            padding: 40px 30px;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .action-btn {
+            background: white;
+            color: #0a0a12;
+            border: none;
+            width: 100%;
+            padding: 20px;
+            border-radius: 16px;
+            font-size: 18px;
+            font-weight: 900;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+
+        .action-btn:active {
+            transform: scale(0.98);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .final-score {
+            font-size: 64px;
+            font-weight: 900;
+            color: #06b6d4;
+            margin-bottom: 24px;
+            text-shadow: 0 0 30px rgba(6, 182, 212, 0.5);
+        }
+
+        .how-to-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            text-align: left;
+        }
+
+        .how-to-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .how-to-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .how-to-icon {
+            width: 32px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #06b6d4;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="ambient-bg"></div>
+    <div class="header">
+        <button class="back-btn" onclick="window.location.href='games.html'"><i data-lucide="arrow-left"></i></button>
+        <div class="game-title">Neon Jumper</div>
+        <div style="width: 44px;"></div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+    <div class="score-display" id="scoreDisplay">0</div>
+
+    <!-- Start Overlay -->
+    <div id="startOverlay" class="ui-overlay">
+        <div class="glass-panel">
+            <div style="font-size: 60px; margin-bottom: 20px;">☄️</div>
+            <h2 style="font-size: 32px; font-weight: 900; margin-bottom: 8px;">Neon Jumper</h2>
+            <p style="color: rgba(255,255,255,0.5); font-size: 14px; margin-bottom: 24px;">L'ascesa verso l'infinito</p>
+
+            <div class="how-to-box">
+                <div class="how-to-item">
+                    <div class="how-to-icon"><i data-lucide="zap" style="width:16px;"></i></div>
+                    <div>Il salto è <b>automatico</b></div>
+                </div>
+                <div class="how-to-item">
+                    <div class="how-to-icon"><i data-lucide="mouse-pointer-2" style="width:16px;"></i></div>
+                    <div>Tocca <b>Sinistra o Destra</b> per muoverti</div>
+                </div>
+                <div class="how-to-item">
+                    <div class="how-to-icon"><i data-lucide="shield-alert" style="width:16px;"></i></div>
+                    <div>Non cadere nel vuoto!</div>
+                </div>
+            </div>
+
+            <button class="action-btn" onclick="startGame()">INIZIA ASCHESA</button>
+        </div>
+    </div>
+
+    <!-- Game Over Overlay -->
+    <div id="gameOverOverlay" class="ui-overlay hidden">
+        <div class="glass-panel">
+            <h2 style="font-size: 24px; font-weight: 800; margin-bottom: 12px; color: #ef4444;">PRECIPITATO</h2>
+            <div class="final-score" id="finalScoreDisplay">0</div>
+            <div id="hotelPointsDisplay"
+                style="color: #facc15; font-weight: 800; font-size: 20px; margin-bottom: 32px;">+0 Punti Hotel</div>
+            <button class="action-btn" onclick="startGame()">RITENTA</button>
+            <button class="action-btn" style="margin-top: 12px; background: rgba(255,255,255,0.1); color: white;"
+                onclick="window.location.href='games.html'">ESCI</button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height, dpr;
+
+        function resize() {
+            dpr = window.devicePixelRatio || 1;
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            ctx.scale(dpr, dpr);
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        let gameState = 'start';
+        let score = 0;
+        let camY = 0;
+        let player = {
+            x: 0,
+            y: 0,
+            radius: 12,
+            vx: 0,
+            vy: 0,
+            jump: -13, // Stronger jump
+            gravity: 0.35
+        };
+        let platforms = [];
+        let inputDir = 0;
+
+        const PLATFORM_WIDTH = 100; // Even wider
+        const PLATFORM_HEIGHT = 16;
+        const COLORS = ['#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
+
+        class Platform {
+            constructor(y) {
+                this.x = Math.random() * (width - PLATFORM_WIDTH);
+                this.y = y;
+                this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
+                this.glow = 15;
+            }
+            draw() {
+                ctx.save();
+                ctx.translate(0, -camY);
+                ctx.shadowBlur = this.glow;
+                ctx.shadowColor = this.color;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.roundRect(this.x, this.y, PLATFORM_WIDTH, PLATFORM_HEIGHT, 8);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        function startGame() {
+            gameState = 'playing';
+            score = 0;
+            camY = 0;
+            player.x = width / 2;
+            player.y = height - 150;
+            player.vx = 0;
+            player.vy = player.jump;
+            platforms = [];
+
+            // Generate starting sequence
+            for (let i = 0; i < 15; i++) {
+                platforms.push(new Platform(height - i * 110));
+            }
+            platforms[0].x = width / 2 - PLATFORM_WIDTH / 2;
+            platforms[0].y = height - 100;
+
+            document.getElementById('startOverlay').classList.add('hidden');
+            document.getElementById('gameOverOverlay').classList.add('hidden');
+            document.getElementById('scoreDisplay').textContent = "0";
+            requestAnimationFrame(loop);
+        }
+
+        function loop() {
+            if (gameState !== 'playing') return;
+            ctx.clearRect(0, 0, width, height);
+
+            // Movement Physics
+            player.vx = inputDir * 6; // Faster movement
+            player.x += player.vx;
+            player.vy += player.gravity;
+            player.y += player.vy;
+
+            // Screen wrapping with buffer
+            if (player.x < -10) player.x = width + 10;
+            if (player.x > width + 10) player.x = -10;
+
+            // Camera Smoothing
+            if (player.y < camY + height * 0.4) {
+                camY += (player.y - (camY + height * 0.4)) * 0.1;
+                score = Math.max(score, Math.floor(-player.y / 10 + height / 10));
+                document.getElementById('scoreDisplay').textContent = score;
+            }
+
+            // High Precision Collision
+            if (player.vy > 0) {
+                platforms.forEach(p => {
+                    const px = player.x;
+                    const py = player.y + player.radius;
+                    if (px > p.x - 5 && px < p.x + PLATFORM_WIDTH + 5 &&
+                        py > p.y && py < p.y + PLATFORM_HEIGHT + 15) {
+                        player.vy = player.jump;
+                        player.y = p.y - player.radius;
+                        // Particle effect could go here
+                    }
+                });
+            }
+
+            // Kill Zone
+            if (player.y > camY + height + 200) gameOver();
+
+            // Procedural Cleanup & Spawn
+            if (platforms[platforms.length - 1].y > camY - 200) {
+                platforms.push(new Platform(platforms[platforms.length - 1].y - (90 + Math.random() * 50)));
+            }
+            if (platforms[0].y > camY + height + 300) platforms.shift();
+
+            // Render
+            platforms.forEach(p => p.draw());
+
+            ctx.save();
+            ctx.translate(player.x, player.y - camY);
+            ctx.shadowBlur = 25;
+            ctx.shadowColor = '#fff';
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            requestAnimationFrame(loop);
+        }
+
+        // Improved Controls: Touch Split Screen
+        window.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const tx = e.touches[0].clientX;
+            inputDir = tx < width / 2 ? -1 : 1;
+        }, { passive: false });
+
+        window.addEventListener('touchend', (e) => {
+            if (e.touches.length === 0) inputDir = 0;
+        });
+
+        window.addEventListener('mousedown', (e) => {
+            if (gameState !== 'playing') return;
+            inputDir = e.clientX < width / 2 ? -1 : 1;
+        });
+        window.addEventListener('mouseup', () => inputDir = 0);
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') inputDir = -1;
+            if (e.key === 'ArrowRight') inputDir = 1;
+        });
+        window.addEventListener('keyup', () => inputDir = 0);
+
+        async function gameOver() {
+            gameState = 'over';
+            const hotelPoints = Math.min(Math.floor(score / 15), 20);
+            document.getElementById('finalScoreDisplay').textContent = score;
+            document.getElementById('hotelPointsDisplay').textContent = `+${hotelPoints} Punti Hotel`;
+            document.getElementById('gameOverOverlay').classList.remove('hidden');
+
+            if (hotelPoints > 0) await savePoints(hotelPoints);
+            if (typeof saveGameScore === 'function') saveGameScore('neon_jumper', score);
+        }
+
+        async function savePoints(pts) {
+            const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
+            try {
+                const { data } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
+                const newPts = (data?.points || 0) + pts;
+                await supabaseClient.from('user_points').update({ points: newPts }).eq('user_email', email);
+            } catch (e) { console.error(e); }
+        }
+    </script>
+</body>
+
+</html>

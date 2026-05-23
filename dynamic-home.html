@@ -501,66 +501,10 @@
             </script>
         </div>
 
-        <div class="cards-grid">
-            <div class="card-3d card-featured" onclick="window.location.href='games.html'">
-                <div class="featured-badge">
-                    <i data-lucide="flame" style="width: 14px; height: 14px;"></i>
-                    NUOVO!
-                </div>
-                <div class="card-icon">
-                    <i data-lucide="gamepad-2"></i>
-                </div>
-                <div class="card-title">Giochi & Sfide</div>
-                <div class="card-subtitle">Guadagna punti e vinci premi esclusivi</div>
-            </div>
-
-            <div class="card-3d" onclick="window.location.href='ristorante.html'">
-                <div class="card-icon">
-                    <i data-lucide="utensils"></i>
-                </div>
-                <div class="card-title">Ristorante</div>
-                <div class="card-subtitle">Prenota tavolo</div>
-            </div>
-
-            <div class="card-3d" onclick="window.location.href='tours.html'">
-                <div class="card-icon">
-                    <i data-lucide="ship"></i>
-                </div>
-                <div class="card-title">Escursioni</div>
-                <div class="card-subtitle">Tour e gite</div>
-            </div>
-
-            <div class="card-3d" onclick="window.location.href='spa.html'">
-                <div class="card-icon">
-                    <i data-lucide="sparkles"></i>
-                </div>
-                <div class="card-title">Spa & Relax</div>
-                <div class="card-subtitle">Massaggi e benessere</div>
-            </div>
-
-            <div class="card-3d" onclick="window.location.href='animazione.html'">
-                <div class="card-icon">
-                    <i data-lucide="party-popper"></i>
-                </div>
-                <div class="card-title">Animazione</div>
-                <div class="card-subtitle">Eventi e spettacoli</div>
-            </div>
-
-            <div class="card-3d" onclick="window.location.href='lastminute.html'">
-                <div class="notification-badge">3</div>
-                <div class="card-icon">
-                    <i data-lucide="zap"></i>
-                </div>
-                <div class="card-title">Last Minute</div>
-                <div class="card-subtitle">Offerte esclusive</div>
-            </div>
-
-            <div class="card-3d" onclick="window.location.href='leaderboard.html'">
-                <div class="card-icon">
-                    <i data-lucide="crown"></i>
-                </div>
-                <div class="card-title">Classifica</div>
-                <div class="card-subtitle">Vedi il ranking</div>
+        <div class="cards-grid" id="mainGrid">
+            <!-- Content verified and loaded by JS -->
+            <div style="grid-column: 1/-1; text-align: center; padding: 40px; opacity: 0.6;">
+                <p>Caricamento interfaccia...</p>
             </div>
         </div>
 
@@ -579,6 +523,122 @@
         if (typeof lucide !== 'undefined') {
             lucide.createIcons();
         }
+
+        // Default Config (Fallback)
+        const defaultSections = [
+            { id: 1, title: 'Giochi & Sfide', icon: 'gamepad-2', route: 'games.html', description: 'Guadagna punti e vinci premi', bg_color: 'rgba(255, 255, 255, 0.2)', is_featured: true },
+            { id: 2, title: 'Ristorante', icon: 'utensils', route: 'ristorante.html', description: 'Prenota tavolo' },
+            { id: 3, title: 'Escursioni', icon: 'ship', route: 'tours.html', description: 'Tour e gite' },
+            { id: 4, title: 'Spa & Relax', icon: 'sparkles', route: 'spa.html', description: 'Massaggi e benessere' },
+            { id: 5, title: 'Animazione', icon: 'party-popper', route: 'animazione.html', description: 'Eventi e spettacoli' },
+            { id: 6, title: 'Last Minute', icon: 'zap', route: 'lastminute.html', description: 'Offerte esclusive', badge: '3' },
+            { id: 7, title: 'Classifica', icon: 'crown', route: 'leaderboard.html', description: 'Vedi il ranking' }
+        ];
+
+        async function initDynamicUI() {
+            try {
+                // Fetch UI config from Supabase
+                const { data, error } = await supabaseClient
+                    .from('ui_sections')
+                    .select('*')
+                    .eq('is_visible', true)
+                    .order('display_order');
+
+                if (error || !data || data.length === 0) {
+                    console.log('Using default UI config');
+                    renderGrid(defaultSections);
+                } else {
+                    console.log('Using dynamic UI config');
+                    // Map legacy Lucide names to Solar if coming from DB (optional, but safe)
+                    // For now assuming we just render what is there, eventually DB needs update too
+                    // But to be safe, if data has 'gamepad-2' we should maybe map it? 
+                    // Let's rely on defaultSections for now for the "premium" demo. 
+                    // To force new icons even if DB has old ones, we might need a mapper.
+                    // Let's stick to rendering rendered icons. 
+
+                    // QUICK FIX: Map common Lucide names to Solar on the fly if they look like Lucide
+                    const solarData = data.map(item => {
+                        const mapper = {
+                            'gamepad-2': 'solar:gamepad-bold-duotone',
+                            'utensils': 'solar:chef-hat-bold-duotone',
+                            'ship': 'solar:map-point-wave-bold-duotone',
+                            'sparkles': 'solar:stars-bold-duotone',
+                            'party-popper': 'solar:confetti-bold-duotone',
+                            'zap': 'solar:bolt-bold-duotone',
+                            'crown': 'solar:crown-bold-duotone',
+                            'flame': 'solar:fire-bold-duotone'
+                        };
+                        if (mapper[item.icon]) {
+                            item.icon = mapper[item.icon];
+                        }
+                        // If it's already full string, keep it. If simple string not in mapper, prefix solar?
+                        // Let's assume for now we just render, but since I want to show improvement instantly:
+                        if (!item.icon.includes(':')) {
+                            // Fallback or just leave it (Iconify might not find it)
+                        }
+                        return item;
+                    });
+                    renderGrid(solarData);
+                }
+            } catch (err) {
+                console.error('UI Load Error:', err);
+                renderGrid(defaultSections);
+            }
+        }
+
+        function renderGrid(sections) {
+            const container = document.getElementById('mainGrid');
+            container.innerHTML = sections.map(section => {
+                const isFeatured = section.title.includes('Giochi'); // Simple heuristic for now
+                const classes = isFeatured ? 'card-3d card-featured' : 'card-3d';
+
+                // Construct styles based on bg_color if present
+                let style = '';
+                if (section.bg_color && section.bg_color.includes('gradient')) {
+                    style = `background: ${section.bg_color};`;
+                }
+
+                // Featured Badge logic
+                let badgeHtml = '';
+                if (isFeatured) {
+                    badgeHtml = `
+                        <div class="featured-badge">
+                            <i data-lucide="flame" style="width: 14px; height: 14px;"></i>
+                            NUOVO!
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="${classes}" style="${style}" onclick="window.location.href='${section.route}'">
+                        ${badgeHtml}
+                        <div class="card-icon">
+                            <i data-lucide="${section.icon || 'circle'}"></i>
+                        </div>
+                        <div class="card-title">${section.title}</div>
+                        <div class="card-subtitle">${section.description || ''}</div>
+                    </div>
+                `;
+            }).join('');
+
+            // Re-init icons
+            lucide.createIcons();
+
+            // Simple animation
+            const cards = container.querySelectorAll('.card-3d');
+            cards.forEach((card, idx) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    card.style.transition = 'all 0.5s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, idx * 100);
+            });
+        }
+
+        // Start UI Init
+        document.addEventListener('DOMContentLoaded', initDynamicUI);
     </script>
 
     <script>

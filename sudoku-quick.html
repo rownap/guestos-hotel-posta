@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sudoku Quick - Hotel Posta</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Space+Grotesk:wght@600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="game-leaderboard.js" defer></script>
+    <style>
+        :root {
+            --bg-primary: #0a0a12;
+            --bg-secondary: #13131f;
+            --accent-primary: #6366f1;
+            --accent-secondary: #8b5cf6;
+            --success: #10b981;
+            --error: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        #startScreen,
+        #resultsScreen {
+            background: var(--bg-secondary);
+            padding: 40px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%;
+        }
+
+        .game-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 32px;
+            margin-bottom: 16px;
+        }
+
+        .sudoku-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            width: 320px;
+            margin: 20px auto;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px;
+            border-radius: 12px;
+        }
+
+        .cell {
+            width: 70px;
+            height: 70px;
+            background: var(--bg-secondary);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .cell.fixed {
+            background: rgba(255, 255, 255, 0.03);
+            color: rgba(255, 255, 255, 0.5);
+            cursor: default;
+        }
+
+        .cell.selected {
+            border: 2px solid var(--accent-primary);
+            box-shadow: 0 0 10px var(--accent-primary);
+        }
+
+        .number-pad {
+            display: flex;
+            gap: 12px;
+            margin-top: 30px;
+        }
+
+        .pad-btn {
+            width: 50px;
+            height: 50px;
+            background: var(--bg-secondary);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: white;
+            font-size: 20px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .pad-btn:hover {
+            border-color: var(--accent-primary);
+        }
+
+        .primary-btn {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border: none;
+            padding: 16px 32px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 700;
+            font-size: 18px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        #gameScreen {
+            width: 100%;
+            display: none;
+        }
+
+        #resultsScreen {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="back-btn" onclick="window.location.href='games.html'">
+                <i data-lucide="arrow-left"></i>
+            </button>
+            <div style="text-align: right;">
+                <div style="font-size: 14px; opacity: 0.6;">Logic Game</div>
+                <div style="font-weight: 700;">Sudoku Quick</div>
+            </div>
+        </div>
+
+        <div class="game-area">
+            <div id="startScreen">
+                <div class="game-icon">🔢</div>
+                <h1>Sudoku Quick</h1>
+                <p style="margin-bottom: 30px; opacity: 0.8;">Completa la griglia 4x4. Ogni riga, colonna e quadrante
+                    2x2 deve contenere i numeri da 1 a 4 senza ripetizioni!</p>
+                <div
+                    style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 16px; margin-bottom: 30px;">
+                    <div style="font-size: 12px; opacity: 0.5; text-transform: uppercase;">Premio</div>
+                    <div style="font-size: 24px; font-weight: 700; color: #fbbf24;">+30 Punti Bonus</div>
+                </div>
+                <button class="primary-btn" onclick="startGame()">GIOCA ORA</button>
+            </div>
+
+            <div id="gameScreen">
+                <div id="timerDisplay"
+                    style="font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700; color: var(--error); margin-bottom: 20px;">
+                    Tempo: 180s</div>
+                <div class="sudoku-grid" id="sudokuGrid"></div>
+                <div class="number-pad">
+                    <button class="pad-btn" onclick="inputNumber(1)">1</button>
+                    <button class="pad-btn" onclick="inputNumber(2)">2</button>
+                    <button class="pad-btn" onclick="inputNumber(3)">3</button>
+                    <button class="pad-btn" onclick="inputNumber(4)">4</button>
+                    <button class="pad-btn" onclick="inputNumber('')" style="width: 80px;">Canc</button>
+                </div>
+                <button class="primary-btn" onclick="checkSudoku()" style="margin-top: 40px;">VERIFICA
+                    SOLUZIONE</button>
+            </div>
+
+            <div id="resultsScreen">
+                <div class="game-icon">🧘</div>
+                <h1>Mente Brillante!</h1>
+                <p style="margin-bottom: 30px; opacity: 0.8;">Il Sudoku è un ottimo allenamento per la logica.</p>
+                <div style="background: var(--success); padding: 20px; border-radius: 16px; margin-bottom: 30px;">
+                    <div style="font-size: 12px; opacity: 0.8; text-transform: uppercase; color: white;">Punti Bonus
+                    </div>
+                    <div style="font-size: 32px; font-weight: 900; color: white;">+30</div>
+                </div>
+                <button class="primary-btn" onclick="window.location.href='games.html'">MENU GIOCHI</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // 4x4 Sudoku puzzle (0 is empty)
+        const puzzle = [
+            [1, 0, 0, 4],
+            [0, 0, 3, 2],
+            [2, 3, 0, 0],
+            [4, 0, 0, 3]
+        ];
+
+        const solution = [
+            [1, 2, 3, 4],
+            [4, 3, 1, 2],
+            [2, 3, 4, 1],
+            [3, 4, 2, 3] // Wait, simple 4x4 needs careful solution. Let's fix.
+        ];
+
+        // Correct 4x4 logic
+        const correctSolution = [
+            [1, 2, 3, 4],
+            [3, 4, 1, 2],
+            [2, 3, 4, 1],
+            [4, 1, 2, 3]
+        ];
+
+        let userGrid = JSON.parse(JSON.stringify(puzzle));
+        let selectedCell = null;
+        let timeLeft = 180;
+        let timerInterval;
+
+        function startGame() {
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'block';
+            renderGrid();
+            startTimer();
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timerDisplay').textContent = "Tempo: " + timeLeft + 's';
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    alert("Tempo scaduto!");
+                    location.reload();
+                }
+            }, 1000);
+        }
+
+        function renderGrid() {
+            const container = document.getElementById('sudokuGrid');
+            container.innerHTML = '';
+
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 4; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    if (puzzle[r][c] !== 0) {
+                        cell.classList.add('fixed');
+                        cell.textContent = puzzle[r][c];
+                    } else {
+                        cell.textContent = userGrid[r][c] || '';
+                        cell.onclick = () => selectCell(r, c, cell);
+                    }
+                    container.appendChild(cell);
+                }
+            }
+        }
+
+        function selectCell(r, c, el) {
+            document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+            selectedCell = { r, c };
+        }
+
+        function inputNumber(num) {
+            if (!selectedCell) return;
+            userGrid[selectedCell.r][selectedCell.c] = num;
+            renderGrid();
+            // Re-select the cell after re-render for better UX
+            const index = selectedCell.r * 4 + selectedCell.c;
+            const cells = document.querySelectorAll('.cell');
+            cells[index].classList.add('selected');
+        }
+
+        async function checkSudoku() {
+            let isCorrect = true;
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 4; c++) {
+                    if (userGrid[r][c] !== correctSolution[r][c]) isCorrect = false;
+                }
+            }
+
+            if (isCorrect) {
+                endGame();
+            } else {
+                alert("La soluzione non è ancora corretta. Controlla meglio!");
+            }
+        }
+
+        async function endGame() {
+            clearInterval(timerInterval);
+            document.getElementById('gameScreen').style.display = 'none';
+            document.getElementById('resultsScreen').style.display = 'block';
+
+            const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
+
+            try {
+                const { data: current } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
+                const newPoints = (current?.points || 0) + 30;
+                await supabaseClient.from('user_points').update({ points: newPoints }).eq('user_email', email);
+
+                if (typeof saveGameScore === 'function') {
+                    saveGameScore('sudoku_quick', 100);
+                }
+            } catch (err) {
+                console.error('Error saving sudoku score:', err);
+            }
+        }
+    </script>
+</body>
+
+</html>

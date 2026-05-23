@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="it">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,23 +8,26 @@
     <title>Ristorante - Hotel Posta</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&display=swap"
+        rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
+    <script src="theme-manager.js"></script>
+    <script src="payment-handler.js"></script>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #FF0080 0%, #FF3399 25%, #00D4FF 75%, #00E5FF 100%);
+            background: var(--primary-gradient);
             min-height: 100vh;
             overflow-x: hidden;
         }
-        
+
         /* Floating Bubbles */
         .bubbles-bg {
             position: fixed;
@@ -34,28 +38,64 @@
             z-index: 0;
             pointer-events: none;
         }
-        
+
         .bubble {
             position: absolute;
             bottom: -100px;
-            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.5), rgba(0,212,255,0.2));
+            background: var(--bubble-gradient);
             border-radius: 50%;
             animation: rise 12s infinite ease-in;
             opacity: 0.3;
         }
-        
-        .bubble:nth-child(1) { width: 40px; height: 40px; left: 10%; animation-delay: 0s; }
-        .bubble:nth-child(2) { width: 60px; height: 60px; left: 30%; animation-delay: 4s; }
-        .bubble:nth-child(3) { width: 50px; height: 50px; left: 60%; animation-delay: 8s; }
-        .bubble:nth-child(4) { width: 45px; height: 45px; left: 80%; animation-delay: 2s; }
-        
-        @keyframes rise {
-            0% { bottom: -100px; opacity: 0; }
-            10% { opacity: 0.3; }
-            90% { opacity: 0.3; }
-            100% { bottom: 110vh; opacity: 0; }
+
+        .bubble:nth-child(1) {
+            width: 40px;
+            height: 40px;
+            left: 10%;
+            animation-delay: 0s;
         }
-        
+
+        .bubble:nth-child(2) {
+            width: 60px;
+            height: 60px;
+            left: 30%;
+            animation-delay: 4s;
+        }
+
+        .bubble:nth-child(3) {
+            width: 50px;
+            height: 50px;
+            left: 60%;
+            animation-delay: 8s;
+        }
+
+        .bubble:nth-child(4) {
+            width: 45px;
+            height: 45px;
+            left: 80%;
+            animation-delay: 2s;
+        }
+
+        @keyframes rise {
+            0% {
+                bottom: -100px;
+                opacity: 0;
+            }
+
+            10% {
+                opacity: 0.3;
+            }
+
+            90% {
+                opacity: 0.3;
+            }
+
+            100% {
+                bottom: 110vh;
+                opacity: 0;
+            }
+        }
+
         /* Container */
         .container {
             position: relative;
@@ -63,7 +103,170 @@
             max-width: 600px;
             margin: 0 auto;
         }
-        
+
+        /* PREMIUM GLASSMORPHISM */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        /* VIP CARD STYLE - MATCHING REFERENCE */
+        /* OLD STYLE REMOVED - replaced by premium block below */
+
+        .offer-badge {
+            position: absolute;
+            top: 0;
+            right: 20px;
+            background: #FFC107;
+            /* Gold */
+            color: #333;
+            padding: 8px 18px;
+            border-radius: 0 0 15px 15px;
+            font-size: 13px;
+            font-weight: 900;
+            box-shadow: 0 4px 10px rgba(255, 193, 7, 0.4);
+            text-transform: uppercase;
+        }
+
+        .offer-icon {
+            font-size: 50px;
+            margin-bottom: 15px;
+            display: inline-block;
+            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+        }
+
+        .offer-title {
+            color: #FF0080;
+            /* Pink */
+            font-size: 26px;
+            font-weight: 900;
+            margin-bottom: 12px;
+            line-height: 1.2;
+        }
+
+        .offer-description {
+            color: #555;
+            font-size: 15px;
+            font-weight: 600;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .book-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #FFC107 0%, #FF9800 100%);
+            border: none;
+            color: #3e2723;
+            /* Dark Brown for contrast on gold */
+            padding: 18px;
+            border-radius: 20px;
+            font-size: 18px;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(255, 152, 0, 0.3);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .book-btn:active {
+            transform: scale(0.98);
+            box-shadow: 0 4px 10px rgba(255, 152, 0, 0.3);
+        }
+
+        /* FORCE GOLD BUTTON FOR VIP CARD */
+        /* OLD BUTTON OVERRIDE REMOVED */
+
+        .special-offer .book-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* PREMIUM GLASS MODAL OVERRIDES */
+        .booking-modal {
+            background: rgba(43, 22, 68, 0.4);
+            /* Deep Purple Tint Overlay */
+            backdrop-filter: blur(15px);
+        }
+
+        .modal-content {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(50px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        .meal-btn {
+            background: rgba(255, 255, 255, 0.6);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(4px);
+        }
+
+        .meal-btn:hover {
+            border-color: #FF0080;
+            background: white;
+            color: #FF0080;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(255, 0, 128, 0.15);
+        }
+
+        .meal-btn .meal-icon {
+            font-size: 32px;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+        }
+
+        /* Meal Selection Grid */
+        .meal-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meal-btn {
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 16px;
+            padding: 15px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            height: auto;
+            aspect-ratio: auto;
+            /* Override default if any */
+        }
+
+        .meal-btn:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .meal-btn:active {
+            transform: scale(0.95);
+        }
+
+        .meal-icon {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .meal-label {
+            font-size: 14px;
+            font-weight: 700;
+            color: #333;
+        }
+
         /* Header */
         .header {
             background: rgba(255, 255, 255, 0.15);
@@ -73,12 +276,12 @@
             display: flex;
             align-items: center;
             gap: 15px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            border-bottom: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
         }
-        
+
         .back-btn {
-            background: rgba(255,255,255,0.3);
+            background: rgba(255, 255, 255, 0.3);
             border: none;
             width: 40px;
             height: 40px;
@@ -90,14 +293,14 @@
             font-size: 20px;
             transition: all 0.3s ease;
         }
-        
+
         .back-btn:active {
             transform: scale(0.9);
-            background: rgba(255,255,255,0.5);
+            background: rgba(255, 255, 255, 0.5);
         }
-        
+
         .home-btn {
-            background: linear-gradient(135deg, #FF0080, #00D4FF);
+            background: var(--primary-gradient);
             border: none;
             width: 40px;
             height: 40px;
@@ -108,48 +311,48 @@
             cursor: pointer;
             font-size: 20px;
             color: white;
-            box-shadow: 0 4px 15px rgba(0,0,128,0.4);
+            box-shadow: 0 4px 15px rgba(0, 0, 128, 0.4);
             transition: all 0.3s ease;
         }
-        
+
         .home-btn:active {
             transform: scale(0.9);
         }
-        
+
         .header-title {
             flex: 1;
         }
-        
+
         .page-title {
             color: white;
             font-size: 22px;
             font-weight: 900;
-            text-shadow: 2px 2px 6px rgba(0,0,0,0.3);
+            text-shadow: var(--text-shadow);
         }
-        
+
         .page-subtitle {
-            color: rgba(255,255,255,0.9);
+            color: rgba(255, 255, 255, 0.9);
             font-size: 13px;
             font-weight: 600;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
         }
-        
+
         /* Hero Image */
         .hero-section {
             position: relative;
             height: 250px;
             overflow: hidden;
         }
-        
+
         .hero-image {
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, rgba(255,0,128,0.3), rgba(0,212,255,0.3)),
-                        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><rect fill="%23f0f0f0" width="800" height="600"/><text x="50%" y="50%" font-family="Arial" font-size="60" fill="%23ccc" text-anchor="middle" dominant-baseline="middle">🍽 Ristorante</text></svg>');
+            background: linear-gradient(135deg, rgba(255, 0, 128, 0.3), rgba(0, 212, 255, 0.3)),
+                url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><rect fill="%23f0f0f0" width="800" height="600"/><text x="50%" y="50%" font-family="Arial" font-size="60" fill="%23ccc" text-anchor="middle" dominant-baseline="middle">🍽 Ristorante</text></svg>');
             background-size: cover;
             background-position: center;
         }
-        
+
         .hero-badge {
             position: absolute;
             top: 20px;
@@ -160,37 +363,37 @@
             border-radius: 25px;
             font-weight: 800;
             font-size: 14px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            text-shadow: var(--text-shadow);
         }
-        
+
         /* Content */
         .content {
             padding: 25px 20px;
         }
-        
+
         /* Status Card */
         .status-card {
             background: rgba(255, 255, 255, 0.25);
             backdrop-filter: blur(20px);
-            border: 2px solid rgba(255,255,255,0.3);
+            border: 2px solid rgba(255, 255, 255, 0.3);
             border-radius: 20px;
             padding: 20px;
             margin-bottom: 20px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
         }
-        
+
         .status-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 15px;
         }
-        
+
         .status-row:last-child {
             margin-bottom: 0;
         }
-        
+
         .status-label {
             color: white;
             font-size: 15px;
@@ -198,262 +401,332 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+            text-shadow: var(--text-shadow);
         }
-        
+
         .status-value {
             color: white;
             font-size: 16px;
             font-weight: 900;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
         }
-        
+
         .status-badge {
             padding: 6px 14px;
             border-radius: 15px;
             font-size: 13px;
             font-weight: 900;
         }
-        
+
         .status-badge.open {
             background: #00FF88;
             color: #003320;
-            box-shadow: 0 2px 10px rgba(0,255,136,0.4);
+            box-shadow: 0 2px 10px rgba(0, 255, 136, 0.4);
         }
-        
+
         .status-badge.closed {
             background: #ff4444;
             color: white;
-            box-shadow: 0 2px 10px rgba(255,68,68,0.4);
+            box-shadow: 0 2px 10px rgba(255, 68, 68, 0.4);
         }
-        
+
         /* Section Title */
         .section-title {
             color: white;
             font-size: 20px;
             font-weight: 900;
             margin-bottom: 15px;
-            text-shadow: 2px 2px 6px rgba(0,0,0,0.3);
+            text-shadow: var(--text-shadow);
             display: flex;
             align-items: center;
             gap: 10px;
         }
-        
+
         /* Menu Items */
         .menu-section {
             margin-bottom: 25px;
         }
-        
+
         .menu-category {
-            background: rgba(255,255,255,0.2);
+            background: rgba(255, 255, 255, 0.2);
             backdrop-filter: blur(15px);
-            border: 2px solid rgba(255,255,255,0.3);
+            border: 2px solid rgba(255, 255, 255, 0.3);
             border-radius: 18px;
             padding: 18px;
             margin-bottom: 12px;
-            box-shadow: 0 6px 25px rgba(0,0,0,0.12);
+            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.12);
         }
-        
+
         .category-header {
             color: white;
             font-size: 17px;
             font-weight: 800;
             margin-bottom: 12px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
             display: flex;
             align-items: center;
             gap: 8px;
         }
-        
+
         .menu-item {
             display: flex;
             justify-content: space-between;
             align-items: start;
             padding: 10px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
         }
-        
+
         .menu-item:last-child {
             border-bottom: none;
             padding-bottom: 0;
         }
-        
+
         .item-info {
             flex: 1;
         }
-        
+
         .item-name {
             color: white;
             font-size: 15px;
             font-weight: 700;
             margin-bottom: 4px;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
         }
-        
+
         .item-description {
-            color: rgba(255,255,255,0.85);
+            color: rgba(255, 255, 255, 0.85);
             font-size: 13px;
             font-weight: 600;
             line-height: 1.4;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
         }
-        
+
         .item-price {
             color: white;
             font-size: 16px;
             font-weight: 900;
             margin-left: 15px;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
         }
-        
+
         /* Special Offer Banner */
+        /* SPECIAL OFFER - PREMIUM UPGRADE */
         .special-offer {
-            background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85));
+            /* Premium Glassmorphism */
+            background: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(25px);
-            border-radius: 25px;
-            padding: 25px;
-            margin-bottom: 25px;
-            box-shadow: 0 10px 35px rgba(0,0,0,0.2);
-            border: 3px solid rgba(255,255,255,0.5);
+            -webkit-backdrop-filter: blur(25px);
+            border-radius: 32px;
+            padding: 40px 30px;
+            margin-bottom: 35px;
+            box-shadow:
+                0 20px 60px rgba(0, 0, 0, 0.15),
+                0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+            border: 1px solid rgba(255, 255, 255, 0.8);
             position: relative;
             overflow: hidden;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: transform 0.3s ease;
         }
-        
+
+        .special-offer:hover {
+            transform: translateY(-5px);
+            box-shadow:
+                0 30px 70px rgba(0, 0, 0, 0.2),
+                0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+        }
+
         .offer-badge {
             position: absolute;
-            top: -5px;
+            top: 20px;
             right: 20px;
-            background: linear-gradient(135deg, #FF0080, #FF3399);
-            color: white;
-            padding: 8px 20px;
-            border-radius: 0 0 15px 15px;
-            font-size: 12px;
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            color: #3e2723;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 11px;
             font-weight: 900;
-            box-shadow: 0 4px 15px rgba(255,0,128,0.4);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            box-shadow: 0 4px 15px rgba(255, 165, 0, 0.4);
+            z-index: 10;
         }
-        
+
+        .offer-icon {
+            font-size: 56px;
+            margin-bottom: 20px;
+            display: inline-block;
+            filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.1));
+            animation: float 4s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
         .offer-title {
-            color: #FF0080;
-            font-size: 22px;
+            color: var(--primary-color);
+            font-size: 28px;
             font-weight: 900;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            margin-bottom: 12px;
+            line-height: 1.2;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            width: 100%;
+            justify-content: center;
         }
-        
+
         .offer-description {
-            color: #333;
-            font-size: 15px;
-            font-weight: 600;
-            line-height: 1.5;
-            margin-bottom: 15px;
+            color: #555;
+            font-size: 16px;
+            font-weight: 500;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            max-width: 90%;
         }
-        
+
         .offer-details {
             display: flex;
             gap: 15px;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
+            width: 100%;
+            justify-content: center;
         }
-        
+
         .offer-detail {
             flex: 1;
-            background: rgba(0,212,255,0.1);
-            border-radius: 12px;
-            padding: 12px;
+            background: rgba(0, 212, 255, 0.08);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 16px;
+            padding: 15px;
             text-align: center;
         }
-        
+
         .detail-label {
             color: #666;
             font-size: 12px;
             font-weight: 700;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
-        
+
         .detail-value {
             color: #00D4FF;
-            font-size: 18px;
+            font-size: 20px;
             font-weight: 900;
         }
-        
+
         .book-btn {
             width: 100%;
-            background: linear-gradient(135deg, #FF0080, #00D4FF);
+            background: linear-gradient(135deg, #FFC107 0%, #FF9800 100%);
             border: none;
-            color: white;
-            padding: 16px;
-            border-radius: 18px;
-            font-size: 17px;
+            color: #4E342E;
+            padding: 18px 25px;
+            border-radius: 22px;
+            font-size: 18px;
             font-weight: 900;
             cursor: pointer;
-            box-shadow: 0 6px 25px rgba(255,0,128,0.4);
-            transition: all 0.3s ease;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 25px rgba(255, 152, 0, 0.35);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            position: relative;
+            overflow: hidden;
         }
-        
+
+        .book-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: 0.5s;
+        }
+
+        .book-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(255, 152, 0, 0.45);
+        }
+
+        .book-btn:hover::before {
+            left: 100%;
+        }
+
         .book-btn:active {
             transform: scale(0.98);
-            box-shadow: 0 4px 20px rgba(255,0,128,0.5);
+            box-shadow: 0 5px 15px rgba(255, 152, 0, 0.3);
         }
-        
+
         /* Reviews */
         .reviews-section {
             margin-bottom: 30px;
         }
-        
+
         .review-card {
-            background: rgba(255,255,255,0.2);
+            background: rgba(255, 255, 255, 0.2);
             backdrop-filter: blur(15px);
-            border: 2px solid rgba(255,255,255,0.3);
+            border: 2px solid rgba(255, 255, 255, 0.3);
             border-radius: 18px;
             padding: 18px;
             margin-bottom: 12px;
-            box-shadow: 0 6px 25px rgba(0,0,0,0.12);
+            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.12);
         }
-        
+
         .review-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 8px;
         }
-        
+
         .reviewer-name {
             color: white;
             font-size: 15px;
             font-weight: 800;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
         }
-        
+
         .review-stars {
             color: #FFD700;
             font-size: 14px;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
         }
-        
+
         .review-text {
-            color: rgba(255,255,255,0.9);
+            color: rgba(255, 255, 255, 0.9);
             font-size: 14px;
             font-weight: 600;
             line-height: 1.5;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
         }
-        
-        /* Bottom CTA */
-        .bottom-cta {
-            position: sticky;
-            bottom: 0;
-            background: rgba(255,255,255,0.15);
-            backdrop-filter: blur(25px);
-            padding: 15px 20px;
-            border-top: 1px solid rgba(255,255,255,0.2);
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
-        }
-        
+
+        /* Bottom CTA handled by common.css */
+
         .cta-btn {
+            pointer-events: auto;
+            /* Re-enable clicks for the button */
             width: 100%;
-            background: linear-gradient(135deg, #FF0080, #00D4FF);
+            background: var(--primary-gradient);
             border: none;
             color: white;
             padding: 18px;
@@ -461,16 +734,16 @@
             font-size: 18px;
             font-weight: 900;
             cursor: pointer;
-            box-shadow: 0 6px 25px rgba(255,0,128,0.5);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             transition: all 0.3s ease;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            text-shadow: var(--text-shadow);
         }
-        
+
         .cta-btn:active {
             transform: scale(0.98);
         }
-        
-        /* BOOKING MODAL - STILE TOURS.HTML */
+
+        /* PREMIUM MODAL STYLES */
         .booking-modal {
             display: none;
             position: fixed;
@@ -478,49 +751,56 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(10px);
+            background: rgba(0, 0, 0, 0.4);
+            /* Darker overlay */
+            backdrop-filter: blur(8px);
+            /* Blur background content */
             z-index: 1000;
             padding: 20px;
             overflow-y: auto;
             align-items: center;
             justify-content: center;
         }
-        
-        .booking-modal.active { display: flex; }
-        
+
+        .booking-modal.active {
+            display: flex;
+        }
+
         .modal-content {
-            background: rgba(255,255,255,0.92);
-            backdrop-filter: blur(50px) saturate(200%);
-            border-radius: 25px;
-            padding: 25px;
+            background: rgba(255, 255, 255, 0.75);
+            /* More transparent */
+            backdrop-filter: blur(40px) saturate(200%);
+            /* Premium Glass */
+            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            border-radius: 30px;
+            padding: 30px;
             max-width: 450px;
             width: 100%;
-            max-height: 65vh;
+            max-height: 85vh;
             overflow-y: auto;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-            border: 3px solid rgba(255,255,255,0.6);
+            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+            border: 1px solid rgba(255, 255, 255, 0.6);
             position: relative;
         }
-        
+
         .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
             padding-bottom: 15px;
-            border-bottom: 2px solid rgba(0,0,0,0.1);
+            border-bottom: 2px solid rgba(0, 0, 0, 0.1);
         }
-        
+
         .modal-title {
             font-size: 22px;
             font-weight: 900;
             color: #FF0080;
         }
-        
+
         .close-btn {
-            background: rgba(255,59,48,0.15);
-            border: 2px solid rgba(255,59,48,0.3);
+            background: rgba(255, 59, 48, 0.15);
+            border: 2px solid rgba(255, 59, 48, 0.3);
             color: #ff3b30;
             width: 36px;
             height: 36px;
@@ -534,30 +814,32 @@
             justify-content: center;
             line-height: 1;
         }
-        
-        .close-btn:active { transform: scale(0.9); }
-        
+
+        .close-btn:active {
+            transform: scale(0.9);
+        }
+
         /* Calendario */
         .calendar {
             margin-bottom: 20px;
         }
-        
+
         .calendar-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 15px;
         }
-        
+
         .month-display {
             font-size: 18px;
             font-weight: 800;
             color: #333;
         }
-        
+
         .month-nav {
-            background: rgba(0,212,255,0.15);
-            border: 2px solid rgba(0,212,255,0.3);
+            background: rgba(0, 212, 255, 0.15);
+            border: 2px solid rgba(0, 212, 255, 0.3);
             color: #00D4FF;
             width: 36px;
             height: 36px;
@@ -567,15 +849,17 @@
             cursor: pointer;
             transition: all 0.3s ease;
         }
-        
-        .month-nav:active { transform: scale(0.9); }
-        
+
+        .month-nav:active {
+            transform: scale(0.9);
+        }
+
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             gap: 8px;
         }
-        
+
         .calendar-day {
             aspect-ratio: 1;
             display: flex;
@@ -587,29 +871,29 @@
             cursor: pointer;
             transition: all 0.3s ease;
             color: #333;
-            background: rgba(0,0,0,0.05);
+            background: rgba(0, 0, 0, 0.05);
         }
-        
+
         .calendar-day.disabled {
             opacity: 0.3;
             pointer-events: none;
         }
-        
+
         .calendar-day.selected {
             background: linear-gradient(135deg, #6366f1, #8b5cf6);
             color: white;
-            box-shadow: 0 4px 15px rgba(99,102,241,0.4);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
         }
-        
+
         .calendar-day:not(.disabled):not(.selected):hover {
-            background: rgba(99,102,241,0.1);
+            background: rgba(99, 102, 241, 0.1);
         }
-        
+
         /* Selezione Persone */
         .people-selector {
             margin-bottom: 20px;
         }
-        
+
         .selector-label {
             display: block;
             font-size: 14px;
@@ -617,20 +901,20 @@
             color: #333;
             margin-bottom: 12px;
         }
-        
+
         .people-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 10px;
         }
-        
+
         .people-btn {
             aspect-ratio: 1;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: rgba(0,0,0,0.05);
-            border: 2px solid rgba(0,0,0,0.1);
+            background: rgba(0, 0, 0, 0.05);
+            border: 2px solid rgba(0, 0, 0, 0.1);
             border-radius: 12px;
             font-size: 16px;
             font-weight: 800;
@@ -638,31 +922,33 @@
             cursor: pointer;
             transition: all 0.3s ease;
         }
-        
+
         .people-btn.selected {
             background: linear-gradient(135deg, #6366f1, #8b5cf6);
             border-color: #6366f1;
             color: white;
-            box-shadow: 0 4px 15px rgba(99,102,241,0.4);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
         }
-        
-        .people-btn:active { transform: scale(0.95); }
-        
+
+        .people-btn:active {
+            transform: scale(0.95);
+        }
+
         /* Time Selector */
         .time-selector {
             margin-bottom: 20px;
         }
-        
+
         .time-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 10px;
         }
-        
+
         .time-btn {
             padding: 12px;
-            background: rgba(0,0,0,0.05);
-            border: 2px solid rgba(0,0,0,0.1);
+            background: rgba(0, 0, 0, 0.05);
+            border: 2px solid rgba(0, 0, 0, 0.1);
             border-radius: 12px;
             font-size: 14px;
             font-weight: 800;
@@ -670,55 +956,57 @@
             cursor: pointer;
             transition: all 0.3s ease;
         }
-        
+
         .time-btn.selected {
             background: linear-gradient(135deg, #6366f1, #8b5cf6);
             border-color: #6366f1;
             color: white;
-            box-shadow: 0 4px 15px rgba(99,102,241,0.4);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
         }
-        
-        .time-btn:active { transform: scale(0.95); }
-        
+
+        .time-btn:active {
+            transform: scale(0.95);
+        }
+
         /* Points Payment */
         .points-payment {
-            background: rgba(255,215,0,0.1);
-            border: 2px solid rgba(255,215,0,0.3);
+            background: rgba(255, 215, 0, 0.1);
+            border: 2px solid rgba(255, 215, 0, 0.3);
             border-radius: 15px;
             padding: 15px;
             margin-bottom: 20px;
         }
-        
+
         .points-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 12px;
         }
-        
+
         .points-title {
             font-size: 14px;
             font-weight: 800;
             color: #333;
         }
-        
+
         .points-available {
             font-size: 13px;
             font-weight: 700;
             color: #fbbf24;
         }
-        
+
         .points-slider {
             width: 100%;
             margin-bottom: 12px;
         }
-        
+
         .price-breakdown {
-            background: rgba(255,255,255,0.6);
+            background: rgba(255, 255, 255, 0.6);
             border-radius: 12px;
             padding: 12px;
         }
-        
+
         .price-row {
             display: flex;
             justify-content: space-between;
@@ -727,20 +1015,20 @@
             font-weight: 700;
             color: #666;
         }
-        
+
         .price-row:last-child {
             margin-bottom: 0;
             padding-top: 8px;
-            border-top: 2px solid rgba(0,0,0,0.1);
+            border-top: 2px solid rgba(0, 0, 0, 0.1);
             font-size: 18px;
             color: #FF0080;
         }
-        
+
         /* Form */
         .form-group {
             margin-bottom: 15px;
         }
-        
+
         .form-label {
             display: block;
             color: #333;
@@ -748,7 +1036,7 @@
             font-weight: 800;
             margin-bottom: 8px;
         }
-        
+
         .form-input {
             width: 100%;
             padding: 12px 14px;
@@ -760,13 +1048,13 @@
             color: #333;
             transition: all 0.3s ease;
         }
-        
+
         .form-input:focus {
             outline: none;
             border-color: #FF0080;
-            box-shadow: 0 0 0 3px rgba(255,0,128,0.1);
+            box-shadow: 0 0 0 3px rgba(255, 0, 128, 0.1);
         }
-        
+
         .btn-book {
             width: 100%;
             background: linear-gradient(135deg, #FF0080, #00D4FF);
@@ -777,21 +1065,23 @@
             font-size: 16px;
             font-weight: 900;
             cursor: pointer;
-            box-shadow: 0 6px 25px rgba(255,0,128,0.4);
+            box-shadow: 0 6px 25px rgba(255, 0, 128, 0.4);
             transition: all 0.3s ease;
         }
-        
-        .btn-book:active { transform: scale(0.98); }
-        
+
+        .btn-book:active {
+            transform: scale(0.98);
+        }
+
         /* Success Modal */
         .success-modal {
             display: none;
         }
-        
+
         .success-modal.active {
             display: flex;
         }
-        
+
         .success-content {
             background: white;
             border-radius: 25px;
@@ -799,27 +1089,34 @@
             max-width: 400px;
             width: 100%;
             text-align: center;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
         }
-        
+
         .success-icon {
             font-size: 80px;
             margin-bottom: 20px;
             animation: bounce 0.6s ease;
         }
-        
+
         @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-20px); }
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-20px);
+            }
         }
-        
+
         .success-title {
             font-size: 26px;
             font-weight: 900;
             color: #00c853;
             margin-bottom: 15px;
         }
-        
+
         .success-message {
             font-size: 15px;
             color: #666;
@@ -827,15 +1124,15 @@
             line-height: 1.6;
             margin-bottom: 25px;
         }
-        
+
         .reception-reminder {
-            background: rgba(255,152,0,0.1);
-            border: 2px solid rgba(255,152,0,0.3);
+            background: rgba(255, 152, 0, 0.1);
+            border: 2px solid rgba(255, 152, 0, 0.3);
             border-radius: 15px;
             padding: 15px;
             margin-bottom: 25px;
         }
-        
+
         .reception-text {
             color: #ff6f00;
             font-size: 14px;
@@ -845,7 +1142,7 @@
             gap: 10px;
             justify-content: center;
         }
-        
+
         .ok-btn {
             width: 100%;
             background: linear-gradient(135deg, #00c853, #00e676);
@@ -856,24 +1153,55 @@
             font-size: 17px;
             font-weight: 900;
             cursor: pointer;
-            box-shadow: 0 6px 25px rgba(0,200,83,0.4);
+            box-shadow: 0 6px 25px rgba(0, 200, 83, 0.4);
             transition: all 0.3s ease;
         }
-        
+
         .ok-btn:active {
             transform: scale(0.98);
+        }
+
+        /* Payment Method Selector */
+        .payment-method-selector {
+            background: rgba(0, 0, 0, 0.03);
+            border-radius: 12px;
+            padding: 12px;
+            margin-top: 15px;
+        }
+
+        .payment-option {
+            flex: 1;
+            padding: 12px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .payment-option.selected {
+            background: rgba(0, 212, 255, 0.1);
+            border-color: #00D4FF;
+            color: #009bb3;
         }
     </style>
 </head>
 <script type="text/javascript">
-    var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
-    (function(){
-    var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
-    s1.async=true;
-    s1.src='https://embed.tawk.to/6972347ad23857197b3dab11/1jfj1q09n';
-    s1.charset='UTF-8';
-    s1.setAttribute('crossorigin','*');
-    s0.parentNode.insertBefore(s1,s0);
+    var Tawk_API = Tawk_API || {}, Tawk_LoadStart = new Date();
+    (function () {
+        var s1 = document.createElement("script"), s0 = document.getElementsByTagName("script")[0];
+        s1.async = true;
+        s1.src = 'https://embed.tawk.to/6972347ad23857197b3dab11/1jfj1q09n';
+        s1.charset = 'UTF-8';
+        s1.setAttribute('crossorigin', '*');
+        s0.parentNode.insertBefore(s1, s0);
     })();
 </script>
 <script>
@@ -881,6 +1209,7 @@
         .then(response => response.text())
         .then(html => document.body.insertAdjacentHTML('beforeend', html));
 </script>
+
 <body>
     <div class="bubbles-bg">
         <div class="bubble"></div>
@@ -888,7 +1217,7 @@
         <div class="bubble"></div>
         <div class="bubble"></div>
     </div>
-    
+
     <div class="container">
         <div class="header">
             <button class="back-btn" onclick="window.history.back()">←</button>
@@ -898,443 +1227,505 @@
             </div>
             <button class="home-btn" onclick="window.location.href='index.html'">🏠</button>
         </div>
-        
-        <div class="hero-section">        <div class="hero-image"></div>
-        <div class="hero-badge">⭐ Vista Mare</div>
+
+        <div class="hero-section">
+            <div class="hero-image"></div>
+            <div class="hero-badge">⭐ Vista Mare</div>
+        </div>
+
+        <div class="content">
+            <div class="status-card">
+                <div class="status-row">
+                    <div class="status-label">
+                        <span>🕐</span>
+                        <span>Stato</span>
+                    </div>
+                    <div class="status-badge" id="statusBadge">APERTO</div>
+                </div>
+                <div class="status-row">
+                    <div class="status-label">
+                        <span>🍽️</span>
+                        <span>Pranzo</span>
+                    </div>
+                    <div class="status-value">12:30 - 14:30</div>
+                </div>
+                <div class="status-row">
+                    <div class="status-label">
+                        <span>🌙</span>
+                        <span>Cena</span>
+                    </div>
+                    <div class="status-value">19:30 - 22:00</div>
+                </div>
+            </div>
+
+            <div class="special-offer">
+                <div class="offer-badge">🛎️ ESCLUSIVO</div>
+                <div class="offer-icon">🍽️</div>
+                <div class="offer-title">Gustati il relax in camera</div>
+                <div class="offer-description">
+                    La tua giornata di relax assoluto! Ordina colazione, pranzo o cena direttamente nella tua stanza
+                    senza muoverti dal letto.
+                </div>
+                <!-- Optional Feature List if needed like the ref, but description kept simple for now per instruction -->
+                <button class="book-btn" onclick="openRoomServiceModal()">⭐ Ordina Servizio in Camera</button>
+            </div>
+
+            <div class="menu-section" id="dynamic-menu-container">
+                <div class="section-title">
+                    <span>📋</span>
+                    <span>Menù del Giorno</span>
+                </div>
+                <div style="text-align:center; padding:40px; color:rgba(255,255,255,0.7);">
+                    <div style="font-size:30px; margin-bottom:10px;">🍲</div>
+                    <div>Caricamento Menu...</div>
+                </div>
+            </div>
+
+            <div class="reviews-section">
+                <div class="section-title">
+                    <span>⭐</span>
+                    <span>Recensioni</span>
+                </div>
+
+                <div class="review-card">
+                    <div class="review-header">
+                        <div class="reviewer-name">Marco R.</div>
+                        <div class="review-stars">⭐⭐⭐⭐⭐</div>
+                    </div>
+                    <div class="review-text">
+                        "Pesce freschissimo e vista mozzafiato! La cena romantica è stata perfetta. Consigliatissimo!"
+                    </div>
+                </div>
+
+                <div class="review-card">
+                    <div class="review-header">
+                        <div class="reviewer-name">Giulia M.</div>
+                        <div class="review-stars">⭐⭐⭐⭐⭐</div>
+                    </div>
+                    <div class="review-text">
+                        "Cucina eccellente e personale gentilissimo. Gli spaghetti allo scoglio sono da provare
+                        assolutamente!"
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bottom-cta">
+            <button class="cta-btn" onclick="window.location.href='chat.html'">💬 Chatta con Bubbles per
+                Prenotare</button>
+        </div>
     </div>
-    
-    <div class="content">
-        <div class="status-card">
-            <div class="status-row">
-                <div class="status-label">
-                    <span>🕐</span>
-                    <span>Stato</span>
-                </div>
-                <div class="status-badge" id="statusBadge">APERTO</div>
+
+    <!-- BOOKING MODAL - STILE TOURS -->
+    <!-- ROOM SERVICE MODAL -->
+    <div class="booking-modal" id="roomServiceModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Servizio in Camera</div>
+                <button class="close-btn" onclick="closeRoomServiceModal()">×</button>
             </div>
-            <div class="status-row">
-                <div class="status-label">
-                    <span>🍽️</span>
-                    <span>Pranzo</span>
+
+            <!-- Step 1: Meal Selection -->
+            <div id="step-meal" class="booking-step">
+                <div style="font-size: 16px; font-weight: 700; color: #666; margin-bottom: 20px;">Cosa vuoi ordinare?
                 </div>
-                <div class="status-value">12:30 - 14:30</div>
+                <div class="meal-grid">
+                    <button class="meal-btn" onclick="selectMeal('colazione')">
+                        <span class="meal-icon">☕</span>
+                        <span class="meal-label">Colazione</span>
+                    </button>
+                    <button class="meal-btn" onclick="selectMeal('pranzo')">
+                        <span class="meal-icon">🍝</span>
+                        <span class="meal-label">Pranzo</span>
+                    </button>
+                    <button class="meal-btn" onclick="selectMeal('cena')">
+                        <span class="meal-icon">🍷</span>
+                        <span class="meal-label">Cena</span>
+                    </button>
+                </div>
             </div>
-            <div class="status-row">
-                <div class="status-label">
-                    <span>🌙</span>
-                    <span>Cena</span>
+
+            <!-- Step 2: Room Verification -->
+            <div id="step-room" class="booking-step" style="display:none;">
+                <div style="font-size: 16px; font-weight: 700; color: #666; margin-bottom: 20px;">Verifica la tua camera
                 </div>
-                <div class="status-value">19:30 - 22:00</div>
+                <div class="form-group">
+                    <label class="form-label">Numero Camera</label>
+                    <input type="text" class="form-input" id="roomNumberInput" placeholder="Es. 101">
+                </div>
+                <button class="btn-book" onclick="verifyRoom()">Verifica Camera</button>
+                <div id="roomError" style="color: red; margin-top: 10px; font-size: 14px; display: none;">Camera non
+                    trovata o non attiva.</div>
+            </div>
+
+            <!-- Step 3: Confirmation -->
+            <div id="step-confirm" class="booking-step" style="display:none;">
+                <div style="font-size: 16px; font-weight: 700; color: #666; margin-bottom: 20px;">Conferma Ordine</div>
+                <div class="price-breakdown">
+                    <div class="price-row">
+                        <span>Camera:</span>
+                        <span id="confirmRoom"></span>
+                    </div>
+                    <div class="price-row">
+                        <span>Pasto:</span>
+                        <span id="confirmMeal"></span>
+                    </div>
+                    <div class="price-row" style="margin-top: 10px; border-top: 1px solid #ccc; padding-top: 10px;">
+                        <span>Prezzo:</span>
+                        <span id="confirmPrice" style="color: #FF0080; font-size: 18px;">--</span>
+                    </div>
+
+                    <div class="payment-method-selector">
+                        <div style="font-size: 14px; font-weight: 700; color: #333; margin-bottom: 8px;">Metodo di
+                            Pagamento:</div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="payment-option selected" onclick="selectPaymentMethod('room')"
+                                id="payRoomBtn">
+                                🏨 Addebito Camera
+                            </button>
+                            <button class="payment-option" onclick="selectPaymentMethod('card')" id="payCardBtn">
+                                💳 Carta (Paga Ora)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button class="btn-book" style="background: #ccc; color: #333;"
+                        onclick="closeRoomServiceModal()">Annulla</button>
+                    <button class="btn-book" onclick="confirmOrder()">Conferma Ordine</button>
+                </div>
             </div>
         </div>
-        
-        <div class="special-offer">
-            <div class="offer-badge">🔥 OFFERTA SPECIALE</div>
-            <div class="offer-title">
-                <span>🦞</span>
-                <span>Cena Romantica sul Mare</span>
-            </div>
-            <div class="offer-description">
-                Menu degustazione di pesce fresco con 4 portate, vino della casa incluso e tavolo riservato con vista tramonto. Un'esperienza indimenticabile! 
-            </div>
-            <div class="offer-details">
-                <div class="offer-detail">
-                    <div class="detail-label">PREZZO</div>
-                    <div class="detail-value">€45</div>
-                </div>
-                <div class="offer-detail">
-                    <div class="detail-label">POSTI</div>
-                    <div class="detail-value">8 rimasti</div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="booking-modal success-modal" id="successModal">
+        <div class="success-content">
+            <div class="success-icon">🎉</div>
+            <h3 class="success-title">Prenotazione Confermata!</h3>
+            <p class="success-message" id="successMessage">
+                Abbiamo ricevuto la tua prenotazione per la <strong>Cena Romantica sul Mare</strong>.<br><br>
+                Riceverai una email di conferma con tutti i dettagli.
+            </p>
+            <div class="reception-reminder">
+                <div class="reception-text">
+                    <span>🔔</span>
+                    <span>Passa in reception per confermare</span>
                 </div>
             </div>
-            <button class="book-btn" onclick="openBookingModal()">✨ Prenota il tuo Tavolo</button>
+            <button class="ok-btn" onclick="closeSuccessModal()">Perfetto!</button>
         </div>
-        
-        <div class="menu-section">
+    </div>
+
+    <script>
+        // DATA MOCK UTENTI
+        const MOCK_USERS = [
+            { id: '10', email: 'test@gmail.com', room: '101', name: 'ciccarelli', active: true, start: '2026-01-24', end: '2026-01-31' },
+            { id: '11', email: 'MARIO.@GMAIL.COM', room: '305', name: 'VERDI', active: true, start: '2026-01-23', end: '2026-01-30' },
+            { id: '15', email: 'TEST@HGMAIL.COM', room: '305', name: 'ROSSI', active: true, start: '2026-01-24', end: '2026-01-31' },
+            { id: '16', email: 'FF@GMAIL.COM', room: '306', name: 'ROSSI', active: true, start: '2026-01-24', end: '2026-01-31' },
+            { id: '17', email: 'DD@GMAIL.COM', room: '310', name: 'ROSSI', active: true, start: '2026-01-24', end: '2026-01-31' },
+            { id: '18', email: 'ros@gmail.com', room: '2222', name: 'rosa', active: true, start: '2026-01-24', end: '2026-01-31' },
+            { id: '19', email: 'ciao@gmail.com', room: '102', name: 'Bombino', active: true, start: '2026-01-24', end: '2026-01-31' },
+            { id: '20', email: 'hh@ii', room: '444', name: 'Pablo', active: true, start: '2026-01-24', end: '2026-01-31' },
+            { id: '21', email: 'test@example.com', room: '999', name: 'Rossi', active: true, start: '2026-01-24', end: '2026-01-27' }
+        ];
+
+        let selectedMeal = '';
+        let validUser = null;
+
+        function checkRestaurantStatus() {
+            const now = new Date();
+            const hour = now.getHours();
+            const minutes = now.getMinutes();
+            const currentTime = hour + minutes / 60;
+
+            const statusBadge = document.getElementById('statusBadge');
+
+            const isLunchTime = currentTime >= 12.5 && currentTime <= 14.5;
+            const isDinnerTime = currentTime >= 19.5 && currentTime <= 22.0;
+
+            if (isLunchTime || isDinnerTime) {
+                statusBadge.textContent = 'APERTO';
+                statusBadge.classList.add('open');
+                statusBadge.classList.remove('closed');
+            } else {
+                statusBadge.textContent = 'CHIUSO';
+                statusBadge.classList.add('closed');
+                statusBadge.classList.remove('open');
+            }
+        }
+
+        function openRoomServiceModal() {
+            document.getElementById('roomServiceModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+            showStep('step-meal');
+        }
+
+        function closeRoomServiceModal() {
+            document.getElementById('roomServiceModal').classList.remove('active');
+            document.body.style.overflow = 'auto';
+            // Reset
+            selectedMeal = '';
+            validUser = null;
+            document.getElementById('roomNumberInput').value = '';
+            document.getElementById('roomError').style.display = 'none';
+        }
+
+        function showStep(stepId) {
+            document.querySelectorAll('.booking-step').forEach(el => el.style.display = 'none');
+            document.getElementById(stepId).style.display = 'block';
+        }
+
+        function selectMeal(meal) {
+            selectedMeal = meal;
+            showStep('step-room');
+        }
+
+        function verifyRoom() {
+            const roomInput = document.getElementById('roomNumberInput').value.trim();
+            const errorMsg = document.getElementById('roomError');
+
+            // Filtra utenti per camera
+            const usersInRoom = MOCK_USERS.filter(u => u.room === roomInput && u.active === true);
+
+            if (usersInRoom.length === 0) {
+                errorMsg.textContent = "Camera non trovata o non attiva.";
+                errorMsg.style.display = 'block';
+                return;
+            }
+
+            // Verifica date
+            // HARDCODED DATE PER SIMULAZIONE (Come da richiesta user: 2026-01-25)
+            const todayStr = '2026-01-25';
+
+            // Cerchiamo un utente valido per la data corrente
+            const userParamsBound = usersInRoom.find(u => {
+                return u.start <= todayStr && u.end >= todayStr;
+            });
+
+            if (userParamsBound) {
+                validUser = userParamsBound;
+                errorMsg.style.display = 'none';
+
+                // Vai alla conferma
+                document.getElementById('confirmRoom').textContent = validUser.room;
+                document.getElementById('confirmMeal').textContent = selectedMeal.charAt(0).toUpperCase() + selectedMeal.slice(1);
+                document.getElementById('confirmPrice').textContent = '€' + (MEAL_PRICES[selectedMeal] || 0);
+                showStep('step-confirm');
+            } else {
+                errorMsg.textContent = "Prenotazione non valida per le date correnti.";
+                errorMsg.style.display = 'block';
+            }
+        }
+
+        const MEAL_PRICES = {
+            'colazione': 15,
+            'pranzo': 25,
+            'cena': 35
+        };
+
+        let selectedPaymentMethod = 'room'; // 'room' or 'card'
+
+        function selectPaymentMethod(method) {
+            selectedPaymentMethod = method;
+            document.querySelectorAll('.payment-option').forEach(btn => btn.classList.remove('selected'));
+            if (method === 'room') document.getElementById('payRoomBtn').classList.add('selected');
+            else document.getElementById('payCardBtn').classList.add('selected');
+        }
+
+        async function confirmOrder() {
+            // Store data before closing/resetting
+            // Salviamo tutto in variabili locali perché closeRoomServiceModal resetta validUser a null
+            const room = validUser ? validUser.room : '';
+            const meal = selectedMeal;
+            const email = (validUser && validUser.email) ? validUser.email : (localStorage.getItem('guestos_user_email') || 'guest@hotel.com');
+            const userName = (validUser && validUser.name) ? validUser.name : (localStorage.getItem('guestos_user_name') || 'Ospite');
+            const mealPrice = MEAL_PRICES[meal] || 0;
+
+            console.log("Tentativo prenotazione:", { email, userName, room, meal, method: selectedPaymentMethod });
+
+            if (!room || !meal) {
+                alert("Dati mancanti per l'ordine.");
+                return;
+            }
+
+            try {
+                // Pagamento con Carta (Stripe)
+                if (selectedPaymentMethod === 'card') {
+                    closeRoomServiceModal(); // Resetta validUser, ma ora usiamo le variabili locali
+
+                    const paymentHandler = new PaymentHandler();
+                    await paymentHandler.processPaymentWithCheckout({
+                        amount: mealPrice,
+                        itemType: 'restaurant',
+                        moduleId: 'room-service',
+                        itemId: null,
+                        itemName: `Servizio in Camera - ${meal.charAt(0).toUpperCase() + meal.slice(1)}`,
+                        itemDescription: `Room Service: ${meal} per Camera ${room}`,
+                        userEmail: email,
+                        userName: userName,
+                        metadata: {
+                            room: room,
+                            meal: meal,
+                            type: 'room_service',
+                            price: mealPrice
+                        }
+                    });
+                    return;
+                }
+
+                // Addebito Camera (Metodo Classico)
+                const { data, error } = await supabaseClient.from('restaurant_bookings').insert({
+                    user_email: email,
+                    user_name: userName,
+                    room_number: room,
+                    meal_type: meal,
+                    booking_date: new Date().toISOString().split('T')[0],
+                    booking_time: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
+                    status: 'confirmed',
+                    type: 'Room Service',
+                    num_people: 1,
+                    original_price: mealPrice,
+                    final_price: 0, // 0 perché addebito su camera, non pagato subito
+                    payment_status: 'charged_to_room'
+                });
+
+                if (error) {
+                    console.error("Supabase Error:", error);
+                    alert("Errore durante il salvataggio della prenotazione: " + error.message);
+                    return;
+                }
+
+                console.log("Prenotazione salvata con successo:", data);
+
+                closeRoomServiceModal();
+
+                const successMsg = `Servizio in camera prenotato con successo!<br>
+                                            Camera: ${room}<br>
+                                            Pasto: ${meal}<br>
+                                            Addebito sul conto confermato.`;
+
+                document.getElementById('successMessage').innerHTML = successMsg;
+                document.querySelector('.success-title').textContent = "Ordine Confermato!";
+                document.getElementById('successModal').classList.add('active');
+
+            } catch (e) {
+                console.error("Eccezione salvataggio ordine", e); // corrected logging
+                alert("Si è verificato un errore tecnico: " + e.message);
+            }
+        }
+
+        function closeSuccessModal() {
+            document.getElementById('successModal').classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function () {
+            checkRestaurantStatus();
+            loadMenu(); // <--- Load Dynamic Menu
+            setInterval(checkRestaurantStatus, 60000);
+        });
+
+        async function loadMenu() {
+            const categoriesOrder = ['antipasti', 'primi', 'secondi', 'dolci', 'vini'];
+            const categoryLabels = {
+                'antipasti': '🥗 Antipasti',
+                'primi': '🍝 Primi Piatti',
+                'secondi': '🍖 Secondi',
+                'dolci': '🍰 Dolci',
+                'vini': '🍷 Vini'
+            };
+
+            try {
+                // Usa window.supabaseClient (definito in config.js)
+                const { data, error } = await window.supabaseClient
+                    .from('restaurant_menu')
+                    .select('*')
+                    .eq('is_available', true);
+
+                if (error) throw error;
+
+                const container = document.getElementById('dynamic-menu-container');
+                const titleHtml = `
             <div class="section-title">
                 <span>📋</span>
                 <span>Menù del Giorno</span>
-            </div>
-            
-            <div class="menu-category">
-                <div class="category-header">🥗 Antipasti</div>
-                <div class="menu-item">
-                    <div class="item-info">
-                        <div class="item-name">Carpaccio di Pesce</div>
-                        <div class="item-description">Pesce fresco marinato con limone e olio EVO</div>
-                    </div>
-                    <div class="item-price">€12</div>
-                </div>
-                <div class="menu-item">
-                    <div class="item-info">
-                        <div class="item-name">Insalata Caprese</div>
-                        <div class="item-description">Pomodori, mozzarella di bufala e basilico</div>
-                    </div>
-                    <div class="item-price">€9</div>
-                </div>
-            </div>
-            
-            <div class="menu-category">
-                <div class="category-header">🍝 Primi Piatti</div>
-                <div class="menu-item">
-                    <div class="item-info">
-                        <div class="item-name">Spaghetti allo Scoglio</div>
-                        <div class="item-description">Frutti di mare freschi e pomodorini</div>
-                    </div>
-                    <div class="item-price">€16</div>
-                </div>
-                <div class="menu-item">
-                    <div class="item-info">
-                        <div class="item-name">Risotto ai Funghi Porcini</div>
-                        <div class="item-description">Riso carnaroli mantecato con porcini freschi</div>
-                    </div>
-                    <div class="item-price">€14</div>
-                </div>
-            </div>
-            
-            <div class="menu-category">
-                <div class="category-header">🍖 Secondi</div>
-                <div class="menu-item">
-                    <div class="item-info">
-                        <div class="item-name">Grigliata di Pesce</div>
-                        <div class="item-description">Pesce misto alla griglia con verdure</div>
-                    </div>
-                    <div class="item-price">€22</div>
-                </div>
-                <div class="menu-item">
-                    <div class="item-info">
-                        <div class="item-name">Tagliata di Manzo</div>
-                        <div class="item-description">Carne alla griglia con rucola e grana</div>
-                    </div>
-                    <div class="item-price">€18</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="reviews-section">
-            <div class="section-title">
-                <span>⭐</span>
-                <span>Recensioni</span>
-            </div>
-            
-            <div class="review-card">
-                <div class="review-header">
-                    <div class="reviewer-name">Marco R.</div>
-                    <div class="review-stars">⭐⭐⭐⭐⭐</div>
-                </div>
-                <div class="review-text">
-                    "Pesce freschissimo e vista mozzafiato! La cena romantica è stata perfetta. Consigliatissimo!"
-                </div>
-            </div>
-            
-            <div class="review-card">
-                <div class="review-header">
-                    <div class="reviewer-name">Giulia M.</div>
-                    <div class="review-stars">⭐⭐⭐⭐⭐</div>
-                </div>
-                <div class="review-text">
-                    "Cucina eccellente e personale gentilissimo. Gli spaghetti allo scoglio sono da provare assolutamente!"
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="bottom-cta">
-        <button class="cta-btn" onclick="window.location.href='chat.html'">💬 Chatta con Bubbles per Prenotare</button>
-    </div>
-</div>
+            </div>`;
 
-<!-- BOOKING MODAL - STILE TOURS -->
-<div class="booking-modal" id="bookingModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <div class="modal-title">Prenota Tavolo</div>
-            <button class="close-btn" onclick="closeBookingModal()">×</button>
-        </div>
-        
-        <div style="font-size: 16px; font-weight: 700; color: #666; margin-bottom: 20px;">🦞 Cena Romantica sul Mare</div>
-        
-        <!-- Calendario -->
-        <div class="calendar">
-            <div class="calendar-header">
-                <button class="month-nav" onclick="changeMonth(-1)">‹</button>
-                <div class="month-display" id="monthDisplay">gennaio 2026</div>
-                <button class="month-nav" onclick="changeMonth(1)">›</button>
-            </div>
-            <div class="calendar-grid" id="calendarGrid"></div>
-        </div>
-        
-        <!-- Selezione Persone -->
-        <div class="people-selector">
-            <label class="selector-label">Numero Persone</label>
-            <div class="people-grid">
-                <button class="people-btn" onclick="selectPeople(1)">1</button>
-                <button class="people-btn" onclick="selectPeople(2)">2</button>
-                <button class="people-btn" onclick="selectPeople(3)">3</button>
-                <button class="people-btn" onclick="selectPeople(4)">4</button>
-                <button class="people-btn" onclick="selectPeople(5)">5</button>
-                <button class="people-btn" onclick="selectPeople(6)">6</button>
-                <button class="people-btn" onclick="selectPeople(7)">7</button>
-                <button class="people-btn" onclick="selectPeople(8)">8+</button>
-            </div>
-        </div>
-        
-        <!-- Selezione Orario -->
-        <div class="time-selector">
-            <label class="selector-label">Orario</label>
-            <div class="time-grid">
-                <button class="time-btn" onclick="selectTime('19:30')">19:30</button>
-                <button class="time-btn" onclick="selectTime('20:00')">20:00</button>
-                <button class="time-btn" onclick="selectTime('20:30')">20:30</button>
-                <button class="time-btn" onclick="selectTime('21:00')">21:00</button>
-                <button class="time-btn" onclick="selectTime('21:30')">21:30</button>
-                <button class="time-btn" onclick="selectTime('22:00')">22:00</button>
-            </div>
-        </div>
-        
-        <!-- Points Payment -->
-        <div class="points-payment">
-            <div class="points-header">
-                <div class="points-title">💰 Paga con Punti</div>
-                <div class="points-available">Hai <span id="userPoints">0</span> punti</div>
-            </div>
-            <input type="range" class="points-slider" id="pointsSlider" min="0" max="0" value="0" oninput="updatePriceBreakdown()">
-            <div class="price-breakdown">
-                <div class="price-row">
-                    <span>Prezzo originale:</span>
-                    <span id="originalPrice">€0</span>
-                </div>
-                <div class="price-row">
-                    <span>Sconto punti (<span id="pointsUsed">0</span> punti):</span>
-                    <span id="discountAmount">-€0</span>
-                </div>
-                <div class="price-row">
-                    <span>Totale da pagare:</span>
-                    <span id="finalPrice">€0</span>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Form -->
-        <div class="form-group">
-            <label class="form-label">Nome Completo</label>
-            <input type="text" class="form-input" id="userName" required placeholder="Mario Rossi">
-        </div>
-        
-        <div class="form-group">
-            <label class="form-label">Note Speciali (Opzionale)</label>
-            <input type="text" class="form-input" id="userNotes" placeholder="Allergie, intolleranze, occasioni speciali...">
-        </div>
-        
-        <button class="btn-book" onclick="submitBooking()">✨ Conferma Prenotazione</button>
-    </div>
-</div>
+                let htmlContent = titleHtml;
 
-<!-- Success Modal -->
-<div class="booking-modal success-modal" id="successModal">
-    <div class="success-content">
-        <div class="success-icon">🎉</div>
-        <h3 class="success-title">Prenotazione Confermata!</h3>
-        <p class="success-message" id="successMessage">
-            Abbiamo ricevuto la tua prenotazione per la <strong>Cena Romantica sul Mare</strong>.<br><br>
-            Riceverai una email di conferma con tutti i dettagli.
-        </p>
-        <div class="reception-reminder">
-            <div class="reception-text">
-                <span>🔔</span>
-                <span>Passa in reception per confermare</span>
-            </div>
-        </div>
-        <button class="ok-btn" onclick="closeSuccessModal()">Perfetto!</button>
-    </div>
-</div>
+                if (!data || data.length === 0) {
+                    htmlContent += '<div style="text-align:center; color:white; padding:20px; background:rgba(0,0,0,0.1); border-radius:15px;">Il menu non è ancora stato caricato.</div>';
+                    container.innerHTML = htmlContent;
+                    return;
+                }
 
-<script>
-    const monthNames = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
-    let currentMonth = 0;
-    let currentYear = 2026;
-    let selectedDate = null;
-    let selectedPeople = 0;
-    let selectedTime = '';
-    let userPointsTotal = 0;
-    const OFFER_PRICE = 45;
-    
-    // Check restaurant status (open/closed)
-    function checkRestaurantStatus() {
-        const now = new Date();
-        const hour = now.getHours();
-        const minutes = now.getMinutes();
-        const currentTime = hour + minutes / 60;
-        
-        const statusBadge = document.getElementById('statusBadge');
-        
-        const isLunchTime = currentTime >= 12.5 && currentTime <= 14.5;
-        const isDinnerTime = currentTime >= 19.5 && currentTime <= 22.0;
-        
-        if (isLunchTime || isDinnerTime) {
-            statusBadge.textContent = 'APERTO';
-            statusBadge.classList.add('open');
-            statusBadge.classList.remove('closed');
-        } else {
-            statusBadge.textContent = 'CHIUSO';
-            statusBadge.classList.add('closed');
-            statusBadge.classList.remove('open');
-        }
-    }
-    
-    async function loadUserPoints() {
-        try {
-            const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
-            const { data } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
-            userPointsTotal = data?.points || 0;
-            document.getElementById('userPoints').textContent = userPointsTotal;
-            document.getElementById('pointsSlider').max = Math.min(userPointsTotal, OFFER_PRICE * 10);
-        } catch (error) {
-            console.error('Error loading points:', error);
-        }
-    }
-    
-    function openBookingModal() {
-        document.getElementById('bookingModal').classList.add('active');
-        document.body.style.overflow = 'hidden';
-        
-        // Prefill user name
-        const userName = localStorage.getItem('guestos_user_name');
-        if (userName) {
-            document.getElementById('userName').value = userName;
-        }
-        
-        renderCalendar();
-        loadUserPoints();
-        updatePriceBreakdown();
-    }
-    
-    function closeBookingModal() {
-        document.getElementById('bookingModal').classList.remove('active');
-        document.body.style.overflow = 'auto';
-        selectedDate = null;
-        selectedPeople = 0;
-        selectedTime = '';
-        document.getElementById('pointsSlider').value = 0;
-    }
-    
-    function renderCalendar() {
-        const grid = document.getElementById('calendarGrid');
-        const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-        
-        let html = '';
-        for (let i = 0; i < firstDay; i++) html += '<div class="calendar-day disabled"></div>';
-        for (let day = 1; day <= daysInMonth; day++) {
-            const isSelected = selectedDate === day;
-            html += `<div class="calendar-day ${isSelected ? 'selected' : ''}" onclick="selectDate(${day})">${day}</div>`;
-        }
-        
-        grid.innerHTML = html;
-        document.getElementById('monthDisplay').textContent = `${monthNames[currentMonth]} ${currentYear}`;
-    }
-    
-    function changeMonth(delta) {
-        currentMonth += delta;
-        if (currentMonth < 0) { currentMonth = 11; currentYear--; }
-        if (currentMonth > 11) { currentMonth = 0; currentYear++; }
-        renderCalendar();
-    }
-    
-    function selectDate(day) {
-        selectedDate = day;
-        renderCalendar();
-    }
-    
-    function selectPeople(num) {
-        selectedPeople = num;
-        document.querySelectorAll('.people-btn').forEach(btn => btn.classList.remove('selected'));
-        event.target.classList.add('selected');
-        updatePriceBreakdown();
-    }
-    
-    function selectTime(time) {
-        selectedTime = time;
-        document.querySelectorAll('.time-btn').forEach(btn => btn.classList.remove('selected'));
-        event.target.classList.add('selected');
-    }
-    
-    function updatePriceBreakdown() {
-        const pointsUsed = parseInt(document.getElementById('pointsSlider').value);
-        const discount = pointsUsed / 10;
-        const totalPrice = OFFER_PRICE * (selectedPeople || 1);
-        const finalPrice = Math.max(0, totalPrice - discount);
-        
-        document.getElementById('originalPrice').textContent = `€${totalPrice}`;
-        document.getElementById('pointsUsed').textContent = pointsUsed;
-        document.getElementById('discountAmount').textContent = `-€${discount.toFixed(2)}`;
-        document.getElementById('finalPrice').textContent = `€${finalPrice.toFixed(2)}`;
-    }
-    
-    async function submitBooking() {
-        if (!selectedDate || !selectedPeople || !selectedTime) {
-            alert('Seleziona data, numero persone e orario');
-            return;
-        }
-        
-        const userName = document.getElementById('userName').value;
-        if (!userName) {
-            alert('Inserisci il tuo nome');
-            return;
-        }
-        
-        const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
-        const pointsUsed = parseInt(document.getElementById('pointsSlider').value);
-        const discount = pointsUsed / 10;
-        const totalPrice = OFFER_PRICE * selectedPeople;
-        const finalPrice = totalPrice - discount;
-        
-        try {
-            await supabaseClient.from('restaurant_bookings').insert({
-                user_email: email,
-                user_name: userName,
-                booking_date: `${currentYear}-${(currentMonth+1).toString().padStart(2,'0')}-${selectedDate.toString().padStart(2,'0')}`,
-                booking_time: selectedTime,
-                num_people: selectedPeople,
-                notes: document.getElementById('userNotes').value,
-                original_price: totalPrice,
-                points_used: pointsUsed,
-                discount_amount: discount,
-                final_price: finalPrice,
-                status: 'confirmed',
-                type: 'Cena Romantica sul Mare'
-            });
-            
-            if (pointsUsed > 0) {
-                const { data } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
-                await supabaseClient.from('user_points').update({ points: data.points - pointsUsed }).eq('user_email', email);
+                // Raggruppa
+                const grouped = {};
+                data.forEach(item => {
+                    const cat = item.category ? item.category.toLowerCase() : 'altro';
+                    if (!grouped[cat]) grouped[cat] = [];
+                    grouped[cat].push(item);
+                });
+
+                // Renderizza nell'ordine definito
+                categoriesOrder.forEach(cat => {
+                    if (grouped[cat] && grouped[cat].length > 0) {
+                        htmlContent += `
+                    <div class="menu-category">
+                        <div class="category-header">${categoryLabels[cat] || cat.toUpperCase()}</div>
+                    `;
+                        grouped[cat].forEach(item => {
+                            htmlContent += `
+                        <div class="menu-item">
+                            <div class="item-info">
+                                <div class="item-name">${item.name}</div>
+                                <div class="item-description">${item.description || ''}</div>
+                            </div>
+                            <div class="item-price">€${item.price}</div>
+                        </div>`;
+                        });
+                        htmlContent += `</div>`;
+                        delete grouped[cat]; // Rimuovi per non duplicare
+                    }
+                });
+
+                // Renderizza le categorie rimanenti (extra)
+                Object.keys(grouped).forEach(cat => {
+                    if (grouped[cat].length > 0) {
+                        htmlContent += `
+                    <div class="menu-category">
+                        <div class="category-header">${cat.toUpperCase()}</div>
+                    `;
+                        grouped[cat].forEach(item => {
+                            htmlContent += `
+                        <div class="menu-item">
+                            <div class="item-info">
+                                <div class="item-name">${item.name}</div>
+                                <div class="item-description">${item.description || ''}</div>
+                            </div>
+                            <div class="item-price">€${item.price}</div>
+                        </div>`;
+                        });
+                        htmlContent += `</div>`;
+                    }
+                });
+
+                container.innerHTML = htmlContent;
+
+            } catch (err) {
+                console.error('Menu load error:', err);
+                // Non sovrascrivere se c'è stato errore, lascia il loader o metti errore
+                const container = document.getElementById('dynamic-menu-container');
+                container.innerHTML += `<div style="text-align:center; color:#ffcccc; padding:10px;">Errore caricamento dati dal server.</div>`;
             }
-            
-            closeBookingModal();
-            
-            // Show success
-            const successMessage = `Abbiamo ricevuto la tua prenotazione per la <strong>Cena Romantica sul Mare</strong>.<br><br>📅 Data: ${selectedDate}/${currentMonth+1}/${currentYear} alle ${selectedTime}<br>👥 Persone: ${selectedPeople}<br>💰 Totale: €${finalPrice.toFixed(2)}`;
-            document.getElementById('successMessage').innerHTML = successMessage;
-            document.getElementById('successModal').classList.add('active');
-            
-        } catch (error) {
-            console.error('Error:', error);
-            alert('Errore nella prenotazione');
         }
-    }
-    
-    function closeSuccessModal() {
-        document.getElementById('successModal').classList.remove('active');
-        document.body.style.overflow = 'auto';
-    }
-    
-    // Initialize
-    document.addEventListener('DOMContentLoaded', function() {
-        checkRestaurantStatus();
-        setInterval(checkRestaurantStatus, 60000);
-    });
-</script>
-<script src="app.js"></script>
+    </script>
+    <script src="app.js"></script>
+    <script src="app-data-loader.js"></script>
 </body>
+
 </html>
 `

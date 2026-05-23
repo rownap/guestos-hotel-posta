@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="it">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,21 +9,279 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
-    
-    <!-- 🔥 CRITICAL: Redirect if already logged in -->
+
     <script>
-        if (localStorage.getItem('guestos_logged_in') === 'true') {
-            window.location.href = 'index.html';
+        // Check and migrate database schema
+        async function checkAndMigrateSchema() {
+            try {
+                console.log('🔍 Verifica struttura database...');
+
+                // Try to query the users table with new columns
+                const { data, error } = await supabaseClient
+                    .from('users')
+                    .select('id, room_number, stay_start_date, stay_end_date, active, last_name, email, pin')
+                    .limit(1);
+
+                if (error) {
+                    // Table doesn't exist or columns are missing
+                    console.error('❌ Struttura database non corretta:', error);
+
+                    // Show migration instructions
+                    const migrate = confirm(
+                        '⚠️ ATTENZIONE: Il database necessita di aggiornamenti!\n\n' +
+                        'Struttura richiesta nella tabella "users":\n' +
+                        '• stay_start_date (DATE) - invece di room_start_date\n' +
+                        '• stay_end_date (DATE) - nuova colonna\n' +
+                        '• active (BOOLEAN) - deve esistere\n\n' +
+                        'Vincolo UNIQUE su: (room_number, stay_start_date)\n\n' +
+                        'Vuoi vedere le istruzioni SQL per aggiornare il database?'
+                    );
+
+                    if (migrate) {
+                        showMigrationInstructions();
+                    }
+
+                    return false;
+                }
+
+                console.log('✅ Struttura database corretta');
+                return true;
+
+            } catch (err) {
+                console.error('Errore verifica schema:', err);
+                return false;
+            }
         }
+
+        function showMigrationInstructions() {
+            const instructions = `
+-- ============================================
+-- MIGRAZIONE DATABASE - SISTEMA SOGGIORNI
+-- ============================================
+
+-- 1. Rinomina colonna (se esiste room_start_date)
+ALTER TABLE users 
+RENAME COLUMN room_start_date TO stay_start_date;
+
+-- 2. Aggiungi colonna stay_end_date
+ALTER TABLE users 
+ADD COLUMN IF NOT EXISTS stay_end_date DATE;
+
+-- 3. Imposta stay_end_date per record esistenti (default: +7 giorni)
+UPDATE users 
+SET stay_end_date = stay_start_date + INTERVAL '7 days'
+WHERE stay_end_date IS NULL;
+
+-- 4. Rendi stay_end_date NOT NULL
+ALTER TABLE users 
+ALTER COLUMN stay_end_date SET NOT NULL;
+
+-- 5. Aggiungi colonna active (se non esiste)
+ALTER TABLE users 
+ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT true;
+
+-- 6. Imposta active = true per tutti i record esistenti
+UPDATE users 
+SET active = true 
+WHERE active IS NULL;
+
+-- 7. Rendi active NOT NULL
+ALTER TABLE users 
+ALTER COLUMN active SET NOT NULL;
+
+-- 8. Rimuovi vecchio vincolo unique (se esiste)
+ALTER TABLE users 
+DROP CONSTRAINT IF EXISTS users_room_number_room_start_date_key;
+
+ALTER TABLE users 
+DROP CONSTRAINT IF EXISTS users_room_number_stay_start_date_key;
+
+-- 9. Aggiungi nuovo vincolo UNIQUE
+ALTER TABLE users 
+ADD CONSTRAINT users_room_number_stay_start_date_key 
+UNIQUE (room_number, stay_start_date);
+
+-- 10. Crea indice per performance
+CREATE INDEX IF NOT EXISTS idx_users_active_room 
+ON users(room_number, active) 
+WHERE active = true;
+
+-- VERIFICA FINALE
+SELECT column_name, data_type, is_nullable 
+FROM information_schema.columns 
+WHERE table_name = 'users' 
+ORDER BY ordinal_position;
+            `;
+
+            // Create modal for SQL instructions
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.9);
+                backdrop-filter: blur(10px);
+                z-index: 10000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+            `;
+
+            modal.innerHTML = `
+                <div style="
+                    background: rgba(255,255,255,0.95);
+                    border-radius: 20px;
+                    padding: 30px;
+                    max-width: 800px;
+                    width: 100%;
+                    max-height: 90vh;
+                    overflow-y: auto;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+                ">
+                    <h2 style="margin: 0 0 20px 0; color: #FF0080; font-size: 24px;">
+                        🔧 Istruzioni Migrazione Database
+                    </h2>
+                    <p style="margin: 0 0 15px 0; color: #333; line-height: 1.6;">
+                        <strong>Esegui questo SQL nel tuo Supabase SQL Editor:</strong><br>
+                        Dashboard → SQL Editor → New Query
+                    </p>
+                    <textarea readonly style="
+                        width: 100%;
+                        height: 400px;
+                        font-family: 'Courier New', monospace;
+                        font-size: 13px;
+                        padding: 15px;
+                        border: 2px solid #ddd;
+                        border-radius: 10px;
+                        background: #f5f5f5;
+                        color: #333;
+                        resize: vertical;
+                    ">${instructions}</textarea>
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button onclick="copyMigrationSQL()" style="
+                            flex: 1;
+                            background: #00D4FF;
+                            color: white;
+                            border: none;
+                            border-radius: 12px;
+                            padding: 14px;
+                            font-weight: 700;
+                            cursor: pointer;
+                            font-size: 15px;
+                        " id="copySqlBtn">
+                            📋 Copia SQL
+                        </button>
+                        <button onclick="closeMigrationModal()" style="
+                            flex: 1;
+                            background: #666;
+                            color: white;
+                            border: none;
+                            border-radius: 12px;
+                            padding: 14px;
+                            font-weight: 700;
+                            cursor: pointer;
+                            font-size: 15px;
+                        ">
+                            Chiudi
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+            modal.id = 'migrationModal';
+
+            window.copyMigrationSQL = function () {
+                navigator.clipboard.writeText(instructions.trim()).then(() => {
+                    const btn = document.getElementById('copySqlBtn');
+                    btn.textContent = '✅ Copiato!';
+                    btn.style.background = '#34C759';
+                    setTimeout(() => {
+                        btn.textContent = '📋 Copia SQL';
+                        btn.style.background = '#00D4FF';
+                    }, 2000);
+                });
+            };
+
+            window.closeMigrationModal = function () {
+                const modal = document.getElementById('migrationModal');
+                if (modal) modal.remove();
+            };
+        }
+
+        // Validate auto-login on page load
+        async function validateAutoLogin() {
+            if (localStorage.getItem('guestos_logged_in') !== 'true') return;
+
+            const userId = localStorage.getItem('guestos_user_id');
+            const stayEndDate = localStorage.getItem('guestos_stay_end_date');
+
+            if (!userId || !stayEndDate) {
+                clearLoginData();
+                return;
+            }
+
+            // Check if stay has ended
+            const today = new Date().toISOString().split('T')[0];
+            if (stayEndDate < today) {
+                clearLoginData();
+                alert('⏰ Il tuo soggiorno è terminato. Per favore registrati nuovamente.');
+                return;
+            }
+
+            // Verify user is still active in database
+            try {
+                const { data: user, error } = await supabaseClient
+                    .from('users')
+                    .select('active, stay_end_date')
+                    .eq('id', userId)
+                    .maybeSingle();
+
+                if (error || !user || !user.active || user.stay_end_date < today) {
+                    clearLoginData();
+                    if (user && user.stay_end_date < today) {
+                        alert('⏰ Il tuo soggiorno è terminato. Per favore registrati nuovamente.');
+                    }
+                    return;
+                }
+
+                // All checks passed - redirect to dashboard (or theme selection if preferred)
+                window.location.href = 'theme-selection.html';
+            } catch (err) {
+                console.error('Auto-login validation error:', err);
+                clearLoginData();
+            }
+        }
+
+        function clearLoginData() {
+            localStorage.removeItem('guestos_user_email');
+            localStorage.removeItem('guestos_user_name');
+            localStorage.removeItem('guestos_room_number');
+            localStorage.removeItem('guestos_user_id');
+            localStorage.removeItem('guestos_user_pin');
+            localStorage.removeItem('guestos_stay_start_date');
+            localStorage.removeItem('guestos_stay_end_date');
+            localStorage.removeItem('guestos_logged_in');
+        }
+
+        // Run validation when Supabase is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof supabaseClient !== 'undefined') {
+                validateAutoLogin();
+            }
+        });
     </script>
-    
+
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: 'Poppins', sans-serif;
             background: linear-gradient(135deg, #FF0080 0%, #FF3399 25%, #00D4FF 75%, #00E5FF 100%);
@@ -32,8 +291,7 @@
             justify-content: center;
             padding: 20px;
         }
-        
-        /* Animated Bubbles */
+
         .bubbles-bg {
             position: fixed;
             top: 0;
@@ -43,362 +301,929 @@
             z-index: 0;
             pointer-events: none;
         }
-        
+
         .bubble {
             position: absolute;
             bottom: -100px;
-            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.6), rgba(0,212,255,0.3));
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.6), rgba(0, 212, 255, 0.3));
             border-radius: 50%;
             animation: rise 14s infinite ease-in;
             opacity: 0.4;
         }
-        
-        .bubble:nth-child(1) { width: 80px; height: 80px; left: 10%; animation-delay: 0s; }
-        .bubble:nth-child(2) { width: 60px; height: 60px; left: 40%; animation-delay: 4s; }
-        .bubble:nth-child(3) { width: 90px; height: 90px; left: 70%; animation-delay: 8s; }
-        
-        @keyframes rise {
-            0% { bottom: -100px; opacity: 0; transform: translateX(0); }
-            10% { opacity: 0.4; }
-            90% { opacity: 0.4; }
-            100% { bottom: 110vh; opacity: 0; transform: translateX(30px); }
+
+        .bubble:nth-child(1) {
+            width: 80px;
+            height: 80px;
+            left: 10%;
+            animation-delay: 0s;
         }
-        
+
+        .bubble:nth-child(2) {
+            width: 60px;
+            height: 60px;
+            left: 40%;
+            animation-delay: 4s;
+        }
+
+        .bubble:nth-child(3) {
+            width: 90px;
+            height: 90px;
+            left: 70%;
+            animation-delay: 8s;
+        }
+
+        @keyframes rise {
+            0% {
+                bottom: -100px;
+                opacity: 0;
+                transform: translateX(0);
+            }
+
+            10% {
+                opacity: 0.4;
+            }
+
+            90% {
+                opacity: 0.4;
+            }
+
+            100% {
+                bottom: 110vh;
+                opacity: 0;
+                transform: translateX(30px);
+            }
+        }
+
         .login-container {
             position: relative;
             z-index: 10;
             max-width: 440px;
             width: 100%;
         }
-        
+
         .login-card {
-            background: rgba(255,255,255,0.2);
+            background: rgba(255, 255, 255, 0.2);
             backdrop-filter: blur(40px) saturate(180%);
             border-radius: 32px;
             padding: 40px 32px;
-            box-shadow: 
-                0 20px 60px rgba(0,0,0,0.2),
-                0 0 0 1px rgba(255,255,255,0.2),
-                inset 0 1px 0 rgba(255,255,255,0.3);
-            border: 2px solid rgba(255,255,255,0.25);
+            box-shadow:
+                0 20px 60px rgba(0, 0, 0, 0.2),
+                0 0 0 1px rgba(255, 255, 255, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.25);
         }
-        
+
         .logo {
             text-align: center;
             margin-bottom: 32px;
         }
-        
+
         .logo-icon {
             width: 80px;
             height: 80px;
             margin: 0 auto 16px;
-            background: rgba(255,255,255,0.2);
+            background: rgba(255, 255, 255, 0.2);
             backdrop-filter: blur(20px);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 40px;
-            box-shadow: 
-                0 10px 30px rgba(0,0,0,0.15),
-                0 0 0 1px rgba(255,255,255,0.2);
-            border: 2px solid rgba(255,255,255,0.3);
+            box-shadow:
+                0 10px 30px rgba(0, 0, 0, 0.15),
+                0 0 0 1px rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
         }
-        
+
         .welcome-title {
             color: white;
             font-size: 28px;
             font-weight: 900;
-            text-shadow: 3px 3px 10px rgba(0,0,0,0.3);
+            text-shadow: 3px 3px 10px rgba(0, 0, 0, 0.3);
             margin-bottom: 8px;
         }
-        
+
         .welcome-subtitle {
-            color: rgba(255,255,255,0.9);
+            color: rgba(255, 255, 255, 0.9);
             font-size: 14px;
             font-weight: 700;
-            text-shadow: 2px 2px 6px rgba(0,0,0,0.3);
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.3);
         }
-        
+
         .form-group {
             margin-bottom: 20px;
         }
-        
+
         .form-label {
             display: block;
             color: white;
             font-size: 14px;
             font-weight: 700;
             margin-bottom: 8px;
-            text-shadow: 1px 1px 4px rgba(0,0,0,0.2);
+            text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.2);
         }
-        
+
         .form-input {
             width: 100%;
-            background: rgba(255,255,255,0.2);
+            background: rgba(255, 255, 255, 0.2);
             backdrop-filter: blur(20px);
-            border: 2px solid rgba(255,255,255,0.3);
+            border: 2px solid rgba(255, 255, 255, 0.3);
             border-radius: 16px;
             padding: 16px 18px;
             font-family: 'Poppins', sans-serif;
             font-size: 15px;
             font-weight: 600;
             color: white;
-            box-shadow: 
-                0 4px 16px rgba(0,0,0,0.1),
-                inset 0 1px 0 rgba(255,255,255,0.2);
+            box-shadow:
+                0 4px 16px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
             transition: all 0.3s ease;
         }
-        
+
         .form-input::placeholder {
-            color: rgba(255,255,255,0.6);
+            color: rgba(255, 255, 255, 0.6);
             font-weight: 600;
         }
-        
+
         .form-input:focus {
             outline: none;
-            border-color: rgba(255,255,255,0.5);
-            background: rgba(255,255,255,0.25);
-            box-shadow: 
-                0 6px 24px rgba(0,0,0,0.15),
-                inset 0 1px 0 rgba(255,255,255,0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            background: rgba(255, 255, 255, 0.25);
+            box-shadow:
+                0 6px 24px rgba(0, 0, 0, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
         }
-        
+
+        .pin-input {
+            font-size: 24px;
+            text-align: center;
+            letter-spacing: 8px;
+            font-weight: 800;
+        }
+
+        .pin-group {
+            display: none;
+        }
+
+        .pin-group.show {
+            display: block;
+        }
+
         .login-btn {
             width: 100%;
-            background: rgba(255,255,255,0.25);
+            background: rgba(255, 255, 255, 0.25);
             backdrop-filter: blur(20px);
-            border: 2px solid rgba(255,255,255,0.4);
+            border: 2px solid rgba(255, 255, 255, 0.4);
             border-radius: 18px;
             padding: 18px;
             color: white;
             font-size: 17px;
             font-weight: 900;
             cursor: pointer;
-            box-shadow: 
-                0 8px 30px rgba(0,0,0,0.15),
-                inset 0 1px 0 rgba(255,255,255,0.3);
+            box-shadow:
+                0 8px 30px rgba(0, 0, 0, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
             transition: all 0.3s ease;
-            text-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.2);
             margin-top: 8px;
         }
-        
+
         .login-btn:hover {
-            background: rgba(255,255,255,0.3);
-            border-color: rgba(255,255,255,0.5);
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
         }
-        
+
         .login-btn:active {
             transform: scale(0.98) translateY(2px);
-            box-shadow: 
-                0 4px 20px rgba(0,0,0,0.2),
-                inset 0 1px 0 rgba(255,255,255,0.2);
+            box-shadow:
+                0 4px 20px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
-        
+
         .login-btn:disabled {
             opacity: 0.6;
             cursor: not-allowed;
         }
-        
-        .error-message {
-            background: rgba(255,59,48,0.9);
-            backdrop-filter: blur(10px);
-            color: white;
+
+        .message {
             padding: 14px 18px;
             border-radius: 14px;
             font-size: 13px;
             font-weight: 700;
             margin-top: 16px;
             display: none;
-            box-shadow: 0 6px 20px rgba(255,59,48,0.3);
-            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
-        
-        .error-message.show {
+
+        .error-message {
+            background: rgba(255, 59, 48, 0.9);
+            backdrop-filter: blur(10px);
+            color: white;
+        }
+
+        .success-message {
+            background: rgba(52, 199, 89, 0.9);
+            backdrop-filter: blur(10px);
+            color: white;
+        }
+
+        .message.show {
             display: block;
             animation: shake 0.5s ease;
         }
-        
+
         @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-10px); }
-            75% { transform: translateX(10px); }
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-10px);
+            }
+
+            75% {
+                transform: translateX(10px);
+            }
         }
-        
+
         .help-text {
             text-align: center;
-            color: rgba(255,255,255,0.8);
+            color: rgba(255, 255, 255, 0.8);
             font-size: 12px;
             font-weight: 600;
             margin-top: 20px;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
         }
-        
-        .demo-credentials {
-            background: rgba(255,255,255,0.15);
+
+        .toggle-link {
+            color: white;
+            text-decoration: underline;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        .security-notice {
+            background: rgba(52, 199, 89, 0.2);
             backdrop-filter: blur(20px);
-            border: 2px solid rgba(255,255,255,0.25);
+            border: 2px solid rgba(52, 199, 89, 0.4);
             border-radius: 16px;
             padding: 16px;
             margin-top: 20px;
         }
-        
-        .demo-title {
+
+        .security-title {
             color: white;
             font-size: 13px;
             font-weight: 800;
-            margin-bottom: 10px;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+            margin-bottom: 8px;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
         }
-        
-        .demo-item {
-            color: rgba(255,255,255,0.9);
+
+        .security-text {
+            color: rgba(255, 255, 255, 0.9);
             font-size: 12px;
             font-weight: 600;
+            line-height: 1.5;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Stay Duration Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(40px) saturate(180%);
+            border-radius: 28px;
+            padding: 32px 28px;
+            max-width: 420px;
+            width: 100%;
+            box-shadow:
+                0 20px 60px rgba(0, 0, 0, 0.3),
+                0 0 0 1px rgba(255, 255, 255, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .modal-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .modal-title {
+            color: white;
+            font-size: 24px;
+            font-weight: 900;
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);
+            margin-bottom: 6px;
+        }
+
+        .modal-subtitle {
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 13px;
+            font-weight: 600;
+            text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .duration-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .duration-btn {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 16px;
+            padding: 20px 16px;
+            color: white;
+            font-size: 15px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .duration-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .duration-btn.selected {
+            background: rgba(255, 255, 255, 0.4);
+            border-color: rgba(255, 255, 255, 0.6);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+        }
+
+        .duration-days {
+            display: block;
+            font-size: 28px;
+            font-weight: 900;
             margin-bottom: 4px;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .duration-label {
+            font-size: 12px;
+            font-weight: 600;
+            opacity: 0.9;
+        }
+
+        .custom-duration {
+            margin-top: 12px;
+        }
+
+        .custom-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .custom-duration-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 14px;
+            padding: 14px 16px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            color: white;
+            text-align: center;
+        }
+
+        .custom-duration-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-radius: 16px;
+            padding: 16px;
+            color: white;
+            font-size: 15px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .modal-btn.primary {
+            background: rgba(52, 199, 89, 0.4);
+            border-color: rgba(52, 199, 89, 0.6);
+        }
+
+        .modal-btn.primary:hover {
+            background: rgba(52, 199, 89, 0.5);
+        }
+
+        .modal-warning {
+            background: rgba(255, 149, 0, 0.25);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255, 149, 0, 0.4);
+            border-radius: 14px;
+            padding: 12px;
+            margin-top: 16px;
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            text-align: center;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
         }
     </style>
 </head>
+
 <body>
-    <!-- Animated Bubbles -->
     <div class="bubbles-bg">
         <div class="bubble"></div>
         <div class="bubble"></div>
         <div class="bubble"></div>
     </div>
-    
+
     <div class="login-container">
         <div class="login-card">
             <div class="logo">
-                <div class="logo-icon">💧</div>
-                <div class="welcome-title">Benvenuto!</div>
-                <div class="welcome-subtitle">Accedi con i dati della tua camera</div>
+                <div class="logo-icon">🔐</div>
+                <div class="welcome-title" id="formTitle">Prima volta?</div>
+                <div class="welcome-subtitle" id="formSubtitle">Registrati inserendo i tuoi dati</div>
             </div>
-            
+
             <form id="loginForm">
                 <div class="form-group">
                     <label class="form-label">Numero Camera</label>
-                    <input 
-                        type="text" 
-                        id="roomNumber" 
-                        class="form-input" 
-                        placeholder="Es: 101" 
-                        required
-                        autocomplete="off"
-                    >
+                    <input type="text" id="roomNumber" class="form-input" placeholder="Es: 101" required
+                        autocomplete="off">
                 </div>
-                
+
                 <div class="form-group">
                     <label class="form-label">Cognome</label>
-                    <input 
-                        type="text" 
-                        id="lastName" 
-                        class="form-input" 
-                        placeholder="Il tuo cognome" 
-                        required
-                        autocomplete="off"
-                    >
+                    <input type="text" id="lastName" class="form-input" placeholder="Il tuo cognome" required
+                        autocomplete="off">
                 </div>
-                
+
                 <div class="form-group">
-                    <label class="form-label">Password</label>
-                    <input 
-                        type="password" 
-                        id="password" 
-                        class="form-input" 
-                        placeholder="Password ricevuta al check-in" 
-                        required
-                        autocomplete="off"
-                    >
+                    <label class="form-label">Email</label>
+                    <input type="email" id="email" class="form-input" placeholder="La tua email" required
+                        autocomplete="email">
                 </div>
-                
+
+                <div class="form-group pin-group" id="pinGroup">
+                    <label class="form-label">🔒 PIN Personale</label>
+                    <input type="text" id="pin" class="form-input pin-input" placeholder="••••••" maxlength="6"
+                        autocomplete="off">
+                </div>
+
                 <button type="submit" class="login-btn" id="loginBtn">
-                    🔓 Accedi
+                    ✨ Registrati
                 </button>
-                
-                <div class="error-message" id="errorMessage"></div>
+
+                <div class="error-message message" id="errorMessage"></div>
+                <div class="success-message message" id="successMessage"></div>
             </form>
-            
+
             <div class="help-text">
-                Non hai ricevuto la password?<br>
-                Chiedi alla reception 📞
+                <span id="toggleText">
+                    Hai già un account? <span class="toggle-link" onclick="toggleMode()">Accedi con PIN</span>
+                </span>
             </div>
-            
-            <!-- Demo Credentials (visibili solo con ?demo=1) -->
-            <div class="demo-credentials" id="demoCredentials" style="display:none;">
-                <div class="demo-title">🧪 Credenziali Test:</div>
-                <div class="demo-item">Camera: 101 | Cognome: Rossi | Password: demo123</div>
-                <div class="demo-item">Camera: 205 | Cognome: Bianchi | Password: test123</div>
+
+            <div class="security-notice">
+                <div class="security-title">🛡️ Login automatico attivo</div>
+                <div class="security-text">
+                    Dopo il primo accesso, verrai riconosciuto automaticamente su questo dispositivo. Il PIN serve solo
+                    per la sicurezza del tuo account.
+                </div>
             </div>
-            <script>
-                if (new URLSearchParams(location.search).has('demo')) {
-                    document.getElementById('demoCredentials').style.display = 'block';
-                }
-            </script>
         </div>
     </div>
-    
+
+    <!-- Stay Duration Modal -->
+    <div class="modal-overlay" id="durationModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon">📅</div>
+                <div class="modal-title">Durata Soggiorno</div>
+                <div class="modal-subtitle">Quante notti resterai con noi?</div>
+            </div>
+
+            <div class="duration-options">
+                <button type="button" class="duration-btn" onclick="selectDuration(1)">
+                    <span class="duration-days">1</span>
+                    <span class="duration-label">notte</span>
+                </button>
+                <button type="button" class="duration-btn" onclick="selectDuration(3)">
+                    <span class="duration-days">3</span>
+                    <span class="duration-label">notti</span>
+                </button>
+                <button type="button" class="duration-btn" onclick="selectDuration(7)">
+                    <span class="duration-days">7</span>
+                    <span class="duration-label">notti</span>
+                </button>
+                <button type="button" class="duration-btn" onclick="selectDuration(14)">
+                    <span class="duration-days">14</span>
+                    <span class="duration-label">notti</span>
+                </button>
+            </div>
+
+            <div class="custom-duration">
+                <div class="custom-input-wrapper">
+                    <input type="number" id="customDays" class="custom-duration-input" placeholder="Altro n° notti"
+                        min="1" max="365">
+                </div>
+            </div>
+
+            <div class="modal-warning">
+                ⚠️ La durata del soggiorno non potrà essere modificata successivamente
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="modal-btn" onclick="closeDurationModal()">
+                    Annulla
+                </button>
+                <button type="button" class="modal-btn primary" onclick="confirmDuration()" id="confirmBtn">
+                    Conferma
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // Handle form submission
-        document.getElementById('loginForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const roomNumber = document.getElementById('roomNumber').value.trim();
-            const lastName = document.getElementById('lastName').value.trim();
-            const password = document.getElementById('password').value;
-            
+        // Get today's date in YYYY-MM-DD format
+        function getTodayDate() {
+            const today = new Date();
+            return today.toISOString().split('T')[0];
+        }
+
+        // Generate a random 6-digit PIN
+        function generatePIN() {
+            return Math.floor(100000 + Math.random() * 900000).toString();
+        }
+
+        // Mode toggle (registration vs login)
+        let isLoginMode = false;
+
+        window.toggleMode = function () {
+            isLoginMode = !isLoginMode;
+            const pinGroup = document.getElementById('pinGroup');
+            const pinInput = document.getElementById('pin');
+            const formTitle = document.getElementById('formTitle');
+            const formSubtitle = document.getElementById('formSubtitle');
+            const loginBtn = document.getElementById('loginBtn');
+            const toggleText = document.getElementById('toggleText');
+
+            if (isLoginMode) {
+                pinGroup.classList.add('show');
+                pinInput.required = true;
+                formTitle.textContent = 'Bentornato!';
+                formSubtitle.textContent = 'Accedi con i tuoi dati e PIN';
+                loginBtn.innerHTML = '🔓 Accedi';
+                toggleText.innerHTML = 'Prima volta? <span class="toggle-link" onclick="toggleMode()">Registrati qui</span>';
+            } else {
+                pinGroup.classList.remove('show');
+                pinInput.required = false;
+                pinInput.value = '';
+                formTitle.textContent = 'Prima volta?';
+                formSubtitle.textContent = 'Registrati inserendo i tuoi dati';
+                loginBtn.innerHTML = '✨ Registrati';
+                toggleText.innerHTML = 'Hai già un account? <span class="toggle-link" onclick="toggleMode()">Accedi con PIN</span>';
+            }
+        };
+
+        // Rate limiting
+        let loginAttempts = 0;
+        const MAX_ATTEMPTS = 3;
+        const LOCKOUT_TIME = 600000;
+        let lockoutUntil = null;
+
+        // Stay duration modal
+        let selectedDays = null;
+        let pendingRegistrationData = null;
+
+        window.selectDuration = function (days) {
+            selectedDays = days;
+            document.getElementById('customDays').value = '';
+
+            const buttons = document.querySelectorAll('.duration-btn');
+            buttons.forEach(btn => btn.classList.remove('selected'));
+            event.target.closest('.duration-btn').classList.add('selected');
+        };
+
+        window.closeDurationModal = function () {
+            document.getElementById('durationModal').classList.remove('show');
+            selectedDays = null;
+            pendingRegistrationData = null;
+            document.getElementById('loginBtn').disabled = false;
+            document.getElementById('loginBtn').textContent = '✨ Registrati';
+        };
+
+        window.confirmDuration = async function () {
+            const customDays = document.getElementById('customDays').value;
+            const days = customDays ? parseInt(customDays) : selectedDays;
+
+            if (!days || days < 1 || days > 365) {
+                alert('⚠️ Seleziona una durata valida (1-365 notti)');
+                return;
+            }
+
+            document.getElementById('durationModal').classList.remove('show');
+            await completeRegistration(days);
+        };
+
+        async function completeRegistration(stayDays) {
+            const { roomNumber, lastName, email } = pendingRegistrationData;
+
             const loginBtn = document.getElementById('loginBtn');
             const errorMsg = document.getElementById('errorMessage');
-            
-            // Reset error
-            errorMsg.classList.remove('show');
-            loginBtn.disabled = true;
-            loginBtn.textContent = '⏳ Accesso in corso...';
-            
+            const successMsg = document.getElementById('successMessage');
+
+            loginBtn.textContent = '⏳ Creazione account...';
+
             try {
-                // Query Supabase users table
-                const { data, error } = await supabaseClient
+                const today = getTodayDate();
+
+                const startDate = new Date(today);
+                const endDate = new Date(startDate);
+                endDate.setDate(endDate.getDate() + stayDays);
+                const stayEndDate = endDate.toISOString().split('T')[0];
+
+                const newPIN = generatePIN();
+
+                const { data: newUser, error: insertError } = await supabaseClient
+                    .from('users')
+                    .insert({
+                        room_number: roomNumber,
+                        last_name: lastName,
+                        email: email,
+                        pin: newPIN,
+                        stay_start_date: today,
+                        stay_end_date: stayEndDate,
+                        active: true,
+                        last_login: new Date().toISOString()
+                    })
+                    .select()
+                    .single();
+
+                if (insertError) {
+                    if (insertError.code === '23505') {
+                        throw new Error('Camera già occupata per questo periodo');
+                    }
+                    throw new Error('Errore durante la registrazione');
+                }
+
+                localStorage.setItem('guestos_user_email', email);
+                localStorage.setItem('guestos_user_name', newUser.last_name);
+                localStorage.setItem('guestos_room_number', newUser.room_number);
+                localStorage.setItem('guestos_user_id', newUser.id);
+                localStorage.setItem('guestos_user_pin', newUser.pin);
+                localStorage.setItem('guestos_stay_start_date', newUser.stay_start_date);
+                localStorage.setItem('guestos_stay_end_date', newUser.stay_end_date);
+                localStorage.setItem('guestos_logged_in', 'true');
+
+                successMsg.innerHTML = `
+                    ✅ Registrazione completata!<br>
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 12px; flex-wrap: wrap;">
+                        <strong style="font-size: 32px; letter-spacing: 4px; color: white;">${newPIN}</strong>
+                        <button type="button" onclick="copyPIN('${newPIN}')" style="
+                            background: rgba(255,255,255,0.3);
+                            border: 2px solid rgba(255,255,255,0.5);
+                            border-radius: 12px;
+                            padding: 8px 16px;
+                            color: white;
+                            font-weight: 700;
+                            cursor: pointer;
+                            font-size: 14px;
+                        " id="copyBtn">📋 Copia PIN</button>
+                    </div>
+                    <small style="display: block; margin-top: 8px;">Il tuo PIN per accessi futuri da altri dispositivi!</small>
+                    <small style="display: block; margin-top: 4px; opacity: 0.9;">Soggiorno: ${stayDays} ${stayDays === 1 ? 'notte' : 'notti'} (fino al ${formatDate(stayEndDate)})</small>
+                `;
+                successMsg.classList.add('show');
+
+                loginBtn.textContent = '✅ Accesso riuscito!';
+
+                console.log('PIN generato per', lastName, ':', newPIN);
+                console.log('Soggiorno dal', today, 'al', stayEndDate);
+
+                setTimeout(() => {
+                    window.location.href = 'theme-selection.html';
+                }, 4000);
+
+            } catch (error) {
+                console.error('Registration error:', error);
+                errorMsg.textContent = `❌ ${error.message}`;
+                errorMsg.classList.add('show');
+                loginBtn.disabled = false;
+                loginBtn.textContent = '✨ Registrati';
+                pendingRegistrationData = null;
+            }
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            if (lockoutUntil && Date.now() < lockoutUntil) {
+                const errorMsg = document.getElementById('errorMessage');
+                const remainingMinutes = Math.ceil((lockoutUntil - Date.now()) / 60000);
+                errorMsg.textContent = `🔒 Troppi tentativi. Riprova tra ${remainingMinutes} minuti o contatta la reception.`;
+                errorMsg.classList.add('show');
+                return;
+            }
+
+            const roomNumber = document.getElementById('roomNumber').value.trim();
+            const lastName = document.getElementById('lastName').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const pin = document.getElementById('pin').value.trim();
+
+            const loginBtn = document.getElementById('loginBtn');
+            const errorMsg = document.getElementById('errorMessage');
+            const successMsg = document.getElementById('successMessage');
+
+            errorMsg.classList.remove('show');
+            successMsg.classList.remove('show');
+            loginBtn.disabled = true;
+            loginBtn.textContent = '⏳ Verifica in corso...';
+
+            try {
+                const today = getTodayDate();
+
+                const { data: existingStay, error: checkError } = await supabaseClient
                     .from('users')
                     .select('*')
                     .eq('room_number', roomNumber)
-                    .eq('last_name', lastName)
-                    .eq('password', password)
                     .eq('active', true)
-                    .single();
-                
-                if (error || !data) {
-                    throw new Error('Credenziali non valide');
+                    .maybeSingle();
+
+                if (checkError && checkError.code !== 'PGRST116') {
+                    throw new Error('Errore durante la verifica account');
                 }
-                
-                // Update last_login
-                await supabaseClient
-                    .from('users')
-                    .update({ last_login: new Date().toISOString() })
-                    .eq('email', data.email);
-                
-                // Save to localStorage
-                localStorage.setItem('guestos_user_email', data.email);
-                localStorage.setItem('guestos_user_name', data.last_name);
-                localStorage.setItem('guestos_room_number', data.room_number);
-                localStorage.setItem('guestos_logged_in', 'true');
-                
-                // Success!
-                loginBtn.textContent = '✅ Accesso riuscito!';
-                
-                // Redirect to homepage
-                setTimeout(() => {
-                    window.location.href = 'index.html';
-                }, 800);
-                
+
+                if (existingStay) {
+                    if (existingStay.stay_end_date < today) {
+                        await supabaseClient
+                            .from('users')
+                            .update({ active: false })
+                            .eq('id', existingStay.id);
+
+                        throw new Error('Il soggiorno precedente è terminato. Registrati nuovamente per un nuovo soggiorno.');
+                    }
+
+                    if (!isLoginMode || !pin) {
+                        throw new Error('Camera già occupata! Usa "Accedi con PIN" per accedere al tuo account.');
+                    }
+
+                    if (existingStay.last_name.toLowerCase() !== lastName.toLowerCase()) {
+                        loginAttempts++;
+                        throw new Error('Credenziali non corrette');
+                    }
+
+                    if (existingStay.pin !== pin) {
+                        loginAttempts++;
+                        throw new Error('PIN non corretto');
+                    }
+
+                    loginAttempts = 0;
+                    lockoutUntil = null;
+
+                    const { data: updatedUser, error: updateError } = await supabaseClient
+                        .from('users')
+                        .update({
+                            last_login: new Date().toISOString(),
+                            email: email
+                        })
+                        .eq('id', existingStay.id)
+                        .select()
+                        .single();
+
+                    if (updateError) {
+                        throw new Error("Errore durante l'aggiornamento profilo");
+                    }
+
+                    localStorage.setItem('guestos_user_email', email);
+                    localStorage.setItem('guestos_user_name', updatedUser.last_name);
+                    localStorage.setItem('guestos_room_number', updatedUser.room_number);
+                    localStorage.setItem('guestos_user_id', updatedUser.id);
+                    localStorage.setItem('guestos_user_pin', updatedUser.pin);
+                    localStorage.setItem('guestos_stay_start_date', updatedUser.stay_start_date);
+                    localStorage.setItem('guestos_stay_end_date', updatedUser.stay_end_date);
+                    localStorage.setItem('guestos_logged_in', 'true');
+
+                    const remainingDays = Math.ceil((new Date(updatedUser.stay_end_date) - new Date(today)) / (1000 * 60 * 60 * 24));
+
+                    successMsg.textContent = `✅ Bentornato! Ti rimangono ${remainingDays} ${remainingDays === 1 ? 'notte' : 'notti'}.`;
+                    successMsg.classList.add('show');
+                    loginBtn.textContent = '✅ Accesso riuscito!';
+
+                    setTimeout(() => {
+                        window.location.href = 'theme-selection.html';
+                    }, 1200);
+
+                } else {
+                    if (isLoginMode && pin) {
+                        throw new Error('Nessun account trovato! Usa "Registrati qui" per creare un nuovo soggiorno.');
+                    }
+
+                    pendingRegistrationData = { roomNumber, lastName, email };
+                    document.getElementById('durationModal').classList.add('show');
+                }
+
             } catch (error) {
-                console.error('Login error:', error);
-                errorMsg.textContent = '❌ Credenziali non valide. Verifica i dati e riprova.';
+                console.error('Login/Registration error:', error);
+
+                if (isLoginMode && loginAttempts > 0) {
+                    if (loginAttempts >= MAX_ATTEMPTS) {
+                        lockoutUntil = Date.now() + LOCKOUT_TIME;
+                        errorMsg.textContent = `🔒 Troppi tentativi falliti. Account bloccato per 10 minuti.`;
+                    } else {
+                        errorMsg.textContent = `❌ ${error.message} (Tentativo ${loginAttempts}/${MAX_ATTEMPTS})`;
+                    }
+                } else {
+                    errorMsg.textContent = `❌ ${error.message}`;
+                }
+
                 errorMsg.classList.add('show');
                 loginBtn.disabled = false;
-                loginBtn.textContent = '🔓 Accedi';
+                loginBtn.textContent = isLoginMode ? '🔓 Accedi' : '✨ Registrati';
             }
         });
+
+        document.getElementById('pin').addEventListener('input', function (e) {
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+
+        document.getElementById('customDays').addEventListener('input', function (e) {
+            this.value = this.value.replace(/[^0-9]/g, '');
+            if (this.value) {
+                selectedDays = null;
+                const buttons = document.querySelectorAll('.duration-btn');
+                buttons.forEach(btn => btn.classList.remove('selected'));
+            }
+        });
+
+        window.copyPIN = function (pin) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            navigator.clipboard.writeText(pin).then(() => {
+                const btn = document.getElementById('copyBtn');
+                if (btn) {
+                    btn.textContent = '✅ Copiato!';
+                    btn.style.background = 'rgba(52,199,89,0.5)';
+                    setTimeout(() => {
+                        btn.textContent = '📋 Copia PIN';
+                        btn.style.background = 'rgba(255,255,255,0.3)';
+                    }, 2000);
+                }
+            }).catch(err => {
+                console.error('Errore copia:', err);
+                alert('PIN: ' + pin + '\n\nCopialo manualmente!');
+            });
+
+            return false;
+        };
     </script>
-</body>
-</html>

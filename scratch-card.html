@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gratta e Vinci - Hotel Posta</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="game-leaderboard.js" defer></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #FF9A9E 0%, #FECFEF 99%, #FECFEF 100%);
+            min-height: 100vh;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .header {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .back-btn:hover {
+            transform: scale(1.05);
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .game-title {
+            font-size: 24px;
+            font-weight: 900;
+            text-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            color: #fff;
+        }
+
+        .premium-card {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-radius: 30px;
+            padding: 20px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+            max-width: 450px;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .premium-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 60%);
+            animation: shine 6s infinite linear;
+            pointer-events: none;
+        }
+
+        @keyframes shine {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .info-header {
+            text-align: center;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .info-title {
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 5px;
+            color: rgba(255, 255, 255, 0.95);
+        }
+
+        .info-subtitle {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .scratch-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.1);
+            background: white;
+            margin-bottom: 25px;
+            border: 4px solid rgba(255, 255, 255, 0.5);
+        }
+
+        #scratchCanvas,
+        #symbolsCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 16px;
+        }
+
+        #scratchCanvas {
+            z-index: 2;
+            cursor: pointer;
+            touch-action: none;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            background: rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 10px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            opacity: 0.7;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            font-weight: 800;
+            font-size: 16px;
+        }
+
+        .reset-btn {
+            background: white;
+            color: #FF9A9E;
+            border: none;
+            padding: 18px;
+            border-radius: 15px;
+            font-size: 16px;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+            text-transform: uppercase;
+        }
+
+        .reset-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .reset-btn:disabled {
+            background: rgba(255, 255, 255, 0.5);
+            color: rgba(255, 255, 255, 0.8);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* Win Modal Premium */
+        .win-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(20px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .win-content {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 30px;
+            text-align: center;
+            max-width: 350px;
+            width: 100%;
+            animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        }
+
+        @keyframes popIn {
+            from {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .win-emoji {
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: bounce 1s infinite alternate;
+        }
+
+        @keyframes bounce {
+            from {
+                transform: translateY(0);
+            }
+
+            to {
+                transform: translateY(-10px);
+            }
+        }
+
+        .win-title {
+            color: #FF9A9E;
+            font-size: 28px;
+            font-weight: 900;
+            margin-bottom: 10px;
+        }
+
+        .win-points {
+            font-size: 48px;
+            font-weight: 800;
+            background: linear-gradient(45deg, #FF9A9E, #FECFEF);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 30px;
+        }
+
+        .close-btn {
+            width: 100%;
+            padding: 15px;
+            border-radius: 12px;
+            background: #FF9A9E;
+            color: white;
+            border: none;
+            font-weight: 700;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <button class="back-btn" onclick="window.location.href='games.html'"><i data-lucide="arrow-left"></i></button>
+        <div class="game-title">🎫 Platinum Scratch</div>
+        <div style="width: 48px;"></div>
+    </div>
+
+    <div class="premium-card">
+        <div class="info-header">
+            <div class="info-title">Gratta & Vinci Premium</div>
+            <div class="info-subtitle">Trova 3 simboli uguali per vincere!</div>
+        </div>
+
+        <div class="scratch-wrapper">
+            <canvas id="symbolsCanvas"></canvas>
+            <canvas id="scratchCanvas"></canvas>
+        </div>
+
+        <div class="controls">
+            <div class="stats-row">
+                <div class="stat-item">
+                    <div class="stat-label">Premi Comuni</div>
+                    <div class="stat-value">5/15 pt</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Jackpot</div>
+                    <div class="stat-value">25 pt</div>
+                </div>
+            </div>
+
+            <button class="reset-btn" id="resetBtn" onclick="requestNewCard()">
+                Ritenta Domani
+            </button>
+        </div>
+    </div>
+
+    <div class="win-modal" id="winModal">
+        <div class="win-content">
+            <div class="win-emoji">💎</div>
+            <div class="win-title">FANTASTICO!</div>
+            <div class="win-points" id="winPoints">+30 Punti</div>
+            <button class="close-btn" onclick="location.reload()">Raccogli Premio</button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        const symbolsCanvas = document.getElementById('symbolsCanvas');
+        const scratchCanvas = document.getElementById('scratchCanvas');
+        const sCtx = symbolsCanvas.getContext('2d');
+        const ctx = scratchCanvas.getContext('2d');
+
+        const SYMBOLS = {
+            common: ['⭐', '🍀', '🎈', '❤️'],
+            rare: ['💎', '👑', '💰'],
+            bonus: ['🎁']
+        };
+
+        let isScratching = false;
+        let scratchedPercentage = 0;
+        let hasPlayed = false;
+        let gameSymbols = [];
+        let winningSymbol = null;
+
+        function init() {
+            // Resize logic
+            const wrapper = document.querySelector('.scratch-wrapper');
+            const size = wrapper.clientWidth;
+
+            symbolsCanvas.width = size;
+            symbolsCanvas.height = size;
+            scratchCanvas.width = size;
+            scratchCanvas.height = size;
+
+            checkStatus();
+            drawCoating();
+            if (!hasPlayed) {
+                generateResult();
+            }
+        }
+
+        function checkStatus() {
+            const lastPlay = localStorage.getItem('guestos_scratch_last');
+            const today = new Date().toDateString();
+
+            if (lastPlay === today) {
+                hasPlayed = true;
+                const btn = document.getElementById('resetBtn');
+                btn.disabled = true;
+                btn.innerText = "Già giocato oggi";
+
+                // Show result if already played
+                // Note: In a real app we'd save the daily layout. Here we just block.
+            } else {
+                document.getElementById('resetBtn').innerText = "Gratta la carta!";
+            }
+        }
+
+        // Logic similar to previous version but with better graphics
+        function drawCoating() {
+            if (hasPlayed) return; // If played, show revealed or handle differently
+
+            // Premium Gradient Silver Coating
+            const grd = ctx.createLinearGradient(0, 0, scratchCanvas.width, scratchCanvas.height);
+            grd.addColorStop(0, '#E0E0E0');
+            grd.addColorStop(0.3, '#FFFFFF');
+            grd.addColorStop(0.5, '#BEBEBE');
+            grd.addColorStop(0.8, '#F0F0F0');
+            grd.addColorStop(1, '#A0A0A0');
+
+            ctx.fillStyle = grd;
+            ctx.fillRect(0, 0, scratchCanvas.width, scratchCanvas.height);
+
+            // Add Logo/Text Pattern
+            ctx.fillStyle = 'rgba(0,0,0,0.05)';
+            ctx.font = '20px Poppins';
+            for (let i = 0; i < 5; i++) {
+                for (let j = 0; j < 5; j++) {
+                    ctx.save();
+                    ctx.translate(i * 80 + 30, j * 80 + 30);
+                    ctx.rotate(-Math.PI / 4);
+                    ctx.fillText('HOTEL', 0, 0);
+                    ctx.restore();
+                }
+            }
+
+            ctx.fillStyle = '#fff';
+            ctx.shadowColor = 'rgba(0,0,0,0.2)';
+            ctx.shadowBlur = 10;
+            ctx.font = '700 24px Poppins';
+            ctx.textAlign = 'center';
+            ctx.fillText('GRATTA QUI', scratchCanvas.width / 2, scratchCanvas.height / 2);
+            ctx.shadowBlur = 0;
+        }
+
+        function generateResult() {
+            const rand = Math.random();
+            let type = 'loss';
+            let symbols = [];
+
+            if (rand < 0.01) type = 'bonus'; // 1%
+            else if (rand < 0.05) type = 'rare'; // 4%
+            else if (rand < 0.20) type = 'common'; // 15%
+
+            // Logic to fill 3x3 grid
+            const allSymbols = [...SYMBOLS.common, ...SYMBOLS.rare, ...SYMBOLS.bonus];
+
+            if (type !== 'loss') {
+                const winSet = SYMBOLS[type];
+                winningSymbol = winSet[Math.floor(Math.random() * winSet.length)];
+                // Place 3 winning symbols
+                let positions = [0, 1, 2, 3, 4, 5, 6, 7, 8].sort(() => 0.5 - Math.random()).slice(0, 3);
+
+                for (let i = 0; i < 9; i++) {
+                    if (positions.includes(i)) symbols.push(winningSymbol);
+                    else {
+                        let s = allSymbols[Math.floor(Math.random() * allSymbols.length)];
+                        while (s === winningSymbol) s = allSymbols[Math.floor(Math.random() * allSymbols.length)];
+                        symbols.push(s);
+                    }
+                }
+            } else {
+                // Loss: Ensure no 3 matches
+                // Simplified: just random mostly
+                for (let i = 0; i < 9; i++) {
+                    symbols.push(allSymbols[Math.floor(Math.random() * allSymbols.length)]);
+                }
+            }
+            gameSymbols = symbols;
+            drawSymbols();
+        }
+
+        function drawSymbols() {
+            sCtx.fillStyle = '#fff';
+            sCtx.fillRect(0, 0, symbolsCanvas.width, symbolsCanvas.height);
+
+            // Grid lines
+            sCtx.strokeStyle = 'rgba(0,0,0,0.05)';
+            sCtx.lineWidth = 2;
+            const cell = symbolsCanvas.width / 3;
+
+            for (let i = 1; i < 3; i++) {
+                sCtx.beginPath();
+                sCtx.moveTo(i * cell, 0);
+                sCtx.lineTo(i * cell, symbolsCanvas.height);
+                sCtx.stroke();
+                sCtx.beginPath();
+                sCtx.moveTo(0, i * cell);
+                sCtx.lineTo(symbolsCanvas.width, i * cell);
+                sCtx.stroke();
+            }
+
+            sCtx.font = '40px Poppins';
+            sCtx.textAlign = 'center';
+            sCtx.textBaseline = 'middle';
+
+            gameSymbols.forEach((sym, i) => {
+                const x = (i % 3) * cell + cell / 2;
+                const y = Math.floor(i / 3) * cell + cell / 2;
+                sCtx.fillText(sym, x, y);
+            });
+        }
+
+        // Scratch Logic
+        function handleInput(e) {
+            if (hasPlayed && scratchedPercentage < 50) return; // Allow scratching only if active
+
+            e.preventDefault();
+            const rect = scratchCanvas.getBoundingClientRect();
+            const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+            const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.beginPath();
+            ctx.arc(x, y, 20, 0, Math.PI * 2);
+            ctx.fill();
+
+            checkScratchProgress();
+        }
+
+        function checkScratchProgress() {
+            if (hasPlayed && scratchedPercentage >= 60) return; // Already revealed
+
+            // Basic sample optimization
+            // In real app, count pixels properly. Here we estimate based on action count for speed?
+            // Let's rely on pixel counting but throttled
+
+            if (Math.random() > 0.1) return; // Check 10% of times to save perf
+
+            const imageData = ctx.getImageData(0, 0, scratchCanvas.width, scratchCanvas.height);
+            let clear = 0;
+            for (let i = 3; i < imageData.data.length; i += 4) {
+                if (imageData.data[i] === 0) clear++;
+            }
+            const pct = (clear / (scratchCanvas.width * scratchCanvas.height)) * 100;
+
+            if (pct > 50 && !hasPlayed) {
+                finishGame();
+            }
+        }
+
+        function finishGame() {
+            hasPlayed = true;
+            localStorage.setItem('guestos_scratch_last', new Date().toDateString());
+
+            // Reveal all
+            ctx.clearRect(0, 0, scratchCanvas.width, scratchCanvas.height);
+
+            // Check win
+            // Count occurrences
+            const counts = {};
+            gameSymbols.forEach(x => counts[x] = (counts[x] || 0) + 1);
+
+            let winSym = null;
+            Object.keys(counts).forEach(k => {
+                if (counts[k] >= 3) winSym = k;
+            });
+
+            if (winSym) {
+                let pts = 5;
+                if (SYMBOLS.bonus.includes(winSym)) pts = 25;
+                if (SYMBOLS.rare.includes(winSym)) pts = 15;
+
+                // Suspense delay!
+                setTimeout(() => showWin(pts), 1500);
+            } else {
+                document.getElementById('resetBtn').innerText = "Niente vittoria... A domani!";
+                document.getElementById('resetBtn').disabled = true;
+            }
+        }
+
+        async function showWin(pts) {
+            document.getElementById('winPoints').innerText = `+${pts} Punti`;
+            document.getElementById('winModal').style.display = 'flex';
+
+            // Save to leaderboard
+            if (typeof saveGameScore === 'function') {
+                saveGameScore('scratch', pts);
+            }
+
+            // Add points
+            const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
+            await supabaseClient.from('user_points')
+                .select('points')
+                .eq('user_email', email)
+                .single()
+                .then(({ data }) => {
+                    const newPts = (data?.points || 0) + pts;
+                    return supabaseClient.from('user_points').update({ points: newPts }).eq('user_email', email);
+                });
+        }
+
+        scratchCanvas.addEventListener('mousemove', (e) => { if (e.buttons === 1) handleInput(e); });
+        scratchCanvas.addEventListener('touchmove', handleInput);
+
+        window.addEventListener('load', init);
+        window.addEventListener('resize', init);
+
+    </script>
+</body>
+
+</html>

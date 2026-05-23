@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Helix Neon - Hotel Posta</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;900&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="game-leaderboard.js" defer></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: #0a0a12;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: white;
+        }
+
+        .ambient-bg {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at 50% 50%, #1e1b4b 0%, #0a0a12 100%);
+            z-index: 0;
+        }
+
+        .header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .game-title {
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #4ade80, #06b6d4);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        #gameCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .score-display {
+            position: absolute;
+            top: 100px;
+            font-size: 80px;
+            font-weight: 900;
+            color: white;
+            opacity: 0.2;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(10, 10, 18, 0.85);
+            backdrop-filter: blur(20px);
+            z-index: 110;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 32px;
+            padding: 40px 30px;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .action-btn {
+            background: white;
+            color: #0a0a12;
+            border: none;
+            width: 100%;
+            padding: 20px;
+            border-radius: 16px;
+            font-size: 18px;
+            font-weight: 900;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+
+        .action-btn:active {
+            transform: scale(0.98);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .how-to-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            text-align: left;
+        }
+
+        .how-to-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .how-to-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .how-to-icon {
+            width: 32px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #4ade80;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="ambient-bg"></div>
+    <div class="header">
+        <button class="back-btn" onclick="window.location.href='games.html'"><i data-lucide="arrow-left"></i></button>
+        <div class="game-title">Helix Neon</div>
+        <div style="width: 44px;"></div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+    <div class="score-display" id="scoreDisplay">0</div>
+
+    <!-- Start Overlay -->
+    <div id="startOverlay" class="ui-overlay">
+        <div class="glass-panel">
+            <div style="font-size: 60px; margin-bottom: 20px;">🌀</div>
+            <h2 style="font-size: 32px; font-weight: 900; margin-bottom: 8px;">Helix Neon</h2>
+            <p style="color: rgba(255,255,255,0.5); font-size: 14px; margin-bottom: 24px;">Discesa energetica</p>
+
+            <div class="how-to-box">
+                <div class="how-to-item">
+                    <div class="how-to-icon"><i data-lucide="refresh-cw" style="width:16px;"></i></div>
+                    <div>Trascina per <b>ruotare</b> la torre</div>
+                </div>
+                <div class="how-to-item">
+                    <div class="how-to-icon"><i data-lucide="arrow-down" style="width:16px;"></i></div>
+                    <div>Passa attraverso i <b>buchi</b></div>
+                </div>
+                <div class="how-to-item">
+                    <div class="how-to-icon"><i data-lucide="shield-alert" style="width:16px;"></i></div>
+                    <div>Evita le zone <b>rosse</b>!</div>
+                </div>
+            </div>
+
+            <button class="action-btn" onclick="startGame()">INIZIA DISCESA</button>
+        </div>
+    </div>
+
+    <!-- Game Over Overlay -->
+    <div id="gameOverOverlay" class="ui-overlay hidden">
+        <div class="glass-panel">
+            <h2 style="font-size: 24px; font-weight: 800; margin-bottom: 12px; color: #ef4444;">COLLISIONE</h2>
+            <div id="finalScoreDisplay" style="font-size: 64px; font-weight: 900; color: #4ade80; margin-bottom: 24px;">
+                0</div>
+            <div id="hotelPointsDisplay"
+                style="color: #facc15; font-weight: 800; font-size: 20px; margin-bottom: 32px;">+0 Punti Hotel</div>
+            <button class="action-btn" onclick="startGame()">RITENTA</button>
+            <button class="action-btn" style="margin-top: 12px; background: rgba(255,255,255,0.1); color: white;"
+                onclick="window.location.href='games.html'">ESCI</button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height, dpr;
+
+        function resize() {
+            dpr = window.devicePixelRatio || 1;
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            ctx.scale(dpr, dpr);
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        let gameState = 'start';
+        let score = 0;
+        let rotation = 0;
+        let ball = { y: 200, vy: 0, gravity: 0.15, jump: -5 };
+        let platforms = [];
+        let viewY = 0;
+        let lastTouchX = 0;
+
+        class Platform {
+            constructor(y) {
+                this.y = y;
+                this.segments = []; // angles where there is a floor
+                const gapCount = 1 + Math.floor(Math.random() * 2);
+                const gapSize = 0.8;
+
+                let current = 0;
+                for (let i = 0; i < 8; i++) {
+                    if (Math.random() > 0.3) {
+                        this.segments.push({
+                            start: i * Math.PI / 4,
+                            end: (i + 1) * Math.PI / 4,
+                            isDeath: Math.random() < 0.2
+                        });
+                    }
+                }
+                // Ensure at least one gap
+                if (this.segments.length === 8) this.segments.pop();
+            }
+            draw() {
+                const drawY = this.y - viewY;
+                if (drawY < -50 || drawY > height + 50) return;
+
+                ctx.save();
+                ctx.translate(width / 2, drawY);
+                ctx.rotate(rotation);
+
+                this.segments.forEach(s => {
+                    ctx.beginPath();
+                    ctx.strokeStyle = s.isDeath ? '#ef4444' : '#4ade80';
+                    ctx.lineWidth = 15;
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = ctx.strokeStyle;
+                    ctx.arc(0, 0, 80, s.start, s.end);
+                    ctx.stroke();
+                });
+
+                // Central Column
+                ctx.beginPath();
+                ctx.fillStyle = 'rgba(255,255,255,0.05)';
+                ctx.arc(0, 0, 30, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        function startGame() {
+            gameState = 'playing';
+            score = 0;
+            rotation = 0;
+            ball.y = 150;
+            ball.vy = 0;
+            viewY = 0;
+            platforms = [];
+            for (let i = 0; i < 10; i++) platforms.push(new Platform(500 + i * 250));
+
+            document.getElementById('startOverlay').classList.add('hidden');
+            document.getElementById('gameOverOverlay').classList.add('hidden');
+            document.getElementById('scoreDisplay').textContent = "0";
+            requestAnimationFrame(loop);
+        }
+
+        function loop() {
+            if (gameState !== 'playing') return;
+            ctx.clearRect(0, 0, width, height);
+
+            ball.vy += ball.gravity;
+            ball.y += ball.vy;
+
+            // Camera follow
+            viewY += (ball.y - 300 - viewY) * 0.1;
+
+            // Collision check
+            let onPlatform = false;
+            platforms.forEach(p => {
+                const dist = Math.abs(ball.y - p.y);
+                if (dist < 15 && ball.vy > 0) {
+                    // Check if ball is over a segment
+                    const ballAngle = (-rotation + Math.PI / 2) % (Math.PI * 2);
+                    const normalizedBallAngle = ballAngle < 0 ? ballAngle + Math.PI * 2 : ballAngle;
+
+                    let hitAny = false;
+                    p.segments.forEach(s => {
+                        if (normalizedBallAngle >= s.start && normalizedBallAngle <= s.end) {
+                            hitAny = true;
+                            if (s.isDeath) gameOver();
+                            else {
+                                ball.vy = ball.jump;
+                                ball.y = p.y - 15;
+                                onPlatform = true;
+                            }
+                        }
+                    });
+
+                    if (!hitAny) {
+                        // Falling through gap
+                        if (!p.scored) {
+                            p.scored = true;
+                            score++;
+                            document.getElementById('scoreDisplay').textContent = score;
+                        }
+                    }
+                }
+            });
+
+            // Procedural platforms
+            if (platforms[platforms.length - 1].y < ball.y + 1000) {
+                platforms.push(new Platform(platforms[platforms.length - 1].y + 250));
+            }
+            if (platforms[0].y < viewY - 200) platforms.shift();
+
+            // Draw platforms
+            platforms.forEach(p => p.draw());
+
+            // Draw ball
+            ctx.save();
+            ctx.translate(width / 2, ball.y - viewY);
+            ctx.fillStyle = '#fff';
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#fff';
+            ctx.beginPath();
+            ctx.arc(0, 0, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            requestAnimationFrame(loop);
+        }
+
+        // Touch Control
+        window.addEventListener('touchstart', e => {
+            lastTouchX = e.touches[0].clientX;
+        });
+        window.addEventListener('touchmove', e => {
+            if (gameState !== 'playing') return;
+            const delta = e.touches[0].clientX - lastTouchX;
+            rotation += delta * 0.01;
+            lastTouchX = e.touches[0].clientX;
+            e.preventDefault();
+        }, { passive: false });
+
+        window.addEventListener('mousedown', e => {
+            lastTouchX = e.clientX;
+            const move = (me) => {
+                if (gameState !== 'playing') return;
+                const delta = me.clientX - lastTouchX;
+                rotation += delta * 0.01;
+                lastTouchX = me.clientX;
+            };
+            const up = () => {
+                window.removeEventListener('mousemove', move);
+                window.removeEventListener('mouseup', up);
+            };
+            window.addEventListener('mousemove', move);
+            window.addEventListener('mouseup', up);
+        });
+
+        async function gameOver() {
+            if (gameState === 'over') return;
+            gameState = 'over';
+            const hotelPoints = Math.min(Math.floor(score / 3), 20);
+            document.getElementById('finalScoreDisplay').textContent = score;
+            document.getElementById('hotelPointsDisplay').textContent = `+${hotelPoints} Punti Hotel`;
+            document.getElementById('gameOverOverlay').classList.remove('hidden');
+
+            if (hotelPoints > 0) await savePoints(hotelPoints);
+            if (typeof saveGameScore === 'function') saveGameScore('helix_neon', score);
+        }
+
+        async function savePoints(pts) {
+            const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
+            try {
+                const { data } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
+                const newPts = (data?.points || 0) + pts;
+                await supabaseClient.from('user_points').update({ points: newPts }).eq('user_email', email);
+            } catch (e) { console.error(e); }
+        }
+    </script>
+</body>
+
+</html>

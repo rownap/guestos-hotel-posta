@@ -1,13 +1,17 @@
 <!DOCTYPE html>
 <html lang="it">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quiz Calabria - Hotel Posta</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap"
+        rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
+    <script src="game-leaderboard.js" defer></script>
     <style>
         :root {
             --bg-primary: #0a0a12;
@@ -16,13 +20,20 @@
             --accent-success: #10b981;
             --accent-error: #ef4444;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
             background: var(--bg-primary);
             color: white;
             min-height: 100vh;
         }
+
         body::before {
             content: '';
             position: fixed;
@@ -30,12 +41,14 @@
             background: radial-gradient(circle at 30% 20%, rgba(99, 102, 241, 0.08) 0%, transparent 50%);
             z-index: 0;
         }
+
         .container {
             position: relative;
             z-index: 1;
             max-width: 600px;
             margin: 0 auto;
         }
+
         .header {
             background: rgba(19, 19, 31, 0.8);
             backdrop-filter: blur(20px);
@@ -45,6 +58,7 @@
             gap: 16px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
+
         .back-btn {
             width: 36px;
             height: 36px;
@@ -57,16 +71,23 @@
             cursor: pointer;
             transition: all 0.2s ease;
         }
-        .back-btn:hover { background: rgba(255, 255, 255, 0.1); }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
         .content {
             padding: 20px;
         }
+
         .quiz-screen {
             display: none;
         }
+
         .quiz-screen.active {
             display: block;
         }
+
         .start-card {
             background: var(--bg-secondary);
             border: 1px solid rgba(255, 255, 255, 0.08);
@@ -74,15 +95,18 @@
             padding: 32px;
             text-align: center;
         }
+
         .quiz-icon {
             font-size: 80px;
             margin-bottom: 24px;
         }
+
         h1 {
             font-family: 'Space Grotesk', sans-serif;
             font-size: 28px;
             margin-bottom: 12px;
         }
+
         .quiz-rules {
             background: rgba(255, 255, 255, 0.03);
             border-radius: 16px;
@@ -90,12 +114,14 @@
             margin: 24px 0;
             text-align: left;
         }
+
         .rule-item {
             display: flex;
             align-items: start;
             gap: 12px;
             margin-bottom: 12px;
         }
+
         .start-btn {
             width: 100%;
             padding: 16px;
@@ -108,20 +134,24 @@
             cursor: pointer;
             transition: all 0.2s ease;
         }
+
         .start-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
         }
+
         .quiz-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 24px;
         }
+
         .question-counter {
             font-size: 14px;
             color: rgba(255, 255, 255, 0.5);
         }
+
         .timer {
             background: rgba(239, 68, 68, 0.1);
             border: 1px solid rgba(239, 68, 68, 0.3);
@@ -132,6 +162,7 @@
             font-weight: 700;
             color: var(--accent-error);
         }
+
         .question-card {
             background: var(--bg-secondary);
             border: 1px solid rgba(255, 255, 255, 0.08);
@@ -139,6 +170,7 @@
             padding: 32px 24px;
             margin-bottom: 24px;
         }
+
         .question-text {
             font-family: 'Space Grotesk', sans-serif;
             font-size: 22px;
@@ -146,10 +178,12 @@
             line-height: 1.4;
             margin-bottom: 24px;
         }
+
         .answers-grid {
             display: grid;
             gap: 12px;
         }
+
         .answer-btn {
             width: 100%;
             padding: 16px 20px;
@@ -163,20 +197,24 @@
             transition: all 0.2s ease;
             text-align: left;
         }
+
         .answer-btn:hover {
             background: rgba(255, 255, 255, 0.08);
             border-color: var(--accent-primary);
         }
+
         .answer-btn.correct {
             background: rgba(16, 185, 129, 0.15);
             border-color: var(--accent-success);
             color: var(--accent-success);
         }
+
         .answer-btn.wrong {
             background: rgba(239, 68, 68, 0.15);
             border-color: var(--accent-error);
             color: var(--accent-error);
         }
+
         .results-card {
             background: var(--bg-secondary);
             border: 1px solid rgba(255, 255, 255, 0.08);
@@ -184,6 +222,7 @@
             padding: 32px;
             text-align: center;
         }
+
         .score-circle {
             width: 140px;
             height: 140px;
@@ -195,15 +234,18 @@
             align-items: center;
             justify-content: center;
         }
+
         .score-value {
             font-family: 'Space Grotesk', sans-serif;
             font-size: 48px;
             font-weight: 700;
         }
+
         .score-total {
             font-size: 18px;
             opacity: 0.8;
         }
+
         .reward-box {
             background: rgba(16, 185, 129, 0.1);
             border: 1px solid rgba(16, 185, 129, 0.2);
@@ -211,6 +253,7 @@
             padding: 20px;
             margin: 24px 0;
         }
+
         .btn-group {
             display: grid;
             gap: 12px;
@@ -221,18 +264,23 @@
         .countdown-box {
             animation: pulse-warning 2s ease-in-out infinite;
         }
+
         @keyframes pulse-warning {
-            0%, 100% {
+
+            0%,
+            100% {
                 transform: scale(1);
-                border-color: rgba(255,68,68,0.3);
+                border-color: rgba(255, 68, 68, 0.3);
             }
+
             50% {
                 transform: scale(1.02);
-                border-color: rgba(255,68,68,0.5);
+                border-color: rgba(255, 68, 68, 0.5);
             }
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
@@ -240,10 +288,12 @@
                 <i data-lucide="arrow-left" style="width: 20px; height: 20px;"></i>
             </button>
             <div style="flex: 1;">
-                <div style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 600;">Quiz Calabria</div>
+                <div style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 600;">Quiz Calabria
+                </div>
                 <div style="font-size: 13px; color: rgba(255,255,255,0.5);">Cultura & Tradizioni</div>
             </div>
-            <button class="back-btn" onclick="window.location.href='index.html'" style="background: linear-gradient(135deg, var(--accent-primary), #8b5cf6); border-color: transparent;">
+            <button class="back-btn" onclick="window.location.href='index.html'"
+                style="background: linear-gradient(135deg, var(--accent-primary), #8b5cf6); border-color: transparent;">
                 <i data-lucide="home" style="width: 20px; height: 20px;"></i>
             </button>
         </div>
@@ -253,8 +303,9 @@
                 <div class="start-card">
                     <div class="quiz-icon">🧠</div>
                     <h1>Quiz Cultura Calabrese</h1>
-                    <p style="color: rgba(255,255,255,0.7); margin-bottom: 24px;">Metti alla prova le tue conoscenze!</p>
-                    
+                    <p style="color: rgba(255,255,255,0.7); margin-bottom: 24px;">Metti alla prova le tue conoscenze!
+                    </p>
+
                     <div class="quiz-rules">
                         <div class="rule-item">
                             <i data-lucide="list" style="width: 20px; height: 20px; color: #6366f1;"></i>
@@ -266,11 +317,11 @@
                         </div>
                         <div class="rule-item">
                             <i data-lucide="trophy" style="width: 20px; height: 20px; color: #6366f1;"></i>
-                            <div><strong>+100 punti</strong> completando il quiz</div>
+                            <div><strong>+40 punti</strong> completando il quiz</div>
                         </div>
                         <div class="rule-item">
                             <i data-lucide="gift" style="width: 20px; height: 20px; color: #10b981;"></i>
-                            <div><strong>Sconto 10%</strong> ristorante (se ≥7/10)</div>
+                            <div><strong>Sconto 10%</strong> ristorante (se ≥9/10)</div>
                         </div>
                     </div>
 
@@ -281,21 +332,26 @@
                             <p style="color: rgba(255,255,255,0.8); margin: 20px 0;">
                                 Torna domani per guadagnare altri punti!
                             </p>
-                            
-                            <div class="countdown-box" style="background: rgba(255,68,68,0.15); border: 2px solid rgba(255,68,68,0.3); border-radius: 16px; padding: 20px; margin: 24px 0;">
+
+                            <div class="countdown-box"
+                                style="background: rgba(255,68,68,0.15); border: 2px solid rgba(255,68,68,0.3); border-radius: 16px; padding: 20px; margin: 24px 0;">
                                 <div style="font-size: 14px; color: rgba(255,255,255,0.8); margin-bottom: 12px;">
                                     Prossimo quiz tra:
                                 </div>
-                                <div id="countdownTimer" style="font-family: 'Space Grotesk', sans-serif; font-size: 36px; font-weight: 700; color: #ff4444;"></div>
+                                <div id="countdownTimer"
+                                    style="font-family: 'Space Grotesk', sans-serif; font-size: 36px; font-weight: 700; color: #ff4444;">
+                                </div>
                             </div>
-                            
-                            <button class="start-btn" onclick="window.location.href='games.html'" style="background: linear-gradient(135deg, #6366f1, #a855f7);">
-                                <i data-lucide="arrow-left" style="width: 20px; height: 20px; vertical-align: middle;"></i>
+
+                            <button class="start-btn" onclick="window.location.href='games.html'"
+                                style="background: linear-gradient(135deg, #6366f1, #a855f7);">
+                                <i data-lucide="arrow-left"
+                                    style="width: 20px; height: 20px; vertical-align: middle;"></i>
                                 Torna ai Giochi
                             </button>
                         </div>
                     </div>
-                    
+
                     <button id="mainStartBtn" class="start-btn" onclick="startQuiz()">
                         <i data-lucide="play" style="width: 20px; height: 20px; vertical-align: middle;"></i>
                         Inizia Quiz
@@ -308,7 +364,7 @@
                     <div class="question-counter" id="questionCounter">Domanda 1/10</div>
                     <div class="timer" id="timer">20s</div>
                 </div>
-                
+
                 <div class="question-card">
                     <div class="question-text" id="questionText"></div>
                     <div class="answers-grid" id="answersGrid"></div>
@@ -321,18 +377,20 @@
                         <div class="score-value" id="finalScore">0</div>
                         <div class="score-total">/10</div>
                     </div>
-                    
+
                     <h2 id="resultsTitle" style="margin-bottom: 12px;">Ottimo lavoro!</h2>
                     <p id="resultsMessage" style="color: rgba(255,255,255,0.7); margin-bottom: 24px;"></p>
-                    
+
                     <div class="reward-box" id="rewardBox">
                         <div style="font-size: 24px; margin-bottom: 8px;">🎉</div>
                         <div id="rewardText"></div>
                     </div>
-                    
+
                     <div class="btn-group">
-                        <button class="start-btn" onclick="window.location.href='leaderboard.html'">👑 Vai alla Leaderboard</button>
-                        <button class="start-btn" style="background: rgba(255,255,255,0.1);" onclick="window.location.href='games.html'">🎮 Torna ai Giochi</button>
+                        <button class="start-btn" onclick="window.location.href='leaderboard.html'">👑 Vai alla
+                            Leaderboard</button>
+                        <button class="start-btn" style="background: rgba(255,255,255,0.1);"
+                            onclick="window.location.href='games.html'">🎮 Torna ai Giochi</button>
                     </div>
                 </div>
             </div>
@@ -341,7 +399,7 @@
 
     <script>
         lucide.createIcons();
-        
+
         const questions = [
             { q: "Qual è il capoluogo della Calabria?", a: ["Catanzaro", "Cosenza", "Reggio Calabria", "Crotone"], correct: 0 },
             { q: "Quale mare bagna la costa orientale della Calabria?", a: ["Mar Tirreno", "Mar Ionio", "Mar Adriatico", "Mar Ligure"], correct: 1 },
@@ -391,10 +449,10 @@
                     showAlreadyPlayedMessage(nextPlay);
                     return false;
                 }
-                return true; 
+                return true;
             } catch (error) {
                 console.error('Error checking play status:', error);
-                return true; 
+                return true;
             }
         }
 
@@ -439,7 +497,7 @@
             const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
             const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-            document.getElementById('countdownTimer').textContent = 
+            document.getElementById('countdownTimer').textContent =
                 String(hours).padStart(2, '0') + ':' +
                 String(minutes).padStart(2, '0') + ':' +
                 String(seconds).padStart(2, '0');
@@ -459,7 +517,7 @@
             const q = questions[currentQuestion];
             document.getElementById('questionCounter').textContent = `Domanda ${currentQuestion + 1}/10`;
             document.getElementById('questionText').textContent = q.q;
-            
+
             const grid = document.getElementById('answersGrid');
             grid.innerHTML = '';
             q.a.forEach((answer, i) => {
@@ -476,12 +534,12 @@
         function startTimer() {
             timeLeft = 20;
             document.getElementById('timer').textContent = timeLeft + 's';
-            
+
             clearInterval(timerInterval);
             timerInterval = setInterval(() => {
                 timeLeft--;
                 document.getElementById('timer').textContent = timeLeft + 's';
-                
+
                 if (timeLeft <= 0) {
                     clearInterval(timerInterval);
                     selectAnswer(-1);
@@ -491,10 +549,10 @@
 
         function selectAnswer(selectedIndex) {
             clearInterval(timerInterval);
-            
+
             const q = questions[currentQuestion];
             const buttons = document.querySelectorAll('.answer-btn');
-            
+
             buttons.forEach((btn, i) => {
                 btn.disabled = true;
                 if (i === q.correct) {
@@ -517,26 +575,26 @@
         async function showResults() {
             showScreen('resultsScreen');
             document.getElementById('finalScore').textContent = score;
-            
+
             let title, message, reward;
             if (score >= 9) {
                 title = "Eccezionale! 🏆";
                 message = "Sei un vero esperto della Calabria!";
-                reward = "🎁 +150 punti + Sconto 15% ristorante";
+                reward = "🎁 +40 punti + Sconto 10% ristorante";
             } else if (score >= 7) {
                 title = "Ottimo lavoro! 🎉";
                 message = "Conosci molto bene la Calabria!";
-                reward = "🎁 +100 punti + Sconto 10% ristorante";
+                reward = "🎁 +25 punti";
             } else if (score >= 5) {
                 title = "Buon risultato! 👍";
                 message = "Non male, continua a esplorare!";
-                reward = "🎁 +50 punti";
+                reward = "🎁 +10 punti";
             } else {
                 title = "Ritenta! 💪";
                 message = "C'è ancora molto da scoprire!";
-                reward = "🎁 +25 punti";
+                reward = "🎁 +5 punti";
             }
-            
+
             document.getElementById('resultsTitle').textContent = title;
             document.getElementById('resultsMessage').textContent = message;
             document.getElementById('rewardText').textContent = reward;
@@ -554,7 +612,7 @@
                     completed_at: new Date().toISOString()
                 });
 
-                const points = finalScore >= 9 ? 150 : finalScore >= 7 ? 100 : finalScore >= 5 ? 50 : 25;
+                const points = finalScore >= 9 ? 40 : finalScore >= 7 ? 25 : finalScore >= 5 ? 10 : 5;
                 const { data: userData } = await supabaseClient
                     .from('user_points')
                     .select('*')
@@ -567,10 +625,16 @@
                         .update({ points: userData.points + points })
                         .eq('user_email', email);
                 }
+
+                // Save to unified leaderboard
+                if (typeof saveGameScore === 'function') {
+                    saveGameScore('quiz', finalScore * 10); // Score x 10 for leaderboard readability (e.g. 80pts)
+                }
             } catch (error) {
                 console.error('Error saving quiz:', error);
             }
         }
     </script>
 </body>
+
 </html>

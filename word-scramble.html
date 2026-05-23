@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Scramble - Hotel Posta</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Space+Grotesk:wght@600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="game-leaderboard.js" defer></script>
+    <style>
+        :root {
+            --bg-primary: #0a0a12;
+            --bg-secondary: #13131f;
+            --accent-primary: #6366f1;
+            --accent-secondary: #8b5cf6;
+            --success: #10b981;
+            --error: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        #startScreen,
+        #resultsScreen {
+            background: var(--bg-secondary);
+            padding: 40px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%;
+        }
+
+        .game-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 32px;
+            margin-bottom: 16px;
+        }
+
+        .scrambled-box {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 20px;
+            padding: 40px 20px;
+            width: 100%;
+            margin-bottom: 30px;
+            font-size: 42px;
+            font-weight: 700;
+            font-family: 'Space Grotesk', sans-serif;
+            letter-spacing: 4px;
+            color: var(--accent-primary);
+            text-transform: uppercase;
+        }
+
+        .input-group {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        input {
+            width: 100%;
+            background: var(--bg-secondary);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 16px;
+            color: white;
+            font-size: 24px;
+            text-align: center;
+            text-transform: uppercase;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--accent-primary);
+        }
+
+        .hint {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 30px;
+        }
+
+        .primary-btn {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border: none;
+            padding: 16px 32px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 700;
+            font-size: 18px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .word-progress {
+            margin-bottom: 20px;
+            font-size: 14px;
+            opacity: 0.6;
+        }
+
+        #gameScreen {
+            width: 100%;
+            display: none;
+        }
+
+        #resultsScreen {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="back-btn" onclick="window.location.href='games.html'">
+                <i data-lucide="arrow-left"></i>
+            </button>
+            <div style="text-align: right;">
+                <div style="font-size: 14px; opacity: 0.6;">Word Game</div>
+                <div style="font-weight: 700;">Word Scramble</div>
+            </div>
+        </div>
+
+        <div class="game-area">
+            <div id="startScreen">
+                <div class="game-icon">📝</div>
+                <h1>Word Scramble</h1>
+                <p style="margin-bottom: 30px; opacity: 0.8;">Riordina le lettere per scoprire le parole legate alla
+                    Calabria e all'Hotel Posta!</p>
+                <div
+                    style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 16px; margin-bottom: 30px;">
+                    <div style="font-size: 12px; opacity: 0.5; text-transform: uppercase;">Premio</div>
+                    <div style="font-size: 24px; font-weight: 700; color: #fbbf24;">+20 Punti Bonus</div>
+                </div>
+                <button class="primary-btn" onclick="startGame()">INIZIA</button>
+            </div>
+
+            <div id="gameScreen">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div class="word-progress" id="wordProgress" style="margin-bottom: 0;">Parola 1 di 5</div>
+                    <div id="timerDisplay"
+                        style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; color: var(--error);">
+                        90s</div>
+                </div>
+                <div class="scrambled-box" id="scrambledText">NDUJA</div>
+                <div class="hint" id="hintText">Indizio: Salume tipico piccante</div>
+                <div class="input-group">
+                    <input type="text" id="wordInput" placeholder="Tua risposta..." autocomplete="off">
+                </div>
+                <button class="primary-btn" onclick="checkWord()">CONFERMA</button>
+            </div>
+
+            <div id="resultsScreen">
+                <div class="game-icon">✨</div>
+                <h1>Ottimo Lessico!</h1>
+                <p style="margin-bottom: 30px; opacity: 0.8;">Hai indovinato tutte le parole.</p>
+                <div style="background: var(--success); padding: 20px; border-radius: 16px; margin-bottom: 30px;">
+                    <div style="font-size: 12px; opacity: 0.8; text-transform: uppercase; color: white;">Punti Premiati
+                    </div>
+                    <div style="font-size: 32px; font-weight: 900; color: white;">+20</div>
+                </div>
+                <button class="primary-btn" onclick="window.location.href='games.html'">MENU GIOCHI</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        const words = [
+            { word: "NDUJA", scrambled: "JADNU", hint: "Salume tipico piccante calabrese" },
+            { word: "POSTA", scrambled: "SATOP", hint: "Il nome del nostro storico Hotel" },
+            { word: "MARE", scrambled: "ERMA", hint: "Cosa bagna le bellissime coste calabresi" },
+            { word: "BERGAMOTTO", scrambled: "TMGOOREBTO", hint: "Agrume tipico della provincia di Reggio" },
+            { word: "SILA", scrambled: "ILSA", hint: "Famoso altopiano e parco nazionale" }
+        ];
+
+        let currentWordIndex = 0;
+        let timeLeft = 90;
+        let timerInterval;
+
+        function startGame() {
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'block';
+            loadWord();
+            startTimer();
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timerDisplay').textContent = timeLeft + 's';
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    alert("Tempo scaduto!");
+                    location.reload();
+                }
+            }, 1000);
+        }
+
+        function loadWord() {
+            const wordData = words[currentWordIndex];
+            document.getElementById('scrambledText').textContent = wordData.scrambled;
+            document.getElementById('hintText').textContent = "Indizio: " + wordData.hint;
+            document.getElementById('wordProgress').textContent = `Parola ${currentWordIndex + 1} di ${words.length}`;
+            document.getElementById('wordInput').value = '';
+            document.getElementById('wordInput').focus();
+        }
+
+        function checkWord() {
+            const input = document.getElementById('wordInput').value.trim().toUpperCase();
+            const correctWord = words[currentWordIndex].word;
+
+            if (input === correctWord) {
+                currentWordIndex++;
+                if (currentWordIndex >= words.length) {
+                    clearInterval(timerInterval);
+                    endGame();
+                }
+                else loadWord();
+            } else {
+                const inputEl = document.getElementById('wordInput');
+                inputEl.style.borderColor = 'var(--error)';
+                setTimeout(() => inputEl.style.borderColor = 'rgba(255, 255, 255, 0.1)', 500);
+            }
+        }
+
+        document.getElementById('wordInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') checkWord();
+        });
+
+        async function endGame() {
+            document.getElementById('gameScreen').style.display = 'none';
+            document.getElementById('resultsScreen').style.display = 'block';
+
+            const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
+
+            try {
+                const { data: current } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
+                const newPoints = (current?.points || 0) + 20;
+                await supabaseClient.from('user_points').update({ points: newPoints }).eq('user_email', email);
+
+                if (typeof saveGameScore === 'function') {
+                    saveGameScore('word_scramble', 100);
+                }
+            } catch (err) {
+                console.error('Error saving word score:', err);
+            }
+        }
+    </script>
+</body>
+
+</html>

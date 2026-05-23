@@ -64,24 +64,108 @@
         .back-btn:hover {
             background: rgba(255, 255, 255, 0.1);
         }
+        
+        /* NUOVO DESIGN POINTS BANNER */
         .points-banner {
-            background: linear-gradient(135deg, var(--accent-primary), #a855f7);
-            border-radius: 20px;
-            padding: 24px;
-            margin-bottom: 24px;
-            text-align: center;
-            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.3);
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            border-radius: 24px;
+            padding: 32px 28px;
+            margin-bottom: 32px;
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.4);
+            position: relative;
+            overflow: hidden;
         }
+        
+        .points-banner::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            transform: translate(30%, -30%);
+        }
+        
+        .points-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .points-icon {
+            width: 44px;
+            height: 44px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        .points-title {
+            font-size: 16px;
+            font-weight: 600;
+            opacity: 0.95;
+        }
+        
+        .points-display {
+            text-align: center;
+            margin-bottom: 24px;
+            position: relative;
+            z-index: 1;
+        }
+        
         .points-value {
             font-family: 'Space Grotesk', sans-serif;
-            font-size: 48px;
+            font-size: 72px;
             font-weight: 700;
+            line-height: 1;
             margin-bottom: 8px;
+            text-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
+        
         .points-label {
-            font-size: 14px;
+            font-size: 15px;
             opacity: 0.9;
+            font-weight: 500;
         }
+        
+        .earn-more-btn {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 16px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .earn-more-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+        
+        .earn-more-btn:active {
+            transform: translateY(0);
+        }
+        
         .section-title {
             font-family: 'Space Grotesk', sans-serif;
             font-size: 18px;
@@ -183,14 +267,33 @@
                 <i data-lucide="arrow-left" style="width: 20px; height: 20px;"></i>
             </button>
             <div style="flex: 1;">
-                <div style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 600;">🎁 Premi</div>
+                <div style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 600;">
+                    <i data-lucide="gift" style="width: 22px; height: 22px; display: inline-block; vertical-align: middle; margin-right: 6px;"></i>
+                    Premi
+                </div>
                 <div style="font-size: 13px; color: rgba(255,255,255,0.5);">Riscatta i tuoi punti</div>
             </div>
         </div>
 
+        <!-- NUOVO DESIGN POINTS BANNER -->
         <div class="points-banner">
-            <div class="points-value" id="userPoints">0</div>
-            <div class="points-label">Punti Disponibili</div>
+            <div class="points-header">
+                <div class="points-icon">
+                    <i data-lucide="star" style="width: 24px; height: 24px; color: #fbbf24; fill: #fbbf24;"></i>
+                </div>
+                <div class="points-title">I Tuoi Punti</div>
+            </div>
+            
+            <div class="points-display">
+                <div class="points-value" id="userPoints">0</div>
+                <div class="points-label">Punti Disponibili</div>
+            </div>
+            
+            <button class="earn-more-btn" onclick="window.location.href='games.html'">
+                <i data-lucide="gamepad-2" style="width: 20px; height: 20px;"></i>
+                <span>Accumula altri punti</span>
+                <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
+            </button>
         </div>
 
         <h2 class="section-title">

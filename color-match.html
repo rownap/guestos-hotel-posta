@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Match - Hotel Posta</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;900&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="game-leaderboard.js" defer></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: #0a0a12;
+            min-height: 100vh;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        /* Ambient Background */
+        .ambient-bg {
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(236, 72, 153, 0.15) 0%, transparent 40%);
+            z-index: 0;
+        }
+
+        .header {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .back-btn:active {
+            transform: scale(0.9);
+        }
+
+        .game-title {
+            font-size: 20px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            background: linear-gradient(to right, #6366f1, #ec4899);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .game-container {
+            position: relative;
+            z-index: 10;
+            width: 90%;
+            max-width: 450px;
+            margin-top: 20px;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 32px;
+            padding: 32px;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.4);
+        }
+
+        .stats-panel {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 12px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 800;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        #timer {
+            color: #facc15;
+        }
+
+        #score {
+            color: #fff;
+        }
+
+        #combo {
+            color: #4ade80;
+        }
+
+        .question-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 24px;
+            padding: 48px 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .instruction {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 16px;
+        }
+
+        .color-word {
+            font-size: 64px;
+            font-weight: 900;
+            text-shadow: 0 0 20px currentColor;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .color-word.pop {
+            transform: scale(1.1);
+        }
+
+        .buttons-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .color-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 24px;
+            border-radius: 20px;
+            font-size: 18px;
+            font-weight: 800;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .color-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Screens */
+        .start-screen,
+        .end-screen {
+            text-align: center;
+        }
+
+        .game-icon {
+            font-size: 64px;
+            margin-bottom: 24px;
+            display: inline-block;
+            filter: drop-shadow(0 0 20px rgba(99, 102, 241, 0.5));
+        }
+
+        .title-large {
+            font-size: 32px;
+            font-weight: 900;
+            margin-bottom: 12px;
+        }
+
+        .desc-text {
+            color: rgba(255, 255, 255, 0.6);
+            line-height: 1.6;
+            margin-bottom: 32px;
+            font-size: 15px;
+        }
+
+        .action-btn {
+            background: white;
+            color: #0a0a12;
+            border: none;
+            padding: 20px;
+            border-radius: 16px;
+            font-size: 18px;
+            font-weight: 900;
+            width: 100%;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.1);
+            transition: all 0.2s;
+        }
+
+        .action-btn:active {
+            transform: scale(0.98);
+        }
+
+        .example-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .final-stats {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 15px;
+        }
+
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .stat-row span {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .points-badge {
+            font-size: 40px;
+            font-weight: 900;
+            color: #facc15;
+            margin-bottom: 24px;
+            text-shadow: 0 0 30px rgba(250, 204, 21, 0.3);
+        }
+
+        .how-to-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            text-align: left;
+            width: 100%;
+        }
+
+        .how-to-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .how-to-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .how-to-icon {
+            width: 32px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6366f1;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @keyframes correct {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+                border-color: #4ade80;
+            }
+        }
+
+        @keyframes wrong {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-8px);
+            }
+
+            75% {
+                transform: translateX(8px);
+            }
+        }
+
+        .animate-correct {
+            animation: correct 0.3s ease;
+        }
+
+        .animate-wrong {
+            animation: wrong 0.3s ease;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="ambient-bg"></div>
+
+    <div class="header">
+        <button class="back-btn" onclick="window.location.href='games.html'">
+            <i data-lucide="arrow-left"></i>
+        </button>
+        <div class="game-title">Neon Match</div>
+        <div style="width: 44px;"></div>
+    </div>
+
+    <div class="game-container">
+        <!-- Start Screen -->
+        <div id="startScreen" class="glass-panel start-screen">
+            <div style="font-size: 60px; margin-bottom: 20px;">⚡</div>
+            <h2 class="title-large">Neon Match</h2>
+            <p style="color: rgba(255,255,255,0.5); font-size: 14px; margin-bottom: 24px;">Riflessi e colori</p>
+
+            <div class="how-to-box">
+                <div class="how-to-item">
+                    <div class="how-to-icon"><i data-lucide="eye" style="width:16px;"></i></div>
+                    <div>Guarda il <b>COLORE</b> della parola</div>
+                </div>
+                <div class="how-to-item">
+                    <div class="how-to-icon"><i data-lucide="alert-triangle" style="width:16px;"></i></div>
+                    <div>Ignora il <b>testo</b> scritto!</div>
+                </div>
+                <div class="how-to-item">
+                    <div class="how-to-icon"><i data-lucide="timer" style="width:16px;"></i></div>
+                    <div>Sii rapido: solo 30 secondi!</div>
+                </div>
+            </div>
+
+            <button class="action-btn" id="startBtn" onclick="startGame()">GIOCA ORA</button>
+            <p id="gamesInfo" style="margin-top: 16px; font-size: 12px; color: rgba(255,255,255,0.4);"></p>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="gameScreen" class="hidden">
+            <div class="stats-panel">
+                <div class="stat-card">
+                    <div class="stat-label">Tempo</div>
+                    <div class="stat-value" id="timer">30</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Punti</div>
+                    <div class="stat-value" id="score">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Combo</div>
+                    <div class="stat-value" id="combo">x1</div>
+                </div>
+            </div>
+
+            <div class="question-card" id="qCard">
+                <div class="instruction">Tocca il COLORE</div>
+                <div class="color-word" id="colorWord">ROSSO</div>
+            </div>
+
+            <div class="buttons-grid" id="buttonsGrid"></div>
+        </div>
+
+        <!-- End Screen -->
+        <div id="endScreen" class="glass-panel end-screen hidden">
+            <div class="game-icon">🚀</div>
+            <h2 class="title-large">Ottimo Lavoro!</h2>
+
+            <div class="final-stats">
+                <div class="stat-row">
+                    <span>Corrette</span>
+                    <strong id="correctCount">0</strong>
+                </div>
+                <div class="stat-row">
+                    <span>Precisione</span>
+                    <strong id="accuracyText">0%</strong>
+                </div>
+                <div class="stat-row">
+                    <span>Combo Max</span>
+                    <strong id="maxComboText">x1</strong>
+                </div>
+            </div>
+
+            <div class="points-badge" id="pointsEarned">+0</div>
+            <div style="margin-bottom: 32px; font-size: 14px; color: rgba(255,255,255,0.4);">Punti Hotel guadagnati
+            </div>
+
+            <button class="action-btn" onclick="location.reload()">RIGIOCA</button>
+            <p id="gamesInfoEnd" style="margin-top: 16px; font-size: 12px; color: rgba(255,255,255,0.4);"></p>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        const COLORS = [
+            { name: 'ROSSO', hex: '#ef4444' },
+            { name: 'BLU', hex: '#3b82f6' },
+            { name: 'VERDE', hex: '#22c55e' },
+            { name: 'GIALLO', hex: '#eab308' }
+        ];
+
+        const MAX_GAMES = 3;
+        const DURATION = 30;
+
+        let gamesLeft = MAX_GAMES;
+        let isActive = false;
+        let time = DURATION;
+        let currentScore = 0;
+        let comboCount = 1;
+        let maxCombo = 1;
+        let correct = 0;
+        let wrong = 0;
+        let targetColor = null;
+        let timer = null;
+
+        function checkDailyLimit() {
+            const lastDate = localStorage.getItem('neon_match_date');
+            const today = new Date().toDateString();
+
+            if (lastDate !== today) {
+                gamesLeft = MAX_GAMES;
+                localStorage.setItem('neon_match_date', today);
+                localStorage.setItem('neon_match_games', gamesLeft);
+            } else {
+                gamesLeft = parseInt(localStorage.getItem('neon_match_games') || MAX_GAMES);
+            }
+            updateLimitUI();
+        }
+
+        function updateLimitUI() {
+            const info = gamesLeft > 0 ? `Partite oggi: ${gamesLeft}/${MAX_GAMES}` : 'Limite giornaliero raggiunto';
+            document.getElementById('gamesInfo').textContent = info;
+            if (gamesLeft <= 0) {
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('startBtn').style.opacity = '0.5';
+            }
+        }
+
+        function startGame() {
+            if (gamesLeft <= 0) return;
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.remove('hidden');
+
+            isActive = true;
+            currentScore = 0;
+            comboCount = 1;
+            time = DURATION;
+
+            renderButtons();
+            next();
+            startTimer();
+        }
+
+        function renderButtons() {
+            const grid = document.getElementById('buttonsGrid');
+            grid.innerHTML = '';
+            COLORS.forEach(c => {
+                const b = document.createElement('button');
+                b.className = 'color-btn';
+                b.textContent = c.name;
+                b.style.color = c.hex;
+                b.style.borderColor = `${c.hex}44`;
+                b.onclick = () => handleInput(c);
+                grid.appendChild(b);
+            });
+        }
+
+        function next() {
+            const wordIdx = Math.floor(Math.random() * COLORS.length);
+            const colorIdx = Math.floor(Math.random() * COLORS.length);
+
+            targetColor = COLORS[colorIdx];
+            const wordEl = document.getElementById('colorWord');
+
+            wordEl.classList.remove('pop');
+            void wordEl.offsetWidth;
+
+            wordEl.textContent = COLORS[wordIdx].name;
+            wordEl.style.color = targetColor.hex;
+            wordEl.classList.add('pop');
+        }
+
+        function handleInput(selected) {
+            if (!isActive) return;
+            const card = document.getElementById('qCard');
+
+            card.classList.remove('animate-correct', 'animate-wrong');
+            void card.offsetWidth;
+
+            if (selected.hex === targetColor.hex) {
+                correct++;
+                comboCount++;
+                if (comboCount > maxCombo) maxCombo = comboCount;
+                currentScore += comboCount;
+                card.classList.add('animate-correct');
+            } else {
+                wrong++;
+                comboCount = 1;
+                card.classList.add('animate-wrong');
+            }
+
+            document.getElementById('score').textContent = currentScore;
+            document.getElementById('combo').textContent = `x${comboCount}`;
+            next();
+        }
+
+        function startTimer() {
+            timer = setInterval(() => {
+                time--;
+                document.getElementById('timer').textContent = time;
+                if (time <= 0) end();
+            }, 1000);
+        }
+
+        async function end() {
+            isActive = false;
+            clearInterval(timer);
+
+            const hotelPoints = Math.min(currentScore, 20);
+
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('endScreen').classList.remove('hidden');
+
+            document.getElementById('correctCount').textContent = correct;
+            const total = correct + wrong;
+            document.getElementById('accuracyText').textContent = total > 0 ? Math.round((correct / total) * 100) + '%' : '0%';
+            document.getElementById('maxComboText').textContent = `x${maxCombo}`;
+            document.getElementById('pointsEarned').textContent = `+${hotelPoints}`;
+
+            gamesLeft--;
+            localStorage.setItem('neon_match_games', gamesLeft);
+            document.getElementById('gamesInfoEnd').textContent = `Partite rimaste: ${gamesLeft}`;
+
+            if (hotelPoints > 0) await savePoints(hotelPoints);
+            if (typeof saveGameScore === 'function') saveGameScore('color_match', currentScore);
+        }
+
+        async function savePoints(pts) {
+            const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
+            try {
+                const { data } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
+                const newPts = (data?.points || 0) + pts;
+                await supabaseClient.from('user_points').update({ points: newPts }).eq('user_email', email);
+            } catch (e) { console.error(e); }
+        }
+
+        checkDailyLimit();
+    </script>
+</body>
+
+</html>

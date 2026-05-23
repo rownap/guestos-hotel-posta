@@ -7,6 +7,17 @@
    SMOOTH TRANSITIONS
    ========================================== */
 
+:root {
+    --primary-gradient: linear-gradient(135deg, #FF0080 0%, #FF3399 25%, #00D4FF 75%, #00E5FF 100%);
+    --primary-color: #FF0080;
+    --secondary-color: #00D4FF;
+    --accent-color: #FF3399;
+    --glass-bg: rgba(255, 255, 255, 0.15);
+    --glass-border: rgba(255, 255, 255, 0.3);
+    --text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.25);
+    --bubble-gradient: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.6), rgba(0, 212, 255, 0.3));
+}
+
 * {
     -webkit-tap-highlight-color: transparent;
 }
@@ -14,6 +25,8 @@
 body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background: var(--primary-gradient);
+    min-height: 100vh;
 }
 
 /* ==========================================
@@ -144,7 +157,7 @@ body {
     padding-bottom: 100px !important; /* Spazio per la bottom bar */
 }
 
-/* Bottom CTA deve essere fixed, non sticky */
+/* Bottom CTA deve essere fixed e pulito (senza background) */
 .bottom-cta {
     position: fixed !important;
     bottom: 0 !important;
@@ -152,6 +165,18 @@ body {
     right: 0 !important;
     width: 100% !important;
     z-index: 1000 !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    pointer-events: none !important;
+    padding: 15px 20px !important;
+}
+
+.bottom-cta .cta-btn {
+    pointer-events: auto !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
 }
 
 /* ==========================================

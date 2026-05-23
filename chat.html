@@ -1,20 +1,25 @@
 <!DOCTYPE html>
 <html lang="it">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#FF0080">
-    <title>Chat - Bubbles</title>
+    <title>Chat - Bubbles AI</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="ai-agent-api.js"></script>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: 'Poppins', sans-serif;
             background: linear-gradient(135deg, #FF0080 0%, #FF3399 25%, #00D4FF 75%, #00E5FF 100%);
@@ -23,7 +28,7 @@
             flex-direction: column;
             overflow: hidden;
         }
-        
+
         /* Floating Bubbles Background */
         .bubbles-bg {
             position: fixed;
@@ -35,29 +40,71 @@
             pointer-events: none;
             overflow: hidden;
         }
-        
+
         .bubble {
             position: absolute;
             bottom: -100px;
-            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.6), rgba(0,212,255,0.2));
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.6), rgba(0, 212, 255, 0.2));
             border-radius: 50%;
             animation: rise 10s infinite ease-in;
             opacity: 0.4;
         }
-        
-        .bubble:nth-child(1) { width: 30px; height: 30px; left: 15%; animation-delay: 0s; }
-        .bubble:nth-child(2) { width: 50px; height: 50px; left: 35%; animation-delay: 3s; }
-        .bubble:nth-child(3) { width: 40px; height: 40px; left: 55%; animation-delay: 6s; }
-        .bubble:nth-child(4) { width: 35px; height: 35px; left: 75%; animation-delay: 2s; }
-        .bubble:nth-child(5) { width: 45px; height: 45px; left: 85%; animation-delay: 8s; }
-        
-        @keyframes rise {
-            0% { bottom: -100px; opacity: 0; }
-            10% { opacity: 0.4; }
-            90% { opacity: 0.4; }
-            100% { bottom: 110vh; opacity: 0; }
+
+        .bubble:nth-child(1) {
+            width: 30px;
+            height: 30px;
+            left: 15%;
+            animation-delay: 0s;
         }
-        
+
+        .bubble:nth-child(2) {
+            width: 50px;
+            height: 50px;
+            left: 35%;
+            animation-delay: 3s;
+        }
+
+        .bubble:nth-child(3) {
+            width: 40px;
+            height: 40px;
+            left: 55%;
+            animation-delay: 6s;
+        }
+
+        .bubble:nth-child(4) {
+            width: 35px;
+            height: 35px;
+            left: 75%;
+            animation-delay: 2s;
+        }
+
+        .bubble:nth-child(5) {
+            width: 45px;
+            height: 45px;
+            left: 85%;
+            animation-delay: 8s;
+        }
+
+        @keyframes rise {
+            0% {
+                bottom: -100px;
+                opacity: 0;
+            }
+
+            10% {
+                opacity: 0.4;
+            }
+
+            90% {
+                opacity: 0.4;
+            }
+
+            100% {
+                bottom: 110vh;
+                opacity: 0;
+            }
+        }
+
         /* Header */
         .chat-header {
             background: rgba(255, 255, 255, 0.15);
@@ -67,14 +114,14 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
             position: relative;
             z-index: 100;
-            border-bottom: 1px solid rgba(255,255,255,0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
         }
-        
+
         .back-btn {
-            background: rgba(255,255,255,0.3);
+            background: rgba(255, 255, 255, 0.3);
             border: none;
             width: 40px;
             height: 40px;
@@ -86,12 +133,12 @@
             font-size: 20px;
             transition: all 0.3s ease;
         }
-        
+
         .back-btn:active {
             transform: scale(0.9);
-            background: rgba(255,255,255,0.5);
+            background: rgba(255, 255, 255, 0.5);
         }
-        
+
         .header-avatar {
             width: 50px;
             height: 50px;
@@ -101,29 +148,29 @@
             align-items: center;
             justify-content: center;
             font-size: 24px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
-        
+
         .header-info {
             flex: 1;
         }
-        
+
         .header-name {
             color: white;
             font-size: 18px;
             font-weight: 800;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
         }
-        
+
         .header-status {
-            color: rgba(255,255,255,0.9);
+            color: rgba(255, 255, 255, 0.9);
             font-size: 13px;
             font-weight: 600;
             display: flex;
             align-items: center;
             gap: 5px;
         }
-        
+
         .status-dot {
             width: 8px;
             height: 8px;
@@ -132,12 +179,21 @@
             animation: pulse-dot 2s infinite;
             box-shadow: 0 0 8px #00FF88;
         }
-        
+
         @keyframes pulse-dot {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.6; transform: scale(1.2); }
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.6;
+                transform: scale(1.2);
+            }
         }
-        
+
         /* Chat Messages Area */
         .chat-messages {
             flex: 1;
@@ -149,43 +205,62 @@
             position: relative;
             z-index: 10;
         }
-        
+
         .chat-messages::-webkit-scrollbar {
             width: 6px;
         }
-        
+
         .chat-messages::-webkit-scrollbar-track {
-            background: rgba(255,255,255,0.1);
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 10px;
         }
-        
+
         .chat-messages::-webkit-scrollbar-thumb {
-            background: rgba(255,255,255,0.3);
+            background: rgba(255, 255, 255, 0.3);
             border-radius: 10px;
         }
-        
+
+        /* Message Bubbles */
         /* Message Bubbles */
         .message {
             display: flex;
             gap: 10px;
-            animation: fadeInUp 0.4s ease;
+            animation: fadeIn 0.4s ease;
         }
-        
-        @keyframes fadeInUp {
+
+        @keyframes fadeIn {
             from {
                 opacity: 0;
-                transform: translateY(20px);
+                transform: translateY(10px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
             }
         }
-        
+
+        .ai-action-card {
+            margin: 15px 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s ease;
+        }
+
+        .ai-action-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .action-btn:hover {
+            filter: brightness(1.1);
+            transform: scale(1.02);
+        }
+
         .message.user {
             flex-direction: row-reverse;
         }
-        
+
+
+
         .message-avatar {
             width: 40px;
             height: 40px;
@@ -195,66 +270,66 @@
             justify-content: center;
             font-size: 20px;
             flex-shrink: 0;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
-        
+
         .message.bubbles .message-avatar {
             background: linear-gradient(135deg, #FF0080, #00D4FF);
         }
-        
+
         .message.user .message-avatar {
-            background: rgba(255,255,255,0.3);
+            background: rgba(255, 255, 255, 0.3);
             backdrop-filter: blur(10px);
         }
-        
+
         .message-content {
             max-width: 75%;
             display: flex;
             flex-direction: column;
             gap: 5px;
         }
-        
+
         .message-bubble {
             padding: 14px 18px;
             border-radius: 20px;
             font-size: 15px;
             font-weight: 500;
             line-height: 1.5;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
-        
+
         .message.bubbles .message-bubble {
-            background: rgba(255,255,255,0.95);
+            background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             color: #333;
             border-bottom-left-radius: 5px;
         }
-        
+
         .message.user .message-bubble {
             background: linear-gradient(135deg, #FF0080, #FF3399);
             color: white;
             border-bottom-right-radius: 5px;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
         }
-        
+
         .message-time {
             font-size: 11px;
             font-weight: 600;
             opacity: 0.7;
             padding: 0 8px;
         }
-        
+
         .message.bubbles .message-time {
             color: white;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
         }
-        
+
         .message.user .message-time {
             color: white;
             text-align: right;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
         }
-        
+
         /* Quick Replies */
         .quick-replies {
             padding: 0 20px 10px;
@@ -264,15 +339,15 @@
             position: relative;
             z-index: 10;
         }
-        
+
         .quick-replies::-webkit-scrollbar {
             display: none;
         }
-        
+
         .quick-reply-btn {
-            background: rgba(255,255,255,0.25);
+            background: rgba(255, 255, 255, 0.25);
             backdrop-filter: blur(15px);
-            border: 2px solid rgba(255,255,255,0.4);
+            border: 2px solid rgba(255, 255, 255, 0.4);
             color: white;
             padding: 10px 18px;
             border-radius: 20px;
@@ -281,14 +356,14 @@
             white-space: nowrap;
             cursor: pointer;
             transition: all 0.3s ease;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
         }
-        
+
         .quick-reply-btn:active {
             transform: scale(0.95);
-            background: rgba(255,255,255,0.4);
+            background: rgba(255, 255, 255, 0.4);
         }
-        
+
         /* Typing Indicator */
         .typing-indicator {
             display: flex;
@@ -296,7 +371,7 @@
             align-items: center;
             padding: 0 20px;
         }
-        
+
         .typing-avatar {
             width: 40px;
             height: 40px;
@@ -307,9 +382,9 @@
             justify-content: center;
             font-size: 20px;
         }
-        
+
         .typing-bubble {
-            background: rgba(255,255,255,0.95);
+            background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             padding: 14px 18px;
             border-radius: 20px;
@@ -317,7 +392,7 @@
             display: flex;
             gap: 5px;
         }
-        
+
         .typing-dot {
             width: 8px;
             height: 8px;
@@ -325,26 +400,41 @@
             border-radius: 50%;
             animation: typing 1.4s infinite;
         }
-        
-        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-        
-        @keyframes typing {
-            0%, 60%, 100% { transform: translateY(0); opacity: 0.7; }
-            30% { transform: translateY(-10px); opacity: 1; }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
         }
-        
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+
+            0%,
+            60%,
+            100% {
+                transform: translateY(0);
+                opacity: 0.7;
+            }
+
+            30% {
+                transform: translateY(-10px);
+                opacity: 1;
+            }
+        }
+
         /* Special Offer Card */
         .offer-card {
-            background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85));
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85));
             backdrop-filter: blur(20px);
             border-radius: 20px;
             padding: 18px;
             margin-top: 8px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-            border: 2px solid rgba(255,255,255,0.5);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.5);
         }
-        
+
         .offer-title {
             font-size: 16px;
             font-weight: 800;
@@ -354,7 +444,7 @@
             align-items: center;
             gap: 8px;
         }
-        
+
         .offer-description {
             font-size: 14px;
             color: #333;
@@ -362,14 +452,14 @@
             font-weight: 600;
             line-height: 1.4;
         }
-        
+
         .offer-price {
             font-size: 18px;
             font-weight: 900;
             color: #00D4FF;
             margin-bottom: 12px;
         }
-        
+
         .offer-btn {
             width: 100%;
             background: linear-gradient(135deg, #FF0080, #00D4FF);
@@ -380,40 +470,40 @@
             font-size: 15px;
             font-weight: 800;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(255,0,128,0.3);
+            box-shadow: 0 4px 15px rgba(255, 0, 128, 0.3);
             transition: all 0.3s ease;
         }
-        
+
         .offer-btn:active {
             transform: scale(0.98);
         }
-        
+
         /* Input Area */
         .chat-input-area {
-            background: rgba(255,255,255,0.15);
+            background: rgba(255, 255, 255, 0.15);
             backdrop-filter: blur(25px);
             -webkit-backdrop-filter: blur(25px);
             padding: 15px 20px;
             display: flex;
             gap: 10px;
             align-items: center;
-            border-top: 1px solid rgba(255,255,255,0.2);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
             position: relative;
             z-index: 100;
         }
-        
+
         .input-wrapper {
             flex: 1;
-            background: rgba(255,255,255,0.25);
+            background: rgba(255, 255, 255, 0.25);
             backdrop-filter: blur(10px);
             border-radius: 25px;
             padding: 12px 18px;
             display: flex;
             align-items: center;
             gap: 10px;
-            border: 2px solid rgba(255,255,255,0.3);
+            border: 2px solid rgba(255, 255, 255, 0.3);
         }
-        
+
         .chat-input {
             flex: 1;
             background: none;
@@ -424,12 +514,12 @@
             font-weight: 600;
             font-family: 'Poppins', sans-serif;
         }
-        
+
         .chat-input::placeholder {
-            color: rgba(255,255,255,0.7);
+            color: rgba(255, 255, 255, 0.7);
             font-weight: 600;
         }
-        
+
         .attach-btn {
             background: none;
             border: none;
@@ -438,12 +528,12 @@
             opacity: 0.8;
             transition: all 0.3s ease;
         }
-        
+
         .attach-btn:active {
             transform: scale(0.9);
             opacity: 1;
         }
-        
+
         .send-btn {
             width: 48px;
             height: 48px;
@@ -455,16 +545,73 @@
             justify-content: center;
             font-size: 22px;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(255,0,128,0.4);
+            box-shadow: 0 4px 15px rgba(255, 0, 128, 0.4);
             transition: all 0.3s ease;
         }
-        
+
         .send-btn:active {
             transform: scale(0.95);
         }
+
+        /* Message Feedback */
+        .message-feedback {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            opacity: 0.7;
+        }
+
+        .message-feedback button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            padding: 4px 10px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .message-feedback button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .message-feedback button:active {
+            transform: scale(0.95);
+        }
     </style>
-    <link rel="stylesheet" href="common.css">
 </head>
+<!-- AI agent initialization -->
+<script type="module">
+    import { Agent } from 'https://cdn.jsdelivr.net/npm/@bubblegum/agent@latest/dist/agent.min.js';
+
+    const agent = new Agent({
+        agentId: 'your-agent-id', // Replace with your actual agent ID
+        element: '#chatMessages', // The element where messages will be displayed
+        input: '.chat-input', // The input field for user messages
+        sendButton: '.send-btn', // The send button
+        quickRepliesContainer: '.quick-replies', // Container for quick replies
+        typingIndicator: '#typingIndicator', // Typing indicator element
+        userAvatar: '👤', // User avatar emoji or URL
+        agentAvatar: '💧', // Agent avatar emoji or URL
+        welcomeMessage: "Ciao! 👋 Benvenuto all'Hotel Posta! Sono Bubbles, il tuo assistente personale. Come posso aiutarti oggi?",
+        // Add any other configuration options here
+    });
+
+    // Expose agent to global scope for easy access in other scripts if needed
+    window.agent = agent;
+
+    // Example of how to send a message programmatically
+    // agent.sendMessage("Hello from script!");
+</script>
+<!-- Common CSS -->
+<link rel="stylesheet" href="common.css">
+<!-- Main JavaScript -->
+<script src="app.js"></script>
+</body>
+
+</html>
+
 <body>
     <!-- Background Bubbles -->
     <div class="bubbles-bg">
@@ -474,42 +621,36 @@
         <div class="bubble"></div>
         <div class="bubble"></div>
     </div>
-    
+
     <!-- Header -->
     <div class="chat-header">
-        <button class="back-btn">←</button>
+        <button class="back-btn" onclick="window.history.back()">←</button>
         <div class="header-avatar">💧</div>
         <div class="header-info">
-            <div class="header-name">Bubbles</div>
+            <div class="header-name">Bubbles - Receptionist H24</div>
             <div class="header-status">
                 <span class="status-dot"></span>
-                Sempre disponibile
+                Sempre disponibile per te
             </div>
         </div>
     </div>
-    
+
     <!-- Chat Messages -->
     <div class="chat-messages" id="chatMessages">
-        <div class="message bubbles">
-            <div class="message-avatar">💧</div>
-            <div class="message-content">
-                <div class="message-bubble">
-                    Ciao! 👋 Sono Bubbles, l'assistente dell'Hotel Posta. Chiedimi qualunque cosa: orari, prenotazioni, escursioni, consigli su Tropea...
-                </div>
-                <div class="message-time">Adesso</div>
-            </div>
-        </div>
+        <!-- Messages will be dynamically loaded here -->
     </div>
-    
+
     <!-- Quick Replies -->
     <div class="quick-replies">
-        <button class="quick-reply-btn">🍝 Ristorante</button>
-        <button class="quick-reply-btn">🎭 Animazione</button>
-        <button class="quick-reply-btn">💆 Spa</button>
-        <button class="quick-reply-btn">🚢 Escursioni</button>
-        <button class="quick-reply-btn">📍 Info Hotel</button>
+        <button class="quick-reply-btn" onclick="handleQuickReply('Vorrei prenotare un tavolo al ristorante')">🍝
+            Ristorante</button>
+        <button class="quick-reply-btn" onclick="handleQuickReply('Che eventi ci sono stasera?')">🎭 Animazione</button>
+        <button class="quick-reply-btn" onclick="handleQuickReply('Vorrei prenotare un massaggio')">💆 Spa</button>
+        <button class="quick-reply-btn" onclick="handleQuickReply('Quali escursioni sono disponibili?')">🚢
+            Escursioni</button>
+        <button class="quick-reply-btn" onclick="handleQuickReply('Informazioni sull\'hotel')">📍 Info Hotel</button>
     </div>
-    
+
     <!-- Typing Indicator (hidden by default) -->
     <div class="typing-indicator" id="typingIndicator" style="display: none; padding-bottom: 15px;">
         <div class="typing-avatar">💧</div>
@@ -519,134 +660,230 @@
             <div class="typing-dot"></div>
         </div>
     </div>
-    
+
     <!-- Input Area -->
     <div class="chat-input-area">
         <div class="input-wrapper">
-            <input type="text" class="chat-input" id="chatInput" placeholder="Scrivi un messaggio...">
-            <button class="attach-btn" title="Allegato (presto)">📎</button>
+            <input type="text" id="messageInput" class="chat-input" placeholder="Scrivi un messaggio..."
+                onkeypress="handleKeyPress(event)">
+            <button class="attach-btn" style="display: none;">📎</button>
         </div>
         <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
     </div>
 
     <script>
-        const chatMessages = document.getElementById('chatMessages');
-        const chatInput = document.getElementById('chatInput');
-        const sendBtn = document.getElementById('sendBtn');
-        const typingIndicator = document.getElementById('typingIndicator');
+        // Global variables
+        let currentConversationId = null;
+        let currentUserId = null;
+        let isTyping = false;
 
-        const history = [];
-        let aiAvailable = true;
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Check authentication
+            const user = window.supabase.auth.user();
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+            currentUserId = user.id;
 
-        function scrollToBottom() {
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            // Load or create conversation
+            await initializeConversation();
+
+            // Load conversation history
+            await loadConversationHistory();
+        });
+
+        // Initialize conversation
+        async function initializeConversation() {
+            const activeConv = await getActiveConversation(currentUserId);
+            if (activeConv) {
+                currentConversationId = activeConv.id;
+            }
+            // If no active conversation, it will be created on first message
         }
 
-        function escapeHtml(str) {
-            return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
-        }
+        // Load conversation history
+        async function loadConversationHistory() {
+            if (!currentConversationId) {
+                // Show welcome message
+                addWelcomeMessage();
+                return;
+            }
 
-        function addMessage(role, text) {
-            const isUser = role === 'user';
-            const html = `
-                <div class="message ${isUser ? 'user' : 'bubbles'}">
-                    <div class="message-avatar">${isUser ? '👤' : '💧'}</div>
-                    <div class="message-content">
-                        <div class="message-bubble">${escapeHtml(text).replace(/\n/g, '<br>')}</div>
-                        <div class="message-time">Adesso</div>
-                    </div>
-                </div>`;
-            chatMessages.insertAdjacentHTML('beforeend', html);
-            scrollToBottom();
-        }
+            const messages = await getConversationHistory(currentConversationId);
 
-        function showTyping(show) {
-            if (!typingIndicator) return;
-            typingIndicator.style.display = show ? 'flex' : 'none';
-            if (show) scrollToBottom();
-        }
-
-        function fallbackReply(msg) {
-            const m = msg.toLowerCase();
-            if (/ristorante|cena|pranzo|mangiare|tavolo/.test(m))
-                return "Il ristorante apre 12:30–14:30 e 19:30–22:00. 🍽️ Vai alla pagina Ristorante per prenotare un tavolo.";
-            if (/spa|massaggio|relax|sauna|bagno turco/.test(m))
-                return "La SPA è aperta 10:00–20:00. 💆 Dalla pagina Spa puoi prenotare massaggi e trattamenti.";
-            if (/escursion|tour|gita|barca|isole/.test(m))
-                return "Abbiamo escursioni in barca, trekking e tour enogastronomici. 🚢 Dai un'occhiata alla pagina Escursioni!";
-            if (/animaz|spettacolo|serata|evento/.test(m))
-                return "L'animazione parte tutte le sere alle 21:30 in piazzetta. 🎭 Trovi il programma nella pagina Animazione.";
-            if (/last minute|offerta|sconto/.test(m))
-                return "Ci sono offerte flash fino al 40% nella pagina Last Minute! ⚡";
-            if (/ciao|buongiorno|buonasera|salve|hey/.test(m))
-                return "Ciao! 👋 Come posso aiutarti?";
-            if (/grazie/.test(m))
-                return "Figurati! 😊 Sono qui se ti serve altro.";
-            return "Posso aiutarti con ristorante, spa, escursioni, animazione e offerte. Cosa ti serve? 😊";
-        }
-
-        async function askAI(userMsg) {
-            if (!aiAvailable) return fallbackReply(userMsg);
-            try {
-                const res = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ messages: [...history, { role: 'user', content: userMsg }] })
+            if (messages.length === 0) {
+                addWelcomeMessage();
+            } else {
+                messages.forEach(msg => {
+                    addMessageToUI(msg.role, msg.content, msg.id, false);
                 });
-                if (res.status === 503 || res.status === 502) {
-                    aiAvailable = false;
-                    return fallbackReply(userMsg);
-                }
-                if (!res.ok) throw new Error('HTTP ' + res.status);
-                const data = await res.json();
-                return data.reply || fallbackReply(userMsg);
-            } catch (err) {
-                console.warn('AI fallback:', err);
-                return fallbackReply(userMsg);
+                scrollToBottom();
             }
         }
 
-        async function sendMessage() {
-            const text = chatInput.value.trim();
-            if (!text) return;
-
-            chatInput.value = '';
-            sendBtn.disabled = true;
-            addMessage('user', text);
-            history.push({ role: 'user', content: text });
-            showTyping(true);
-
-            const reply = await askAI(text);
-
-            showTyping(false);
-            addMessage('assistant', reply);
-            history.push({ role: 'assistant', content: reply });
-            sendBtn.disabled = false;
-            chatInput.focus();
+        // Add welcome message
+        function addWelcomeMessage() {
+            const welcomeMsg = "Ciao! 👋 Benvenuto all'Hotel Posta! Sono Bubbles, il tuo assistente AI personale. Come posso aiutarti oggi?";
+            addMessageToUI('assistant', welcomeMsg, null, true);
         }
 
-        chatInput.addEventListener('keypress', e => {
-            if (e.key === 'Enter') sendMessage();
-        });
-
-        document.querySelectorAll('.quick-reply-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                chatInput.value = btn.textContent.trim();
+        // Handle Enter key press
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
                 sendMessage();
-            });
-        });
+            }
+        }
 
-        document.querySelector('.back-btn')?.addEventListener('click', () => {
-            if (window.history.length > 1) window.history.back();
-            else window.location.href = 'index.html';
-        });
+        // Send message
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+
+            if (!message || isTyping) return;
+
+            // Clear input
+            input.value = '';
+
+            // Add user message to UI
+            addMessageToUI('user', message, null, true);
+
+            // Show typing indicator
+            showTypingIndicator();
+
+            try {
+                // Send to AI agent
+                const response = await sendMessageToAgent(message, currentUserId, currentConversationId);
+
+                if (response.success) {
+                    // Update conversation ID if it was just created
+                    if (!currentConversationId) {
+                        currentConversationId = response.conversationId;
+                    }
+
+                    // Hide typing indicator
+                    hideTypingIndicator();
+
+                    // Add AI response to UI
+                    addMessageToUI('assistant', response.response, null, true);
+
+                    // Update quick replies based on context
+                    updateQuickReplies(response.actionType);
+                } else {
+                    hideTypingIndicator();
+                    addMessageToUI('assistant', response.response, null, true);
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+                hideTypingIndicator();
+                addMessageToUI('assistant', 'Mi dispiace, c\'è stato un errore. Riprova per favore.', null, true);
+            }
+        }
+
+        // Add message to UI
+        function addMessageToUI(role, content, messageId, animate) {
+            const messagesContainer = document.getElementById('chatMessages');
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role === 'user' ? 'user' : 'bubbles'}`;
+            if (animate) {
+                messageDiv.style.opacity = '0';
+            }
+
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = role === 'user' ? '👤' : '💧';
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+            bubble.innerHTML = content.replace(/\n/g, '<br>');
+
+            const time = document.createElement('div');
+            time.className = 'message-time';
+            time.textContent = new Date().toLocaleTimeString('it-IT', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            contentDiv.appendChild(bubble);
+
+            // Add feedback buttons for assistant messages
+            if (role === 'assistant' && messageId) {
+                const feedbackDiv = document.createElement('div');
+                feedbackDiv.className = 'message-feedback';
+                feedbackDiv.innerHTML = `
+                    <button onclick="submitFeedback('${messageId}', 1)" title="Utile">👍</button>
+                    <button onclick="submitFeedback('${messageId}', -1)" title="Non utile">👎</button>
+                `;
+                contentDiv.appendChild(feedbackDiv);
+            }
+
+            contentDiv.appendChild(time);
+
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(contentDiv);
+
+            messagesContainer.appendChild(messageDiv);
+
+            if (animate) {
+                setTimeout(() => {
+                    messageDiv.style.transition = 'opacity 0.4s ease';
+                    messageDiv.style.opacity = '1';
+                }, 10);
+            }
+
+            scrollToBottom();
+        }
+
+        // Show typing indicator
+        function showTypingIndicator() {
+            isTyping = true;
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) {
+                indicator.style.display = 'flex';
+                scrollToBottom();
+            }
+        }
+
+        // Hide typing indicator
+        function hideTypingIndicator() {
+            isTyping = false;
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) {
+                indicator.style.display = 'none';
+            }
+        }
+
+        // Scroll to bottom
+        function scrollToBottom() {
+            const messagesContainer = document.getElementById('chatMessages');
+            setTimeout(() => {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }, 100);
+        }
+
+        // Update quick replies based on context
+        function updateQuickReplies(actionType) {
+            // You can dynamically update quick reply buttons based on conversation context
+            // For now, keeping them static
+        }
+
+        // Handle quick reply click
+        function handleQuickReply(text) {
+            document.getElementById('messageInput').value = text;
+            sendMessage();
+        }
     </script>
 
+    <!-- Common CSS -->
+    <link rel="stylesheet" href="common.css">
+    <!-- Main JavaScript -->
     <script src="app.js"></script>
 </body>
+
 </html>

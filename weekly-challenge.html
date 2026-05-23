@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sfida Settimanale - Hotel Posta</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Space+Grotesk:wght@600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="game-leaderboard.js" defer></script>
+    <style>
+        :root {
+            --bg-primary: #0a0a12;
+            --bg-secondary: #13131f;
+            --accent-primary: #6366f1;
+            --accent-secondary: #8b5cf6;
+            --success: #10b981;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 20px;
+        }
+
+        .game-card {
+            background: var(--bg-secondary);
+            padding: 40px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%;
+        }
+
+        h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 28px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .leaderboard {
+            margin-top: 30px;
+        }
+
+        .lb-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            opacity: 0.5;
+            text-transform: uppercase;
+            padding: 8px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .lb-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            align-items: center;
+        }
+
+        .lb-row.me {
+            background: rgba(99, 102, 241, 0.1);
+            border-radius: 8px;
+        }
+
+        .rank {
+            font-weight: 700;
+            font-size: 18px;
+            width: 40px;
+        }
+
+        .player {
+            flex: 1;
+        }
+
+        .score {
+            font-weight: 700;
+            color: var(--accent-primary);
+        }
+
+        .primary-btn {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        #gameScreen,
+        #resultsScreen {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="back-btn" onclick="window.location.href='games.html'">
+                <i data-lucide="arrow-left"></i>
+            </button>
+            <div style="text-align: right;">
+                <div style="font-size: 14px; opacity: 0.6;">Sociale</div>
+                <div style="font-weight: 700;">Sfida Settimanale</div>
+            </div>
+        </div>
+
+        <div class="game-area">
+            <div id="startScreen" class="game-card">
+                <div style="font-size: 64px; margin-bottom: 20px; text-align: center;">🏆</div>
+                <h1>Sfida Settimanale</h1>
+                <p style="opacity: 0.8; margin-bottom: 20px; text-align: center;">
+                    Tutti gli ospiti ricevono lo stesso puzzle ogni settimana. Chi lo risolve più velocemente vince!
+                </p>
+                <div
+                    style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 16px; margin-bottom: 20px;">
+                    <div style="font-size: 12px; opacity: 0.5; text-transform: uppercase; text-align: center;">Tempo
+                        rimanente</div>
+                    <div id="timeRemaining"
+                        style="font-size: 24px; font-weight: 700; color: #fbbf24; text-align: center;">Caricamento...
+                    </div>
+                </div>
+                <div
+                    style="background: rgba(16, 185, 129, 0.1); padding: 20px; border-radius: 16px; margin-bottom: 30px;">
+                    <div style="font-size: 12px; opacity: 0.8; text-align: center;">Premio</div>
+                    <div style="font-size: 18px; font-weight: 700; color: var(--success); text-align: center;">+30 punti
+                        + Bonus Top 10</div>
+                </div>
+                <button class="primary-btn" onclick="startChallenge()">ACCETTA SFIDA</button>
+
+                <div class="leaderboard" id="leaderboard">
+                    <h3 style="margin-bottom: 16px;">Classifica Settimanale</h3>
+                    <div class="lb-header">
+                        <span style="width: 40px;">Pos</span>
+                        <span style="flex: 1;">Giocatore</span>
+                        <span>Punteggio</span>
+                    </div>
+                    <div id="lbContent">
+                        <div class="lb-row">
+                            <span class="rank">1</span>
+                            <span class="player">Caricamento...</span>
+                            <span class="score">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="gameScreen" class="game-card">
+                <h2 style="margin-bottom: 20px;">Puzzle della Settimana</h2>
+                <p style="margin-bottom: 30px; opacity: 0.8;">
+                    Risolvi questo enigma il più velocemente possibile!
+                </p>
+                <div style="background: rgba(255, 255, 255, 0.03); padding: 24px; border-radius: 16px; margin-bottom: 30px; font-size: 18px; line-height: 1.6; font-style: italic;"
+                    id="challengeText">
+                    Caricamento sfida...
+                </div>
+                <input type="text" id="answerInput" placeholder="La tua risposta..."
+                    style="width: 100%; background: rgba(255, 255, 255, 0.05); border: 2px solid rgba(255, 255, 255, 0.1); padding: 16px; border-radius: 12px; color: white; font-size: 16px; margin-bottom: 20px;">
+                <button class="primary-btn" onclick="submitAnswer()">INVIA RISPOSTA</button>
+            </div>
+
+            <div id="resultsScreen" class="game-card">
+                <div style="font-size: 64px; margin-bottom: 20px; text-align: center;">🎊</div>
+                <h1>Sfida Completata!</h1>
+                <p style="text-align: center; opacity: 0.8; margin: 20px 0;">La tua posizione in classifica sarà
+                    aggiornata a breve.</p>
+                <div
+                    style="background: var(--success); padding: 20px; border-radius: 16px; margin-bottom: 30px; text-align: center;">
+                    <div style="font-size: 32px; font-weight: 900; color: white;">+30 Punti</div>
+                </div>
+                <button class="primary-btn" onclick="window.location.href='leaderboard.html'">VAI ALLA
+                    CLASSIFICA</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        const weeklyChallenge = {
+            question: "Sono alto quando sono giovane, piccolo quando sono vecchio. Cos'è?",
+            answer: "candela"
+        };
+
+        function getWeekNumber() {
+            const today = new Date();
+            const januaryFirst = new Date(today.getFullYear(), 0, 1);
+            const days = Math.floor((today - januaryFirst) / (24 * 60 * 60 * 1000));
+            return Math.ceil((days + januaryFirst.getDay() + 1) / 7);
+        }
+
+        function getTimeRemaining() {
+            const now = new Date();
+            const endOfWeek = new Date(now);
+            endOfWeek.setDate(now.getDate() + (7 - now.getDay()));
+            endOfWeek.setHours(23, 59, 59, 999);
+
+            const diff = endOfWeek - now;
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+
+            return `${days}g ${hours}h`;
+        }
+
+        function init() {
+            document.getElementById('timeRemaining').textContent = getTimeRemaining();
+            loadLeaderboard();
+        }
+
+        async function loadLeaderboard() {
+            // Mock leaderboard - in production, fetch from Supabase
+            const mockData = [
+                { name: "Marco R.", score: 150 },
+                { name: "Laura B.", score: 145 },
+                { name: "Giuseppe T.", score: 130 },
+                { name: "Anna M.", score: 120 },
+                { name: "Paolo F.", score: 115 }
+            ];
+
+            const lbContent = document.getElementById('lbContent');
+            lbContent.innerHTML = mockData.map((player, idx) => `
+                <div class="lb-row">
+                    <span class="rank">${idx + 1}</span>
+                    <span class="player">${player.name}</span>
+                    <span class="score">${player.score}pts</span>
+                </div>
+            `).join('');
+        }
+
+        function startChallenge() {
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'block';
+            document.getElementById('challengeText').textContent = weeklyChallenge.question;
+        }
+
+        async function submitAnswer() {
+            const userAnswer = document.getElementById('answerInput').value.trim().toLowerCase();
+
+            if (userAnswer === weeklyChallenge.answer) {
+                document.getElementById('gameScreen').style.display = 'none';
+                document.getElementById('resultsScreen').style.display = 'block';
+
+                const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
+                try {
+                    const { data: current } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
+                    const newPoints = (current?.points || 0) + 30;
+                    await supabaseClient.from('user_points').update({ points: newPoints }).eq('user_email', email);
+
+                    if (typeof saveGameScore === 'function') {
+                        saveGameScore('weekly_challenge', 100);
+                    }
+                } catch (err) {
+                    console.error('Error saving score:', err);
+                }
+            } else {
+                alert('Risposta errata! Riprova.');
+            }
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

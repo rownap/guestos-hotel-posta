@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sliding Puzzle - Hotel Posta</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Space+Grotesk:wght@600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="game-leaderboard.js" defer></script>
+    <style>
+        :root {
+            --bg-primary: #0a0a12;
+            --bg-secondary: #13131f;
+            --accent-primary: #6366f1;
+            --accent-secondary: #8b5cf6;
+            --success: #10b981;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1e 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .game-card {
+            background: var(--bg-secondary);
+            padding: 40px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 28px;
+            margin-bottom: 16px;
+        }
+
+        .puzzle-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+            width: 330px;
+            height: 330px;
+            margin: 20px auto;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px;
+            border-radius: 16px;
+        }
+
+        .puzzle-tile {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .puzzle-tile:hover {
+            transform: scale(0.95);
+        }
+
+        .puzzle-tile.empty {
+            background: rgba(255, 255, 255, 0.05);
+            cursor: default;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .stat {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .primary-btn {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        #gameScreen,
+        #resultsScreen {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="back-btn" onclick="window.location.href='games.html'">
+                <i data-lucide="arrow-left"></i>
+            </button>
+            <div style="text-align: right;">
+                <div style="font-size: 14px; opacity: 0.6;">Relax & Zen</div>
+                <div style="font-weight: 700;">Sliding Puzzle</div>
+            </div>
+        </div>
+
+        <div class="game-area">
+            <div id="startScreen" class="game-card">
+                <div style="font-size: 64px; margin-bottom: 20px;">🧩</div>
+                <h1>Sliding Puzzle</h1>
+                <p style="opacity: 0.8; margin-bottom: 30px;">
+                    Riordina i numeri da 1 a 8. Un classico rilassante!
+                </p>
+                <div
+                    style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 16px; margin-bottom: 30px;">
+                    <div style="font-size: 12px; opacity: 0.5; text-transform: uppercase;">Premio</div>
+                    <div style="font-size: 24px; font-weight: 700; color: #fbbf24;">+20 Punti</div>
+                </div>
+                <button class="primary-btn" onclick="startGame()">INIZIA</button>
+            </div>
+
+            <div id="gameScreen" class="game-card">
+                <div class="stats">
+                    <div class="stat">Mosse: <span id="moves">0</span></div>
+                </div>
+                <div id="puzzleGrid" class="puzzle-grid"></div>
+                <button class="primary-btn" onclick="shuffle()">MESCOLA</button>
+            </div>
+
+            <div id="resultsScreen" class="game-card">
+                <div style="font-size: 64px; margin-bottom: 20px;">🎊</div>
+                <h1>Puzzle Completato!</h1>
+                <p style="opacity: 0.8; margin: 20px 0;">Mosse totali: <span id="finalMoves"></span></p>
+                <div style="background: var(--success); padding: 20px; border-radius: 16px; margin-bottom: 30px;">
+                    <div style="font-size: 32px; font-weight: 900; color: white;">+20 Punti</div>
+                </div>
+                <button class="primary-btn" onclick="window.location.href='games.html'">TORNA AI GIOCHI</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        let tiles = [1, 2, 3, 4, 5, 6, 7, 8, 0];
+        let moves = 0;
+        let emptyIndex = 8;
+
+        function startGame() {
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'block';
+            shuffle();
+        }
+
+        function shuffle() {
+            // Simple shuffle - move random tiles 50 times
+            for (let i = 0; i < 50; i++) {
+                const movable = getMovableTiles();
+                const randomTile = movable[Math.floor(Math.random() * movable.length)];
+                swap(randomTile);
+            }
+            moves = 0;
+            document.getElementById('moves').textContent = moves;
+            render();
+        }
+
+        function getMovableTiles() {
+            const movable = [];
+            const row = Math.floor(emptyIndex / 3);
+            const col = emptyIndex % 3;
+
+            // Check up, down, left, right
+            if (row > 0) movable.push(emptyIndex - 3);
+            if (row < 2) movable.push(emptyIndex + 3);
+            if (col > 0) movable.push(emptyIndex - 1);
+            if (col < 2) movable.push(emptyIndex + 1);
+
+            return movable;
+        }
+
+        function swap(tileIndex) {
+            [tiles[emptyIndex], tiles[tileIndex]] = [tiles[tileIndex], tiles[emptyIndex]];
+            emptyIndex = tileIndex;
+        }
+
+        function moveTile(index) {
+            if (getMovableTiles().includes(index)) {
+                swap(index);
+                moves++;
+                document.getElementById('moves').textContent = moves;
+                render();
+                checkWin();
+            }
+        }
+
+        function render() {
+            const container = document.getElementById('puzzleGrid');
+            container.innerHTML = '';
+
+            tiles.forEach((num, idx) => {
+                const tile = document.createElement('div');
+                tile.className = 'puzzle-tile' + (num === 0 ? ' empty' : '');
+                tile.textContent = num || '';
+                tile.onclick = () => moveTile(idx);
+                container.appendChild(tile);
+            });
+        }
+
+        function checkWin() {
+            const isWin = tiles.every((num, idx) => idx === 8 || num === idx + 1);
+            if (isWin) {
+                setTimeout(() => endGame(), 300);
+            }
+        }
+
+        async function endGame() {
+            document.getElementById('gameScreen').style.display = 'none';
+            document.getElementById('resultsScreen').style.display = 'block';
+            document.getElementById('finalMoves').textContent = moves;
+
+            const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
+            try {
+                const { data: current } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
+                const newPoints = (current?.points || 0) + 20;
+                await supabaseClient.from('user_points').update({ points: newPoints }).eq('user_email', email);
+
+                if (typeof saveGameScore === 'function') {
+                    const score = Math.max(10, 100 - moves);
+                    saveGameScore('sliding_puzzle', score);
+                }
+            } catch (err) {
+                console.error('Error saving score:', err);
+            }
+        }
+    </script>
+</body>
+
+</html>
