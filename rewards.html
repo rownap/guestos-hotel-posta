@@ -403,11 +403,15 @@
                 
                 if (redeemError) throw redeemError;
                 
-                // Scala punti
+                // Scala punti (upsert per consistenza)
                 const { error: pointsError } = await supabaseClient
                     .from('user_points')
-                    .update({ points: userPoints - cost })
-                    .eq('user_email', userEmail);
+                    .upsert({
+                        user_email: userEmail,
+                        user_name: localStorage.getItem('guestos_user_name') || 'Ospite',
+                        points: Math.max(0, userPoints - cost),
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: 'user_email' });
                 
                 if (pointsError) throw pointsError;
                 

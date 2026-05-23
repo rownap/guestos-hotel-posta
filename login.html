@@ -1011,6 +1011,10 @@ ORDER BY ordinal_position;
                     throw new Error('Errore durante la registrazione');
                 }
 
+                // NOTA: il record user_points viene creato automaticamente da un trigger
+                // PostgreSQL (vedi db-setup.sql). Non serve un INSERT lato client (RLS blocca
+                // INSERT da anon key con errore 42501).
+
                 localStorage.setItem('guestos_user_email', email);
                 localStorage.setItem('guestos_user_name', newUser.last_name);
                 localStorage.setItem('guestos_room_number', newUser.room_number);

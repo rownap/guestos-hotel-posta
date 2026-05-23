@@ -351,7 +351,7 @@
                 // Save points
                 const { data: current } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
                 const newPoints = (current?.points || 0) + score;
-                await supabaseClient.from('user_points').update({ points: newPoints }).eq('user_email', email);
+                await supabaseClient.from('user_points').upsert({ user_email: email, user_name: localStorage.getItem('guestos_user_name') || 'Ospite', points: newPoints, updated_at: new Date().toISOString() }, { onConflict: 'user_email' });
 
                 // Save to leaderboard
                 if (typeof saveGameScore === 'function') {

@@ -1405,14 +1405,16 @@
                 throw error;
             }
 
-            // Deduct points if used
+            // Deduct points if used (upsert per evitare no-op se record mancante)
             if (pointsUsed > 0) {
-                const { data: userData } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
-                if (userData) {
-                    await supabaseClient.from('user_points').update({
-                        points: userData.points - pointsUsed
-                    }).eq('user_email', email);
-                }
+                const { data: userData } = await supabaseClient.from('user_points').select('points').eq('user_email', email).maybeSingle();
+                const newPts = Math.max(0, (userData?.points || 0) - pointsUsed);
+                await supabaseClient.from('user_points').upsert({
+                    user_email: email,
+                    user_name: localStorage.getItem('guestos_user_name') || 'Ospite',
+                    points: newPts,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'user_email' });
             }
 
             alert('✅ Prenotazione confermata con successo! (Pagata con Punti)');

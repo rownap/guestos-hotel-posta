@@ -346,7 +346,7 @@
             try {
                 const { data: current } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
                 const newPoints = (current?.points || 0) + 30;
-                await supabaseClient.from('user_points').update({ points: newPoints }).eq('user_email', email);
+                await supabaseClient.from('user_points').upsert({ user_email: email, user_name: localStorage.getItem('guestos_user_name') || 'Ospite', points: newPoints, updated_at: new Date().toISOString() }, { onConflict: 'user_email' });
 
                 if (typeof saveGameScore === 'function') {
                     saveGameScore('sudoku_quick', 100);

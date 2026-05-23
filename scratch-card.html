@@ -576,7 +576,7 @@
                 .single()
                 .then(({ data }) => {
                     const newPts = (data?.points || 0) + pts;
-                    return supabaseClient.from('user_points').update({ points: newPts }).eq('user_email', email);
+                    return supabaseClient.from('user_points').upsert({ user_email: email, user_name: localStorage.getItem('guestos_user_name') || 'Ospite', points: newPts, updated_at: new Date().toISOString() }, { onConflict: 'user_email' });
                 });
         }
 

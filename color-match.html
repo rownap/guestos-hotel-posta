@@ -600,7 +600,7 @@
             try {
                 const { data } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
                 const newPts = (data?.points || 0) + pts;
-                await supabaseClient.from('user_points').update({ points: newPts }).eq('user_email', email);
+                await supabaseClient.from('user_points').upsert({ user_email: email, user_name: localStorage.getItem('guestos_user_name') || 'Ospite', points: newPts, updated_at: new Date().toISOString() }, { onConflict: 'user_email' });
             } catch (e) { console.error(e); }
         }
 
