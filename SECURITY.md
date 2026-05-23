@@ -74,7 +74,7 @@ Before delivering an instance to a customer:
 - [ ] Run `db-setup.sql` on the customer's Supabase project.
 - [ ] Verify RLS is enabled on every table.
 - [ ] Configure custom domain with HTTPS.
-- [ ] Generate a random admin PIN (not `demo2024`) and share it via secure channel.
+- [ ] Generate a random admin PIN and share it via secure channel.
 - [ ] Enable automatic Supabase backups (PITR).
 - [ ] Link privacy and cookie policies in the footer.
 - [ ] Purge demo data (test users and bookings).
