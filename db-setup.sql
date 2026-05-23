@@ -21,7 +21,7 @@ BEGIN
     NEW.last_name,
     0,
     1,
-    ARRAY[]::text[],
+    '[]'::jsonb,
     0,
     NOW(),
     NOW()
@@ -47,7 +47,7 @@ SELECT
   COALESCE(u.last_name, 'Ospite'),
   0,
   1,
-  ARRAY[]::text[],
+  '[]'::jsonb,
   0,
   NOW(),
   NOW()
