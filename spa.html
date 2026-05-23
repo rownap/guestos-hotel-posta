@@ -1383,20 +1383,20 @@
             const totalPrice = currentTreatmentPrice * selectedPeople;
 
             // Save spa booking to database (for points-only payments)
+            // NB: la tabella spa_bookings NON ha payment_status (a differenza di restaurant/tour) — non aggiungere quel campo o l'insert va in PGRST204
             const { error } = await supabaseClient.from('spa_bookings').insert({
                 user_email: email,
                 user_name: userName,
                 treatment_name: currentTreatmentName,
                 booking_date: bookingDate,
                 booking_time: '10:00:00',
-                price: 0,
+                price: Math.max(0, totalPrice - discount),
                 num_people: selectedPeople,
                 original_price: totalPrice,
                 points_used: pointsUsed,
                 discount_amount: discount,
-                final_price: 0,
-                status: 'confirmed',
-                payment_status: paymentStatus
+                final_price: Math.max(0, totalPrice - discount),
+                status: 'confirmed'
             });
 
             if (error) {

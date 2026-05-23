@@ -1115,15 +1115,23 @@
 
         async function saveBooking(email, userName, paymentStatus) {
             const tourDateStr = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-${selectedDate.toString().padStart(2, '0')}`;
+            const pointsUsedVal = parseInt(document.getElementById('pointsSlider').value || 0);
+            const discountVal = pointsUsedVal * 0.1;
+            const originalPriceVal = currentTourPrice * selectedPeople;
+            const finalPriceVal = Math.max(0, originalPriceVal - discountVal);
 
             const { error } = await supabaseClient.from('tour_bookings').insert({
                 user_email: email,
                 user_name: userName,
                 tour_name: currentTourName,
                 booking_date: tourDateStr,
-                people: selectedPeople,
-                total_price: (currentTourPrice * selectedPeople),
-                points_used: document.getElementById('pointsSlider').value,
+                tour_date: tourDateStr,
+                num_people: selectedPeople,
+                original_price: originalPriceVal,
+                points_used: pointsUsedVal,
+                discount_amount: discountVal,
+                final_price: finalPriceVal,
+                total_price: finalPriceVal,
                 payment_status: paymentStatus,
                 status: 'confirmed'
             });
@@ -1134,7 +1142,7 @@
                 throw error;
             }
 
-            alert('✅ Prenotazione confermata con successo! (Pagata con Punti)');
+            alert('✅ Prenotazione confermata con successo!');
             closeBookingModal();
         }
 
