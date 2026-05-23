@@ -5,7 +5,7 @@
 | Info | Dettaglio |
 |------|-----------|
 | **Sito Live** | [guestos-hotel-posta-1.vercel.app](https://guestos-hotel-posta-1.vercel.app) |
-| **Repo GitHub** | [umidifire22-cell/guestos-hotel-posta](https://github.com/umidifire22-cell/guestos-hotel-posta) |
+| **Repo GitHub** | [rownap/guestos-hotel-posta](https://github.com/rownap/guestos-hotel-posta) |
 | **Branch** | `main` (auto-deploy Vercel ad ogni push) |
 | **Tipo Deploy** | Sito statico HTML/CSS/JS + 1 Vercel Function (`/api/chat`) |
 | **Backend** | Supabase (DB + Auth + RPC pgcrypto) |
@@ -80,7 +80,7 @@ Per attivare la chat AI vera (sennò usa il fallback keyword):
 
 ```
 Vercel → Project Settings → Environment Variables
-ANTHROPIC_API_KEY = sk-ant-...
+ANTHROPIC_API_KEY = replace_with_your_anthropic_key
 ```
 
 ---
@@ -117,4 +117,4 @@ ANTHROPIC_API_KEY = sk-ant-...
 - **Tabella prenotazioni**: `restaurant_bookings` (user_email, booking_date, booking_time, num_people, status, ...)
 - **Tabella punti**: `user_points` (user_email, points)
 - **Admin login**: Supabase RPC `admin_login(p_email, p_password)` con `crypt()` (pgcrypto)
-- **Admin credentials demo**: `admin@hotelposta.it` / `demo2024`
+- **Admin credentials demo**: conservate fuori dal repository pubblico.

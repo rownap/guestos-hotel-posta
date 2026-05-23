@@ -18,8 +18,8 @@ window.STRIPE_CONFIG = {
 window.STRIPE_CONFIG.createPaymentIntentUrl = window.STRIPE_CONFIG.createCheckoutSessionUrl;
 const STRIPE_CONFIG = window.STRIPE_CONFIG;
 
-// OpenWeather API
-const OPENWEATHER_API_KEY = 'dcc0590743a5a15df1e33e71e3e17786'; // Sostituisci con la tua key
+// Weather widget is loaded via weatherwidget.io; keep this empty unless a private backend proxy is added.
+const OPENWEATHER_API_KEY = '';
 const HOTEL_LOCATION = {
     lat: 39.2, // Calabria
     lon: 16.25,
@@ -33,7 +33,6 @@ var supabaseClient = window.supabaseClient; // Fallback for direct usage
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { supabaseClient };
 }
-
 
 
 

@@ -8,6 +8,18 @@
 
 ---
 
+## Stato portfolio
+
+GuestOS è una PWA verticale per hotel già deployata, pensata come prodotto white-label per aumentare revenue ancillary e qualità dell'esperienza ospite. La demo pubblica mostra il flusso ospite, il catalogo servizi, la gamification e la dashboard admin.
+
+| Area | Stato |
+|------|-------|
+| PWA ospite | Live |
+| Chat AI | Live con fallback se `ANTHROPIC_API_KEY` non è configurata |
+| Admin dashboard | Live |
+| Booking ristorante / punti | Collegati a Supabase |
+| Revenue tools | In espansione |
+
 ## ✨ Cosa fa per i tuoi ospiti
 
 - 💬 **Bubbles AI Receptionist** — chat 24/7 in italiano (Claude Haiku) per orari, info, suggerimenti.
@@ -39,7 +51,7 @@
 ## 🚀 Setup locale
 
 ```bash
-git clone https://github.com/umidifire22-cell/guestos-hotel-posta.git
+git clone https://github.com/rownap/guestos-hotel-posta.git
 cd guestos-hotel-posta
 npx serve .
 # apri http://localhost:3000
@@ -54,6 +66,13 @@ Per attivare la chat AI vera (Bubbles), aggiungi in **Vercel → Project Setting
 | `ANTHROPIC_API_KEY` | la tua key da [console.anthropic.com](https://console.anthropic.com) |
 
 Senza la key, la chat usa un fallback keyword-based.
+
+## 🔐 Sicurezza
+
+- Le chiavi private restano su Vercel/Supabase, non nel repository.
+- La Supabase anon key può essere usata lato browser solo con Row Level Security correttamente configurata.
+- Le credenziali demo operative non devono essere documentate nel repository pubblico.
+- Vedi [`SECURITY.md`](./SECURITY.md) per le regole di gestione segreti.
 
 ## 💰 Per gli hotel
 
