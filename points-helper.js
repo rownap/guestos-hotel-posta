@@ -1,21 +1,20 @@
 // points-helper.js
-// Helper centralizzato per gestire i punti utente. Usa UPSERT per evitare
-// il bug "punti persi" che si verificava con UPDATE su record inesistenti.
-// USO: await addPoints(20); — semplice e sicuro.
+// Helper centralizzato per gestire i punti utente.
+// Usa UPDATE (non upsert/insert) perché:
+//   - Le RLS Supabase bloccano INSERT/UPSERT dalla anon key (errore 42501).
+//   - Il trigger PostgreSQL `user_points_auto_create` (vedi db-setup.sql)
+//     garantisce che ogni utente abbia il record già al momento della
+//     registrazione. Quindi UPDATE è sempre sufficiente.
+// USO: await addPoints(20)  // restituisce il nuovo totale, o null se errore.
 
 (function () {
     function getEmail() {
         return localStorage.getItem('guestos_user_email') || null;
     }
 
-    function getName() {
-        return localStorage.getItem('guestos_user_name') || 'Ospite';
-    }
-
     /**
      * Aggiunge (o sottrae se negativo) punti all'utente loggato.
-     * Crea automaticamente il record user_points se non esiste.
-     * @param {number} delta - punti da aggiungere (può essere negativo)
+     * @param {number} delta - punti da aggiungere/sottrarre
      * @returns {Promise<number|null>} nuovo totale punti, o null se errore
      */
     window.addPoints = async function (delta) {
@@ -29,31 +28,37 @@
             return null;
         }
         try {
-            const { data: current } = await supabaseClient
+            const { data: current, error: selErr } = await supabaseClient
                 .from('user_points')
-                .select('points, badges, total_bookings')
+                .select('points')
                 .eq('user_email', email)
                 .maybeSingle();
 
-            const currentPts = current?.points || 0;
-            const newPts = Math.max(0, currentPts + delta);
-
-            const { error } = await supabaseClient
-                .from('user_points')
-                .upsert({
-                    user_email: email,
-                    user_name: getName(),
-                    points: newPts,
-                    badges: current?.badges || [],
-                    total_bookings: current?.total_bookings || 0,
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'user_email' });
-
-            if (error) {
-                console.error('addPoints upsert error:', error);
+            if (selErr) {
+                console.error('addPoints select error:', selErr);
                 return null;
             }
-            console.log(`✅ Punti: ${currentPts} → ${newPts} (${delta > 0 ? '+' : ''}${delta})`);
+            if (!current) {
+                console.warn('addPoints: nessun record per', email,
+                    '— verificare che il trigger db sia attivo (db-setup.sql).');
+                return null;
+            }
+
+            const newPts = Math.max(0, (current.points || 0) + delta);
+
+            const { error: updErr } = await supabaseClient
+                .from('user_points')
+                .update({
+                    points: newPts,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('user_email', email);
+
+            if (updErr) {
+                console.error('addPoints update error:', updErr);
+                return null;
+            }
+            console.log(`✅ Punti: ${current.points || 0} → ${newPts} (${delta > 0 ? '+' : ''}${delta})`);
             return newPts;
         } catch (err) {
             console.error('addPoints error:', err);
@@ -82,7 +87,7 @@
     };
 
     /**
-     * Imposta direttamente il totale punti (usato dopo prenotazioni che scalano punti).
+     * Imposta direttamente il totale punti.
      * @param {number} newTotal
      */
     window.setPoints = async function (newTotal) {
@@ -91,12 +96,11 @@
         try {
             const { error } = await supabaseClient
                 .from('user_points')
-                .upsert({
-                    user_email: email,
-                    user_name: getName(),
+                .update({
                     points: Math.max(0, newTotal),
                     updated_at: new Date().toISOString()
-                }, { onConflict: 'user_email' });
+                })
+                .eq('user_email', email);
             if (error) {
                 console.error('setPoints error:', error);
                 return null;
