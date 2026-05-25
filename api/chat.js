@@ -1,6 +1,6 @@
 // Vercel Function: AI Receptionist per Hotel Posta
 // Richiede env var ANTHROPIC_API_KEY (impostata in Vercel → Settings → Environment Variables)
-// Se la key non è settata, ritorna 503 e il client fa fallback al bot keyword.
+// Se la key non è settata, ritorna una risposta keyword-based così la demo resta fluida.
 
 const SYSTEM_PROMPT = `Sei Bubbles, l'assistente digitale dell'Hotel Posta in Calabria (Tropea).
 Parli SEMPRE in italiano, in modo cordiale, breve e con tono caldo da concierge di villaggio.
@@ -25,6 +25,34 @@ REGOLE:
 - Non inventare prezzi che non conosci. I prezzi delle offerte li conosce solo l'app.
 - Mai dare consigli medici, legali o finanziari.`;
 
+function getFallbackReply(message = '') {
+  const text = message.toLowerCase();
+
+  if (text.includes('ristorante') || text.includes('cena') || text.includes('pranzo') || text.includes('tavolo')) {
+    return 'Il ristorante è aperto 12:30-14:30 e 19:30-22:00. Puoi prenotare dalla pagina Ristorante dell’app. 🍽️';
+  }
+  if (text.includes('spa') || text.includes('massaggio') || text.includes('sauna') || text.includes('benessere')) {
+    return 'La SPA è aperta dalle 10:00 alle 20:00. Vai nella pagina Spa per scegliere trattamento e orario. 💆';
+  }
+  if (text.includes('tour') || text.includes('escurs') || text.includes('barca') || text.includes('tropea')) {
+    return 'Le escursioni disponibili sono nella pagina Escursioni: barca, trekking e percorsi enogastronomici. 🚢';
+  }
+  if (text.includes('check-out') || text.includes('checkout') || text.includes('partenza')) {
+    return 'Il check-out è entro le 11:00. Per esigenze particolari chiama la reception digitando 0 dalla camera. 🕚';
+  }
+  if (text.includes('wifi') || text.includes('internet')) {
+    return 'Il WiFi è gratuito in tutta la struttura. Se hai problemi di connessione, la reception può aiutarti subito. 📶';
+  }
+  if (text.includes('punti') || text.includes('premi') || text.includes('reward') || text.includes('giochi')) {
+    return 'Puoi guadagnare punti con giochi e quiz, poi riscattarli come sconti nella pagina Rewards. 🎮';
+  }
+  if (text.includes('last minute') || text.includes('offerta') || text.includes('sconto')) {
+    return 'Le offerte flash sono nella pagina Last Minute. Controllala spesso: alcune promozioni durano poche ore. ⚡';
+  }
+
+  return 'Sono Bubbles, l’assistente dell’Hotel Posta. Posso aiutarti con ristorante, SPA, tour, giochi, punti, offerte e informazioni sul soggiorno. 💧';
+}
+
 module.exports = async (req, res) => {
   // CORS (se serve)
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -40,24 +68,25 @@ module.exports = async (req, res) => {
     return;
   }
 
+  const { messages } = req.body || {};
+  if (!Array.isArray(messages) || messages.length === 0) {
+    res.status(400).json({ error: 'messages array richiesto' });
+    return;
+  }
+
+  const trimmed = messages.slice(-20).map(m => ({
+    role: m.role === 'assistant' ? 'assistant' : 'user',
+    content: String(m.content || '').slice(0, 2000)
+  }));
+
+  const lastMessage = [...trimmed].reverse().find(m => m.role === 'user')?.content || '';
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    res.status(503).json({ error: 'AI non configurata', fallback: true });
+    res.status(200).json({ reply: getFallbackReply(lastMessage), fallback: true, model: 'local-fallback' });
     return;
   }
 
   try {
-    const { messages } = req.body || {};
-    if (!Array.isArray(messages) || messages.length === 0) {
-      res.status(400).json({ error: 'messages array richiesto' });
-      return;
-    }
-
-    const trimmed = messages.slice(-20).map(m => ({
-      role: m.role === 'assistant' ? 'assistant' : 'user',
-      content: String(m.content || '').slice(0, 2000)
-    }));
-
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -76,7 +105,7 @@ module.exports = async (req, res) => {
     if (!response.ok) {
       const errText = await response.text();
       console.error('Anthropic error:', response.status, errText);
-      res.status(502).json({ error: 'Errore servizio AI', fallback: true });
+      res.status(200).json({ reply: getFallbackReply(lastMessage), fallback: true, model: 'local-fallback' });
       return;
     }
 
@@ -85,6 +114,6 @@ module.exports = async (req, res) => {
     res.status(200).json({ reply });
   } catch (err) {
     console.error('Chat error:', err);
-    res.status(500).json({ error: 'Errore interno', fallback: true });
+    res.status(200).json({ reply: getFallbackReply(lastMessage), fallback: true, model: 'local-fallback' });
   }
 };

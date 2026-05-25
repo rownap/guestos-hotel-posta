@@ -2,107 +2,120 @@
  * AI Agent API - Backend Integration
  * Hotel Posta - AI Receptionist
  * 
- * This module handles communication between the chat UI and n8n workflow
+ * This module handles communication between the chat UI and the Vercel AI function.
  */
 
-// Configuration
-// Configuration
-// Webhook URL del workflow n8n su Hostinger (Produzione)
-const N8N_WEBHOOK_URL = 'https://n8n.srv1079262.hstgr.cloud/webhook/ai-chat';
-const N8N_WEBHOOK_SECRET = 'your-webhook-secret'; // Opzionale, per sicurezza
+const CHAT_API_URL = '/api/chat';
+
+function getDbClient() {
+    return window.supabaseClient || null;
+}
+
+function makeLocalConversationId() {
+    return `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function canPersistUser(userId) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId || '');
+}
+
+function getLocalBubblesResponse(message) {
+    const text = message.toLowerCase();
+
+    if (text.includes('ristorante') || text.includes('cena') || text.includes('pranzo') || text.includes('tavolo')) {
+        return 'Il ristorante è aperto 12:30-14:30 e 19:30-22:00 🍽️ Puoi prenotare dalla pagina Ristorante dell’app.';
+    }
+    if (text.includes('spa') || text.includes('massaggio') || text.includes('sauna') || text.includes('benessere')) {
+        return 'La SPA è aperta dalle 10:00 alle 20:00 💆 Vai nella pagina Spa per scegliere trattamento e orario.';
+    }
+    if (text.includes('tour') || text.includes('escurs') || text.includes('barca') || text.includes('tropea')) {
+        return 'Le escursioni disponibili sono nella pagina Escursioni 🚢 Trovi tour in barca, trekking e percorsi enogastronomici.';
+    }
+    if (text.includes('check-out') || text.includes('checkout') || text.includes('partenza')) {
+        return 'Il check-out è entro le 11:00 🕚 Per esigenze particolari chiama la reception digitando 0 dalla camera.';
+    }
+    if (text.includes('wifi') || text.includes('internet')) {
+        return 'Il WiFi è gratuito in tutta la struttura 📶 Se hai problemi di connessione, la reception può aiutarti subito.';
+    }
+    if (text.includes('punti') || text.includes('premi') || text.includes('reward') || text.includes('giochi')) {
+        return 'Puoi guadagnare punti con giochi e quiz 🎮 Poi li riscatti come sconti nella pagina Rewards.';
+    }
+    if (text.includes('last minute') || text.includes('offerta') || text.includes('sconto')) {
+        return 'Le offerte flash sono nella pagina Last Minute ⚡ Controllala spesso: alcune promozioni durano poche ore.';
+    }
+
+    return 'Sono Bubbles, il tuo assistente dell’Hotel Posta 💧 Posso aiutarti con ristorante, SPA, tour, giochi, punti, offerte e informazioni sul soggiorno.';
+}
 
 /**
- * Send message to AI agent via n8n webhook
+ * Send message to AI agent via the Vercel function.
  * @param {string} message - User message
  * @param {string} userId - User ID from Supabase auth
  * @param {string} conversationId - Conversation ID (optional, will create new if not provided)
  * @returns {Promise<Object>} AI response
  */
 async function sendMessageToAgent(message, userId, conversationId = null) {
+    const startedAt = performance.now();
+
     try {
-        // Get or create conversation
         if (!conversationId) {
-            conversationId = await createConversation(userId);
+            conversationId = await createConversation(userId).catch(() => makeLocalConversationId());
         }
 
-        // Save user message to database
-        await saveMessage(conversationId, 'user', message);
+        await saveMessage(conversationId, 'user', message).catch(() => {});
 
-        // Send to n8n webhook
-        const response = await fetch(N8N_WEBHOOK_URL, {
+        const response = await fetch(CHAT_API_URL, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'X-Webhook-Secret': N8N_WEBHOOK_SECRET
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                message: message,
-                userId: userId,
-                conversationId: conversationId,
-                timestamp: new Date().toISOString()
+                messages: [{ role: 'user', content: message }]
             })
         });
 
-        if (!response.ok) {
-            throw new Error(`n8n webhook failed: ${response.status}`);
-        }
-
         const data = await response.json();
+        const aiUnavailable = !response.ok || !data.reply;
+        const reply = aiUnavailable ? getLocalBubblesResponse(message) : data.reply;
+        const actionType = detectActionType(message);
 
-        // Save assistant response to database
-        if (data.response) {
-            await saveMessage(conversationId, 'assistant', data.response, {
-                action_type: data.actionType,
-                model: data.metadata?.model || 'gpt-4-turbo',
-                tokens_used: data.metadata?.tokens_used,
-                response_time_ms: data.metadata?.response_time_ms
-            });
+        await saveMessage(conversationId, 'assistant', reply, {
+            action_type: actionType,
+            model: aiUnavailable ? 'local-fallback' : 'claude-haiku',
+            response_time_ms: Math.round(performance.now() - startedAt)
+        }).catch(() => {});
+
+        if (actionType && actionType !== 'info' && typeof handleAIAction === 'function') {
+            handleAIAction(actionType, {});
         }
-
-        // If there's an action, save it
-        if (data.actionType && data.actionType !== 'info') {
-            await saveAction(conversationId, data.actionType, data.actionData);
-        }
-
-        // --- Start of modified section ---
-        // Assuming addMessageToUI is defined elsewhere in the UI code
-        if (data.success) {
-            // Add AI response to chat
-            // addMessageToUI('assistant', data.response); // This line is commented out as addMessageToUI is not defined in this file
-
-            // Handle specific actions detected by AI
-            if (data.actionType && data.actionType !== 'info') {
-                handleAIAction(data.actionType, data.metadata);
-            }
-        }
-        // --- End of modified section ---
 
         return {
             success: true,
-            response: data.response,
+            response: reply,
             conversationId: conversationId,
-            actionType: data.actionType,
-            timestamp: data.timestamp
+            actionType: actionType,
+            timestamp: new Date().toISOString()
         };
 
     } catch (error) {
         console.error('Error sending message to agent:', error);
-
-        // --- Start of modified section ---
-        // Fallback response
-        // Remove typing indicator if error
-        const typingIndicator = document.querySelector('.typing-indicator'); // Assuming this is part of the UI
-        if (typingIndicator) typingIndicator.remove();
-
-        // addMessageToUI('assistant', 'Mi dispiace, ho avuto un piccolo problema tecnico. Riprova tra poco! 😓'); // This line is commented out as addMessageToUI is not defined in this file
-        // --- End of modified section ---
-
         return {
-            success: false,
-            response: "Mi dispiace, sto avendo problemi tecnici. Per favore riprova tra poco o contatta la reception al numero +39 0963 123456.",
-            error: error.message
+            success: true,
+            response: getLocalBubblesResponse(message),
+            conversationId: conversationId || makeLocalConversationId(),
+            actionType: detectActionType(message),
+            timestamp: new Date().toISOString(),
+            fallback: true
         };
     }
+}
+
+function detectActionType(message) {
+    const text = message.toLowerCase();
+    if (text.includes('ristorante') || text.includes('tavolo') || text.includes('cena')) return 'booking_restaurant';
+    if (text.includes('spa') || text.includes('massaggio') || text.includes('sauna')) return 'booking_spa';
+    if (text.includes('tour') || text.includes('escurs') || text.includes('barca')) return 'booking_tour';
+    return 'info';
 }
 
 /**
@@ -111,7 +124,10 @@ async function sendMessageToAgent(message, userId, conversationId = null) {
  * @returns {Promise<string>} Conversation ID
  */
 async function createConversation(userId) {
-    const { data, error } = await window.supabase
+    const db = getDbClient();
+    if (!db || !canPersistUser(userId)) return makeLocalConversationId();
+
+    const { data, error } = await db
         .from('ai_conversations')
         .insert({
             user_id: userId,
@@ -137,7 +153,10 @@ async function createConversation(userId) {
  * @param {Object} metadata - Additional metadata
  */
 async function saveMessage(conversationId, role, content, metadata = {}) {
-    const { error } = await window.supabase
+    const db = getDbClient();
+    if (!db || conversationId.startsWith('local-')) return;
+
+    const { error } = await db
         .from('ai_messages')
         .insert({
             conversation_id: conversationId,
@@ -160,7 +179,10 @@ async function saveMessage(conversationId, role, content, metadata = {}) {
  * @param {Object} actionData - Action data
  */
 async function saveAction(conversationId, actionType, actionData) {
-    const { error } = await window.supabase
+    const db = getDbClient();
+    if (!db || conversationId.startsWith('local-')) return;
+
+    const { error } = await db
         .from('ai_actions')
         .insert({
             conversation_id: conversationId,
@@ -181,7 +203,10 @@ async function saveAction(conversationId, actionType, actionData) {
  * @returns {Promise<Array>} Array of messages
  */
 async function getConversationHistory(conversationId, limit = 20) {
-    const { data, error } = await window.supabase
+    const db = getDbClient();
+    if (!db || !conversationId || conversationId.startsWith('local-')) return [];
+
+    const { data, error } = await db
         .from('ai_messages')
         .select('*')
         .eq('conversation_id', conversationId)
@@ -202,7 +227,10 @@ async function getConversationHistory(conversationId, limit = 20) {
  * @returns {Promise<Object|null>} Active conversation or null
  */
 async function getActiveConversation(userId) {
-    const { data, error } = await window.supabase
+    const db = getDbClient();
+    if (!db || !canPersistUser(userId)) return null;
+
+    const { data, error } = await db
         .from('ai_conversations')
         .select('*')
         .eq('user_id', userId)
@@ -226,15 +254,16 @@ async function getActiveConversation(userId) {
  * @param {string} comment - Optional comment
  */
 async function submitFeedback(messageId, rating, comment = null) {
-    const userId = window.supabase.auth.user()?.id;
+    const db = getDbClient();
+    const userId = localStorage.getItem('guestos_user_id');
 
-    if (!userId) {
+    if (!db || !userId) {
         console.error('User not authenticated');
         return;
     }
 
     // Get conversation ID from message
-    const { data: message } = await window.supabase
+    const { data: message } = await db
         .from('ai_messages')
         .select('conversation_id')
         .eq('id', messageId)
@@ -245,7 +274,7 @@ async function submitFeedback(messageId, rating, comment = null) {
         return;
     }
 
-    const { error } = await window.supabase
+    const { error } = await db
         .from('ai_feedback')
         .insert({
             message_id: messageId,
@@ -286,7 +315,10 @@ async function executeBookingAction(actionType, bookingDetails) {
                 throw new Error(`Unknown booking type: ${actionType}`);
         }
 
-        const { data, error } = await window.supabase
+        const db = getDbClient();
+        if (!db) throw new Error('Database non disponibile');
+
+        const { data, error } = await db
             .from(tableName)
             .insert({
                 ...bookingDetails,
@@ -320,13 +352,7 @@ async function executeBookingAction(actionType, bookingDetails) {
  */
 async function getAgentStatus() {
     try {
-        // Ping the n8n webhook to check if it's alive
-        const response = await fetch(N8N_WEBHOOK_URL + '/health', {
-            method: 'GET',
-            headers: {
-                'X-Webhook-Secret': N8N_WEBHOOK_SECRET
-            }
-        });
+        const response = await fetch(CHAT_API_URL, { method: 'OPTIONS' });
 
         return {
             online: response.ok,

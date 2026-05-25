@@ -581,37 +581,6 @@
         }
     </style>
 </head>
-<!-- AI agent initialization -->
-<script type="module">
-    import { Agent } from 'https://cdn.jsdelivr.net/npm/@bubblegum/agent@latest/dist/agent.min.js';
-
-    const agent = new Agent({
-        agentId: 'your-agent-id', // Replace with your actual agent ID
-        element: '#chatMessages', // The element where messages will be displayed
-        input: '.chat-input', // The input field for user messages
-        sendButton: '.send-btn', // The send button
-        quickRepliesContainer: '.quick-replies', // Container for quick replies
-        typingIndicator: '#typingIndicator', // Typing indicator element
-        userAvatar: '👤', // User avatar emoji or URL
-        agentAvatar: '💧', // Agent avatar emoji or URL
-        welcomeMessage: "Ciao! 👋 Benvenuto all'Hotel Posta! Sono Bubbles, il tuo assistente personale. Come posso aiutarti oggi?",
-        // Add any other configuration options here
-    });
-
-    // Expose agent to global scope for easy access in other scripts if needed
-    window.agent = agent;
-
-    // Example of how to send a message programmatically
-    // agent.sendMessage("Hello from script!");
-</script>
-<!-- Common CSS -->
-<link rel="stylesheet" href="common.css">
-<!-- Main JavaScript -->
-<script src="app.js"></script>
-</body>
-
-</html>
-
 <body>
     <!-- Background Bubbles -->
     <div class="bubbles-bg">
@@ -679,19 +648,20 @@
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', async () => {
-            // Check authentication
-            const user = window.supabase.auth.user();
-            if (!user) {
+            if (localStorage.getItem('guestos_logged_in') !== 'true') {
                 window.location.href = 'login.html';
                 return;
             }
-            currentUserId = user.id;
+
+            currentUserId = localStorage.getItem('guestos_user_id') || `guest-${Date.now()}`;
 
             // Load or create conversation
-            await initializeConversation();
+            await initializeConversation().catch((error) => {
+                console.warn('Conversation history unavailable, continuing in local chat mode:', error);
+            });
 
             // Load conversation history
-            await loadConversationHistory();
+            await loadConversationHistory().catch(() => addWelcomeMessage());
         });
 
         // Initialize conversation

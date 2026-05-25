@@ -4,7 +4,7 @@
 
 | Info | Dettaglio |
 |------|-----------|
-| **Sito Live** | [guestos-hotel-posta-1.vercel.app](https://guestos-hotel-posta-1.vercel.app) |
+| **Sito Live** | [guestos-hotel-posta-gamma.vercel.app](https://guestos-hotel-posta-gamma.vercel.app) |
 | **Repo GitHub** | [rownap/guestos-hotel-posta](https://github.com/rownap/guestos-hotel-posta) |
 | **Branch** | `main` (auto-deploy Vercel ad ogni push) |
 | **Tipo Deploy** | Sito statico HTML/CSS/JS + 1 Vercel Function (`/api/chat`) |

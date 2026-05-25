@@ -2,9 +2,9 @@
 
 > **L'app PWA all-in-one che trasforma l'esperienza dei tuoi ospiti in revenue.**
 
-🔗 **Demo live:** [guestos-hotel-posta-1.vercel.app](https://guestos-hotel-posta-1.vercel.app)
-📲 **Accesso demo:** [/login.html?demo=1](https://guestos-hotel-posta-1.vercel.app/login.html?demo=1)
-🛠️ **Admin:** [/guestos-admin-login.html](https://guestos-hotel-posta-1.vercel.app/guestos-admin-login.html)
+🔗 **Demo live:** [guestos-hotel-posta-gamma.vercel.app](https://guestos-hotel-posta-gamma.vercel.app)
+📲 **Accesso demo:** [/login.html?demo=1](https://guestos-hotel-posta-gamma.vercel.app/login.html?demo=1)
+🛠️ **Admin:** [/guestos-admin-login.html](https://guestos-hotel-posta-gamma.vercel.app/guestos-admin-login.html)
 
 ---
 
