@@ -1,10 +1,15 @@
-# 🏨 GuestOS — Hotel Posta
+# GuestOS — Hotel Posta
 
 > **L'app PWA all-in-one che trasforma l'esperienza dei tuoi ospiti in revenue.**
 
-🔗 **Demo live:** [guestos-hotel-posta-gamma.vercel.app](https://guestos-hotel-posta-gamma.vercel.app)
-📲 **Accesso demo:** [/login.html?demo=1](https://guestos-hotel-posta-gamma.vercel.app/login.html?demo=1)
-🛠️ **Admin:** [/guestos-admin-login.html](https://guestos-hotel-posta-gamma.vercel.app/guestos-admin-login.html)
+## Demo
+
+| Link | Stato |
+| --- | --- |
+| [Demo live](https://guestos-hotel-posta-gamma.vercel.app) | Online |
+| [Accesso ospite demo](https://guestos-hotel-posta-gamma.vercel.app/login.html?demo=1) | Online |
+| [Admin demo](https://guestos-hotel-posta-gamma.vercel.app/guestos-admin-login.html) | Online |
+| [Codice sorgente](https://github.com/rownap/guestos-hotel-posta) | Pubblico |
 
 ---
 
@@ -20,23 +25,23 @@ GuestOS è una PWA verticale per hotel già deployata, pensata come prodotto whi
 | Booking ristorante / punti | Collegati a Supabase |
 | Revenue tools | In espansione |
 
-## ✨ Cosa fa per i tuoi ospiti
+## Cosa fa per gli ospiti
 
-- 💬 **Bubbles AI Receptionist** — chat 24/7 in italiano (Claude Haiku) per orari, info, suggerimenti.
-- 🍽️ **Ristorante** — menu, calendario, prenotazione tavolo con sconto in punti.
-- 💆 **SPA** — catalogo trattamenti e booking immediato.
-- 🚢 **Escursioni** — tour locali con dettagli, foto, prenotazione.
-- 🎮 **Gamification** — 20+ giochi, quiz, leaderboard, rewards riscattabili come sconti.
-- 🎭 **Animazione** — programma sera per sera.
-- ⚡ **Last Minute** — offerte flash spinte ai presenti in struttura.
-- 📱 **PWA** — installabile su iOS/Android dalla schermata Home, funziona offline.
+- **Bubbles AI Receptionist** — chat 24/7 in italiano per orari, info e suggerimenti.
+- **Ristorante** — menu, calendario e prenotazione tavolo con sconto in punti.
+- **SPA** — catalogo trattamenti e booking immediato.
+- **Escursioni** — tour locali con dettagli, foto e prenotazione.
+- **Gamification** — giochi, quiz, leaderboard e reward riscattabili.
+- **Animazione** — programma sera per sera.
+- **Last Minute** — offerte flash per gli ospiti presenti in struttura.
+- **PWA** — installabile su iOS/Android dalla schermata Home.
 
-## 💼 Cosa fa per la direzione
+## Cosa fa per la direzione
 
-- 🔧 **Dashboard admin** con Yield Management, gestione contenuti, statistiche.
-- 📨 Prenotazioni reali sincronizzate su Supabase (`restaurant_bookings`, `user_points`).
-- 🔐 Login admin sicuro (Supabase RPC + pgcrypto).
-- 🌐 Deploy automatico Vercel ad ogni `git push`.
+- **Dashboard admin** con yield management, gestione contenuti e statistiche.
+- **Prenotazioni sincronizzate** su Supabase (`restaurant_bookings`, `user_points`).
+- **Login admin** via Supabase RPC + pgcrypto.
+- **Deploy automatico** su Vercel a ogni `git push`.
 
 ## 🛠 Stack
 
@@ -74,12 +79,6 @@ Senza la key, la chat usa un fallback keyword-based.
 - Le credenziali demo operative non devono essere documentate nel repository pubblico.
 - Vedi [`SECURITY.md`](./SECURITY.md) per le regole di gestione segreti.
 
-## 💰 Per gli hotel
+## Portfolio note
 
-- **Setup**: 2-3 ore di customizzazione (logo, colori, menu, escursioni).
-- **Prezzo**: €3.000 una tantum + €200/mese gestione (AI + hosting + supporto).
-- **Payback**: 2-3 settimane (anche solo upsell su SPA e tour ripagano l'investimento).
-- **Contatti**: [umidifire22@gmail.com](mailto:umidifire22@gmail.com)
-
----
-*Made with 💧 in Calabria — un'app, mille opportunità.*
+Questo repository mostra una demo live verificabile. Eventuali pricing, proposta commerciale, contatti diretti e condizioni per hotel non sono documentati nel repository pubblico: vanno gestiti in materiali privati o in una landing commerciale dedicata.
