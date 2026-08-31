@@ -24,26 +24,32 @@
         box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.12);
         z-index: 9999;
         border-top: 1px solid rgba(255, 255, 255, 0.25);
+        overflow: hidden;
     }
 
     .bottom-nav-container {
         max-width: 600px;
         margin: 0 auto;
         display: flex;
-        justify-content: space-around;
-        align-items: center;
-        padding: 0 10px;
-        gap: 8px;
+        justify-content: space-between;
+        align-items: stretch;
+        padding: 0 8px;
+        gap: 6px;
     }
 
     .bottom-nav-item {
+        /* Larghezza elastica: 5 item entrano sempre nello schermo */
+        flex: 1 1 0;
+        min-width: 0;
+        box-sizing: border-box;
         display: flex;
         flex-direction: column;
         align-items: center;
+        justify-content: center;
         gap: 5px;
         cursor: pointer;
         transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-        padding: 10px 14px;
+        padding: 10px 4px;
         border-radius: 18px;
         text-decoration: none;
         background: rgba(255, 255, 255, 0.08);
@@ -100,7 +106,8 @@
     }
 
     .bottom-nav-icon {
-        font-size: 24px;
+        font-size: clamp(20px, 5.5vw, 24px);
+        line-height: 1;
         /* Adjusted for Iconify */
         display: flex;
         /* Center icon */
@@ -119,13 +126,34 @@
     }
 
     .bottom-nav-label {
-        font-size: 10px;
+        font-size: clamp(8px, 2.5vw, 10px);
         font-weight: 900;
         color: rgba(255, 255, 255, 0.85);
         transition: all 0.3s ease;
         text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4);
         text-align: center;
-        letter-spacing: 0.3px;
+        letter-spacing: 0.2px;
+        line-height: 1.1;
+        max-width: 100%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Schermi molto stretti (iPhone SE / mini): stringi tutto */
+    @media (max-width: 360px) {
+        .bottom-nav-container {
+            gap: 4px;
+            padding: 0 6px;
+        }
+
+        .bottom-nav-item {
+            padding: 8px 2px;
+        }
+
+        .bottom-nav-label {
+            letter-spacing: 0;
+        }
     }
 
     .bottom-nav-item.active .bottom-nav-label {
