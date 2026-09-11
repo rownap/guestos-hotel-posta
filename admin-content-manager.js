@@ -1,367 +1,384 @@
 /**
- * GUESTOS ADMIN - CONTENT MANAGEMENT SYSTEM
- * Gestisce Ristorante, Tours, SPA, Animazione, Last Minute
+ * GUESTOS ADMIN — GESTIONE CONTENUTI
+ * Menu ristorante, escursioni, servizi spa, animazione, offerte last minute, premi.
+ *
+ * Sicurezza:
+ *  - Ogni tabella di catalogo ha due policy: `public_read` (l'ospite vede solo le
+ *    righe attive) e `admin_all`, che da' lettura e scrittura complete quando
+ *    guestos_is_admin() e' vero, cioe' quando la richiesta porta un x-admin-token
+ *    valido. La console quindi legge e scrive in diretta: e' il database a
+ *    rifiutare chi non e' amministratore, non il browser a doversi autolimitare.
+ *  - Tutto cio' che finisce in innerHTML passa da escapeHtml(): i nomi dei piatti,
+ *    dei tour e dei premi sono testo scritto a mano dallo staff.
+ *  - Niente onclick con stringhe interpolate (prima l'elenco iniettava un intero
+ *    JSON.stringify dell'oggetto dentro un attributo HTML): data-attribute +
+ *    addEventListener, con gli oggetti tenuti in memoria e non nel markup.
  */
+(function () {
+    'use strict';
 
-// Configurazione Tabelle
-const TABLES = {
-    RESTAURANT: 'restaurant_menu',
-    TOURS: 'tours',
-    SPA: 'spa_services',
-    ANIMATION: 'animation_activities',
-    LAST_MINUTE: 'last_minute_offers', // Tabella esistente
-    REWARDS: 'rewards' // Gestione Premi
-};
+    const esc = (window.AdminOS && window.AdminOS.escapeHtml) || function (s) {
+        return String(s === null || s === undefined ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    };
 
-// Stato Corrente
-let currentEditingItem = null;
-let currentSection = null;
+    // Tabella e ordinamento per ogni sezione della console.
+    // spa punta a spa_treatments (id interi): e' il catalogo prenotabile, quello
+    // a cui si riferisce spa_bookings.treatment_id. La vecchia spa_services e'
+    // stata rinominata spa_services_legacy e non e' piu' raggiungibile.
+    const TABLES = {
+        restaurant: { table: 'restaurant_menu', order: 'category' },
+        tours: { table: 'tours', order: 'name' },
+        spa: { table: 'spa_treatments', order: 'price' },
+        animation: { table: 'animation_activities', order: 'start_time' },
+        last_minute: { table: 'last_minute_offers', order: 'valid_until' },
+        rewards: { table: 'rewards', order: 'points_required' }
+    };
 
-// ==========================================
-// 🚀 APERTURA MODALI E GESTIONE UI
-// ==========================================
-
-function openContentManager(section) {
-    currentSection = section;
-    const modalTitle = document.getElementById('contentModalTitle');
-    const modalBody = document.getElementById('contentModalBody');
-    const modal = document.getElementById('contentModal');
-
-    // Reset
-    modalBody.innerHTML = '<div class="loading">Caricamento dati...</div>';
-    modal.classList.add('active');
-
-    // Routing Sezione
-    switch (section) {
-        case 'restaurant':
-            modalTitle.textContent = '🍽️ Gestione Menu Ristorante';
-            loadRestaurantItems();
-            break;
-        case 'tours':
-            modalTitle.textContent = '🚌 Gestione Escursioni';
-            loadToursItems();
-            break;
-        case 'spa':
-            modalTitle.textContent = '💆 Gestione Servizi SPA';
-            loadSpaItems();
-            break;
-        case 'animation':
-            modalTitle.textContent = '🎉 Gestione Animazione';
-            loadAnimationItems();
-            break;
-        case 'last_minute':
-            modalTitle.textContent = '🔥 Gestione Offerte Last Minute';
-            loadLastMinuteItems();
-            break;
-        case 'rewards':
-            modalTitle.textContent = '🎁 Gestione Premi';
-            loadRewardsItems();
-            break;
-    }
-}
-
-function closeContentModal() {
-    document.getElementById('contentModal').classList.remove('active');
-    currentSection = null;
-    currentEditingItem = null;
-}
-
-// ------------------------------------------
-// 🍽️ RISTORANTE
-// ------------------------------------------
-async function loadRestaurantItems() {
-    try {
-        const { data, error } = await supabaseClient.from(TABLES.RESTAURANT).select('*').order('category');
-        if (error) throw error;
-        renderGenericTable(data, 'restaurant', ['Categoria', 'Piatto', 'Prezzo'], (item) => `
-            <td><span class="badge ${getCategoryBadgeColor(item.category)}">${item.category}</span></td>
-            <td><div style="font-weight:700;">${item.name}</div><div style="font-size:12px;color:#999;">${item.description || ''}</div></td>
-            <td>€${item.price}</td>
-        `);
-    } catch (err) { handleError(err, 'restaurant_menu'); }
-}
-
-// ------------------------------------------
-// 🚌 TOURS
-// ------------------------------------------
-async function loadToursItems() {
-    try {
-        const { data, error } = await supabaseClient.from(TABLES.TOURS).select('*').order('id', { ascending: false });
-        if (error) throw error;
-        renderGenericTable(data, 'tours', ['Categoria', 'Tour', 'Dettagli', 'Prezzo'], (item) => `
-            <td><span class="badge active">${item.category || 'N/A'}</span></td>
-            <td><div style="font-weight:700;">${item.title || item.name || 'Senza Titolo'}</div>${item.featured ? '<span style="color:#FF0080;font-weight:900;font-size:10px;">🔥 FEATURED</span>' : ''}</td>
-            <td style="font-size:12px;">⏱️ ${item.duration}<br>👥 Max ${item.max_people || '-'}</td>
-            <td>€${item.price}</td>
-        `);
-    } catch (err) { handleError(err, 'tours'); }
-}
-
-// ------------------------------------------
-// 💆 SPA
-// ------------------------------------------
-async function loadSpaItems() {
-    try {
-        const { data, error } = await supabaseClient.from(TABLES.SPA).select('*').order('name');
-        if (error) throw error;
-        renderGenericTable(data, 'spa', ['Servizio', 'Durata', 'Prezzo'], (item) => `
-            <td><div style="font-weight:700;">${item.name}</div><div style="font-size:12px;color:#999;">${item.description || ''}</div></td>
-            <td>⏱️ ${item.duration}</td>
-            <td>€${item.price}</td>
-        `);
-    } catch (err) { handleError(err, 'spa_services'); }
-}
-
-// ------------------------------------------
-// 🎉 ANIMAZIONE
-// ------------------------------------------
-async function loadAnimationItems() {
-    try {
-        const { data, error } = await supabaseClient.from(TABLES.ANIMATION).select('*').order('start_time');
-        if (error) throw error;
-        renderGenericTable(data, 'animation', ['Orario', 'Attività', 'Luogo'], (item) => `
-            <td><div style="font-weight:900; font-size:16px;">${item.start_time}</div></td>
-            <td><div style="font-weight:700;">${item.title}</div><div style="font-size:12px;color:#999;">${item.description || ''}</div></td>
-            <td>📍 ${item.location}</td>
-        `);
-    } catch (err) { handleError(err, 'animation_activities'); }
-}
-
-// ------------------------------------------
-// 🎁 REWARDS (Premi)
-// ------------------------------------------
-async function loadRewardsItems() {
-    try {
-        const { data, error } = await supabaseClient.from(TABLES.REWARDS).select('*').order('points_required');
-        if (error) throw error;
-        renderGenericTable(data, 'rewards', ['Premio', 'Punti', 'Stock', 'Stato'], (item) => `
-            <td>
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <div style="font-size:32px;">${item.emoji || '🎁'}</div>
-                    <div>
-                        <div style="font-weight:700;">${item.name}</div>
-                        <div style="font-size:12px;color:#999;">${item.description || ''}</div>
-                    </div>
-                </div>
-            </td>
-            <td><span style="font-weight:900; color:#fbbf24; font-size:18px;">${item.points_required}</span> punti</td>
-            <td>${item.stock === -1 ? '<span class="badge active">♾️ Illimitato</span>' : `<span class="badge ${item.stock > 0 ? 'confirmed' : 'expired'}">${item.stock} disponibili</span>`}</td>
-            <td><span class="badge ${item.active ? 'active' : 'expired'}">${item.active ? 'Attivo' : 'Disattivo'}</span></td>
-        `);
-    } catch (err) { handleError(err, 'rewards'); }
-}
-
-// ------------------------------------------
-// 🔥 LAST MINUTE (Tabella Esistente)
-// ------------------------------------------
-async function loadLastMinuteItems() {
-    try {
-        const { data, error } = await supabaseClient.from(TABLES.LAST_MINUTE).select('*').order('id', { ascending: false });
-        if (error) throw error;
-
-        renderGenericTable(data, 'last_minute', ['Tipo', 'Offerta', 'Prezzo', 'Sconto'], (item) => `
-            <td><span class="badge">${item.type}</span></td>
-            <td><div style="font-weight:700;">${item.title}</div><div style="font-size:12px;color:#999;">${item.description || ''}</div></td>
-            <td>
-                <div style="text-decoration:line-through; color:#999;">€${item.original_price || 0}</div>
-                <div style="font-weight:900; color:#00c853; font-size:16px;">€${item.discounted_price}</div>
-            </td>
-            <td><span class="badge confirmed">-${item.discount_percent || 0}%</span></td>
-        `);
-    } catch (err) { handleError(err, 'last_minute_offers'); }
-}
-
-// ==========================================
-// 🎨 RENDER GENERICO
-// ==========================================
-function renderGenericTable(items, type, headers, rowFn) {
-    const container = document.getElementById('contentModalBody');
-    let html = `
-        <div class="top-actions" style="margin-bottom: 20px;">
-            <button class="action-btn" onclick="openEditModal('${type}')">➕ Aggiungi Nuovo</button>
-        </div>
-        <div class="data-table-container">
-            <table class="data-table">
-                <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}<th>Azioni</th></tr></thead>
-                <tbody>
-    `;
-
-    if (!items || items.length === 0) {
-        html += `<tr><td colspan="${headers.length + 1}" class="text-center p-4">Nessun elemento presente</td></tr>`;
-    } else {
-        items.forEach(item => {
-            html += `<tr>${rowFn(item)}<td>
-                <div class="action-buttons">
-                    <button class="btn-icon edit" onclick='editItem("${type}", ${JSON.stringify(item)})'>✏️</button>
-                    <button class="btn-icon delete" onclick="deleteItem('${TABLES[type.toUpperCase()]}', '${item.id}', '${type}')">🗑️</button>
-                </div>
-            </td></tr>`;
-        });
-    }
-    html += `</tbody></table></div>`;
-    container.innerHTML = html;
-}
-
-// ==========================================
-// 🛠️ EDIT & SAVE
-// ==========================================
-
-function openEditModal(type, item = null) {
-    const container = document.getElementById('contentModalBody');
-    currentEditingItem = item;
-
-    let fields = '';
-
-    if (type === 'restaurant') {
-        fields = `
-            ${renderInput('Nome Piatto', 'name', item?.name, true)}
-            ${renderTextarea('Descrizione', 'description', item?.description)}
-            ${renderSelect('Categoria', 'category', ['antipasti', 'primi', 'secondi', 'dolci', 'vini'], item?.category)}
-            ${renderInput('Prezzo (€)', 'price', item?.price, true, 'number')}
-        `;
-    }
-    else if (type === 'tours') {
-        fields = `
-            ${renderInput('Titolo Tour', 'title', item?.title || item?.name, true)}
-            ${renderTextarea('Descrizione', 'description', item?.description)}
-            ${renderSelect('Categoria', 'category', ['mare', 'montagna', 'cultura', 'enogastronomia'], (item?.category || '').toLowerCase())}
-            <div class="grid grid-cols-2 gap-4" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                ${renderInput('Prezzo (€)', 'price', item?.price, true, 'number')}
-                ${renderInput('Durata', 'duration', item?.duration)}
-            </div>
-            ${renderInput('Max Persone', 'max_people', item?.max_people, false, 'number')}
-            <div class="form-group mb-3"><label><input type="checkbox" name="featured" ${item?.featured ? 'checked' : ''}> Featured</label></div>
-        `;
-    }
-    else if (type === 'spa') {
-        fields = `
-            ${renderInput('Nome Servizio', 'name', item?.name, true)}
-            ${renderTextarea('Descrizione', 'description', item?.description)}
-            ${renderInput('Durata', 'duration', item?.duration)}
-            ${renderInput('Prezzo (€)', 'price', item?.price, true, 'number')}
-        `;
-    }
-    else if (type === 'animation') {
-        fields = `
-            ${renderInput('Titolo Attività', 'title', item?.title, true)}
-            ${renderTextarea('Descrizione', 'description', item?.description)}
-            <div class="grid grid-cols-2 gap-4" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                ${renderInput('Orario Inizio', 'start_time', item?.start_time, true, 'time')}
-                ${renderInput('Luogo', 'location', item?.location)}
-            </div>
-            ${renderSelect('Categoria', 'category', ['sport', 'kids', 'show', 'relax'], item?.category)}
-        `;
-    }
-    else if (type === 'rewards') {
-        fields = `
-            ${renderInput('Nome Premio', 'name', item?.name, true)}
-            ${renderTextarea('Descrizione', 'description', item?.description)}
-            ${renderInput('Emoji', 'emoji', item?.emoji || '🎁')}
-            <div class="grid grid-cols-2 gap-4" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                ${renderInput('Punti Richiesti', 'points_required', item?.points_required, true, 'number')}
-                ${renderInput('Stock (-1 = illimitato)', 'stock', item?.stock ?? -1, true, 'number')}
-            </div>
-            <div class="form-group mb-3"><label><input type="checkbox" name="active" ${item?.active !== false ? 'checked' : ''}> Attivo</label></div>
-        `;
-    }
-    else if (type === 'last_minute') {
-        // Mappatura specifica per tabella esistente last_minute_offers
-        fields = `
-            ${renderInput('Titolo Offerta', 'title', item?.title, true)}
-            ${renderTextarea('Dettagli Offerta', 'description', item?.description)}
-            ${renderSelect('Applica a', 'type', ['tours', 'ristorante', 'spa'], item?.type)}
-            <div class="grid grid-cols-2 gap-4" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                ${renderInput('Prezzo Originale (€)', 'original_price', item?.original_price, true, 'number')}
-                ${renderInput('Prezzo Scontato (€)', 'discounted_price', item?.discounted_price, true, 'number')}
-            </div>
-            ${renderInput('Sconto % (Auto-Calcolato se vuoto)', 'discount_percent', item?.discount_percent, false, 'number')}
-            ${renderInput('Slot Disponibili', 'slots_available', item?.slots_available || 10, true, 'number')}
-        `;
-    }
-
-    container.innerHTML = `
-        <div class="form-container" style="max-width: 500px; margin: 0 auto;">
-            <h3 style="margin-bottom: 20px;">${item ? '✏️ Modifica' : '➕ Nuovo'}</h3>
-            <form onsubmit="saveItem(event, '${type}')">
-                ${fields}
-                <div class="modal-actions mt-4" style="margin-top:20px; display:flex; gap:10px;">
-                    <button type="button" class="modal-btn" onclick="openContentManager('${type}')">Annulla</button>
-                    <button type="submit" class="modal-btn primary" style="flex:1;">💾 Salva</button>
-                </div>
-            </form>
-        </div>
-    `;
-}
-
-function editItem(type, item) { openEditModal(type, item); }
-
-async function saveItem(event, type) {
-    event.preventDefault();
-    const formData = new FormData(event.target);
-    const data = Object.fromEntries(formData.entries());
-
-    if (type === 'tours') {
-        data.featured = event.target.querySelector('[name="featured"]').checked;
-    }
-
-    if (type === 'rewards') {
-        data.active = event.target.querySelector('[name="active"]').checked;
-        data.points_required = parseInt(data.points_required);
-        data.stock = parseInt(data.stock);
-    }
-
-    // Logica specifica per Last Minute esistente
-    if (type === 'last_minute') {
-        // Calcolo automatico sconto se non inserito
-        if (!data.discount_percent && data.original_price && data.discounted_price) {
-            data.discount_percent = Math.round((1 - data.discounted_price / data.original_price) * 100);
+    // Il client Supabase porta gia' l'header x-admin-token (vedi config.js):
+    // e' quello che fa passare la policy admin_all.
+    function db(kind) {
+        if (!window.AdminOS || !window.AdminOS.token()) {
+            throw new Error('Sessione admin non disponibile.');
         }
-        // Campi obbligatori tabella esistente
-        data.active = true;
-        // Conversione numerica
-        data.slots_available = parseInt(data.slots_available);
-        data.discount_percent = parseInt(data.discount_percent);
+        const sb = window.supabaseClient;
+        if (!sb) throw new Error('Connessione al database non disponibile.');
+        const cfg = TABLES[kind];
+        if (!cfg) throw new Error('Sezione contenuti sconosciuta.');
+        return { q: sb.from(cfg.table), order: cfg.order };
     }
 
-    const table = TABLES[type.toUpperCase()];
+    const KINDS = {
+        restaurant: { title: '🍽️ Gestione menu ristorante', empty: 'Nessun piatto in menu' },
+        tours: { title: '🚌 Gestione escursioni', empty: 'Nessuna escursione' },
+        spa: { title: '💆 Gestione servizi spa', empty: 'Nessun servizio spa' },
+        animation: { title: '🎉 Gestione animazione', empty: 'Nessuna attivita\'' },
+        last_minute: { title: '🔥 Gestione offerte last minute', empty: 'Nessuna offerta' },
+        rewards: { title: '🎁 Gestione premi', empty: 'Nessun premio' }
+    };
 
-    try {
-        const { error } = currentEditingItem
-            ? await supabaseClient.from(table).update(data).eq('id', currentEditingItem.id)
-            : await supabaseClient.from(table).insert([data]);
+    let currentKind = null;
+    let currentItems = [];        // righe caricate, indicizzate per id
+    let currentEditingItem = null;
 
-        if (error) throw error;
-        alert('Salvato! 💾');
-        openContentManager(type);
-    } catch (err) {
-        console.error(err);
-        alert('Errore: ' + err.message);
+    function body() { return document.getElementById('contentModalBody'); }
+
+    function setBody(html) {
+        const el = body();
+        if (el) el.innerHTML = html;
     }
-}
 
-async function deleteItem(table, id, type) {
-    if (!confirm('Eliminare elemento?')) return;
-    try {
-        const { error } = await supabaseClient.from(table).delete().eq('id', id);
-        if (error) throw error;
-        openContentManager(type);
-    } catch (err) { alert('Errore: ' + err.message); }
-}
+    function money(v) {
+        const n = Number(v);
+        return '€' + (isFinite(n) ? n : 0).toFixed(2);
+    }
 
-// Helpers Form
-function renderInput(label, name, val, req = false, type = 'text') {
-    return `<div class="form-group mb-3" style="margin-bottom:15px;"><label style="display:block;font-weight:700;margin-bottom:5px;">${label}</label><input type="${type}" name="${name}" class="form-input" style="width:100%;padding:10px;border-radius:10px;border:1px solid #ccc;" value="${val || ''}" ${req ? 'required' : ''}></div>`;
-}
-function renderTextarea(label, name, val) {
-    return `<div class="form-group mb-3" style="margin-bottom:15px;"><label style="display:block;font-weight:700;margin-bottom:5px;">${label}</label><textarea name="${name}" class="form-input" style="width:100%;padding:10px;border-radius:10px;border:1px solid #ccc;" rows="3">${val || ''}</textarea></div>`;
-}
-function renderSelect(label, name, options, val) {
-    return `<div class="form-group mb-3" style="margin-bottom:15px;"><label style="display:block;font-weight:700;margin-bottom:5px;">${label}</label><select name="${name}" class="form-input" style="width:100%;padding:10px;border-radius:10px;border:1px solid #ccc;">${options.map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o.toUpperCase()}</option>`).join('')}</select></div>`;
-}
+    // ==========================================
+    // APERTURA / CHIUSURA
+    // ==========================================
+    async function openContentManager(kind) {
+        const cfg = KINDS[kind];
+        if (!cfg) { console.warn('Sezione contenuti sconosciuta:', kind); return; }
 
-function handleError(err, table) {
-    console.error(err);
-    document.getElementById('contentModalBody').innerHTML = `<div class="empty-state"><div class="empty-title" style="color:#d32f2f;">Errore</div><div class="empty-text">Impossibile caricare dati.<br>Tabella: <b>${table}</b> mancante o errore connessione.</div></div>`;
-}
+        currentKind = kind;
+        currentEditingItem = null;
 
-function getCategoryBadgeColor(cat) { return 'active'; }
+        const titleEl = document.getElementById('contentModalTitle');
+        const modal = document.getElementById('contentModal');
+        if (titleEl) titleEl.textContent = cfg.title;
+        if (modal) modal.classList.add('active');
+        setBody('<div class="loading">⏳ Caricamento dati...</div>');
+
+        try {
+            const { q, order } = db(kind);
+            const { data, error } = await q.select('*').order(order, { ascending: true });
+            if (error) throw error;
+            currentItems = Array.isArray(data) ? data : (data ? [data] : []);
+            renderList(kind, currentItems);
+        } catch (err) {
+            console.error('openContentManager ' + kind + ':', err);
+            setBody('<div class="empty-state">'
+                + '<div class="empty-title" style="color:#d32f2f;">Errore</div>'
+                + '<div class="empty-text">' + esc((err && err.message) || 'Impossibile caricare i dati.') + '</div>'
+                + '</div>');
+        }
+    }
+
+    function closeContentModal() {
+        const modal = document.getElementById('contentModal');
+        if (modal) modal.classList.remove('active');
+        currentKind = null;
+        currentEditingItem = null;
+        currentItems = [];
+    }
+
+    // ==========================================
+    // ELENCO
+    // ==========================================
+    const COLUMNS = {
+        restaurant: {
+            headers: ['Categoria', 'Piatto', 'Prezzo'],
+            row: item => `
+                <td><span class="badge active">${esc(item.category || '-')}</span></td>
+                <td><div style="font-weight:700;">${esc(item.name)}</div>
+                    <div style="font-size:12px;color:#999;">${esc(item.description || '')}</div></td>
+                <td>${esc(money(item.price))}</td>`
+        },
+        tours: {
+            headers: ['Categoria', 'Tour', 'Dettagli', 'Prezzo'],
+            row: item => `
+                <td><span class="badge active">${esc(item.category || '-')}</span></td>
+                <td><div style="font-weight:700;">${esc(item.title || item.name || 'Senza titolo')}</div>
+                    ${item.featured ? '<span style="color:#FF0080;font-weight:900;font-size:10px;">🔥 IN EVIDENZA</span>' : ''}</td>
+                <td style="font-size:12px;">⏱️ ${esc(item.duration || '-')}<br>👥 Max ${esc(item.max_people || '-')}</td>
+                <td>${esc(money(item.price))}</td>`
+        },
+        spa: {
+            headers: ['Trattamento', 'Durata', 'Prezzo'],
+            row: item => `
+                <td><div style="font-weight:700;">${esc(item.emoji || '💆')} ${esc(item.name)}</div>
+                    <div style="font-size:12px;color:#999;">${esc(item.description || '')}</div></td>
+                <td>⏱️ ${esc(item.duration_minutes || '-')} min</td>
+                <td>${esc(money(item.price))}</td>`
+        },
+        animation: {
+            headers: ['Orario', 'Attivita\'', 'Luogo'],
+            row: item => `
+                <td><div style="font-weight:900; font-size:16px;">${esc(item.start_time || '-')}</div></td>
+                <td><div style="font-weight:700;">${esc(item.title)}</div>
+                    <div style="font-size:12px;color:#999;">${esc(item.description || '')}</div></td>
+                <td>📍 ${esc(item.location || '-')}</td>`
+        },
+        last_minute: {
+            headers: ['Tipo', 'Offerta', 'Prezzo', 'Sconto'],
+            row: item => `
+                <td><span class="badge active">${esc(item.type || '-')}</span></td>
+                <td><div style="font-weight:700;">${esc(item.title)}</div>
+                    <div style="font-size:12px;color:#999;">${esc(item.description || '')}</div></td>
+                <td><div style="text-decoration:line-through; color:#999;">${esc(money(item.original_price))}</div>
+                    <div style="font-weight:900; color:#00c853; font-size:16px;">${esc(money(item.discounted_price))}</div></td>
+                <td><span class="badge confirmed">-${parseInt(item.discount_percent, 10) || 0}%</span></td>`
+        },
+        rewards: {
+            headers: ['Premio', 'Punti', 'Scorte', 'Stato'],
+            row: item => `
+                <td><div style="display:flex; align-items:center; gap:10px;">
+                        <div style="font-size:32px;">${esc(item.emoji || '🎁')}</div>
+                        <div><div style="font-weight:700;">${esc(item.name)}</div>
+                             <div style="font-size:12px;color:#999;">${esc(item.description || '')}</div></div>
+                    </div></td>
+                <td><span style="font-weight:900; color:#fbbf24; font-size:18px;">${parseInt(item.points_required, 10) || 0}</span> punti</td>
+                <td>${Number(item.stock) === -1
+                    ? '<span class="badge active">♾️ Illimitato</span>'
+                    : `<span class="badge ${Number(item.stock) > 0 ? 'confirmed' : 'expired'}">${parseInt(item.stock, 10) || 0} disponibili</span>`}</td>
+                <td><span class="badge ${item.active ? 'active' : 'expired'}">${item.active ? 'Attivo' : 'Disattivo'}</span></td>`
+        }
+    };
+
+    function renderList(kind, items) {
+        const cfg = COLUMNS[kind];
+        const headers = cfg.headers;
+
+        const rows = (items && items.length)
+            ? items.map(item => `<tr>${cfg.row(item)}<td>
+                    <div class="action-buttons">
+                        <button type="button" class="btn-icon edit" data-content-action="edit"
+                                data-id="${esc(item.id)}" title="Modifica">✏️</button>
+                        <button type="button" class="btn-icon delete" data-content-action="delete"
+                                data-id="${esc(item.id)}" title="Elimina">🗑️</button>
+                    </div></td></tr>`).join('')
+            : `<tr><td colspan="${headers.length + 1}" style="text-align:center; padding:24px; color:#999; font-weight:700;">${esc(KINDS[kind].empty)}</td></tr>`;
+
+        setBody(`
+            <div class="top-actions" style="margin-bottom:20px;">
+                <button type="button" class="action-btn" data-content-action="new">➕ Aggiungi nuovo</button>
+            </div>
+            <div class="data-table-container">
+                <table class="data-table">
+                    <thead><tr>${headers.map(h => `<th>${esc(h)}</th>`).join('')}<th>Azioni</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`);
+    }
+
+    // ==========================================
+    // FORM
+    // ==========================================
+    function input(label, name, val, req, type) {
+        return `<div class="form-group" style="margin-bottom:15px;">
+            <label style="display:block;font-weight:700;margin-bottom:5px;">${esc(label)}</label>
+            <input type="${esc(type || 'text')}" name="${esc(name)}" class="form-input"
+                   style="width:100%;padding:10px;border-radius:10px;border:1px solid #ccc;"
+                   value="${esc(val === null || val === undefined ? '' : val)}" ${req ? 'required' : ''}>
+        </div>`;
+    }
+
+    function textarea(label, name, val) {
+        return `<div class="form-group" style="margin-bottom:15px;">
+            <label style="display:block;font-weight:700;margin-bottom:5px;">${esc(label)}</label>
+            <textarea name="${esc(name)}" class="form-input" rows="3"
+                      style="width:100%;padding:10px;border-radius:10px;border:1px solid #ccc;">${esc(val || '')}</textarea>
+        </div>`;
+    }
+
+    function select(label, name, options, val) {
+        return `<div class="form-group" style="margin-bottom:15px;">
+            <label style="display:block;font-weight:700;margin-bottom:5px;">${esc(label)}</label>
+            <select name="${esc(name)}" class="form-input"
+                    style="width:100%;padding:10px;border-radius:10px;border:1px solid #ccc;">
+                ${options.map(o => `<option value="${esc(o)}" ${val === o ? 'selected' : ''}>${esc(String(o).toUpperCase())}</option>`).join('')}
+            </select>
+        </div>`;
+    }
+
+    function checkbox(label, name, checked) {
+        return `<div class="form-group" style="margin-bottom:15px;">
+            <label><input type="checkbox" name="${esc(name)}" ${checked ? 'checked' : ''}> ${esc(label)}</label>
+        </div>`;
+    }
+
+    const FORMS = {
+        restaurant: i => input('Nome piatto', 'name', i && i.name, true)
+            + textarea('Descrizione', 'description', i && i.description)
+            + select('Categoria', 'category', ['antipasti', 'primi', 'secondi', 'dolci', 'vini'], i && i.category)
+            + input('Prezzo (€)', 'price', i && i.price, true, 'number'),
+        tours: i => input('Titolo tour', 'title', i && (i.title || i.name), true)
+            + textarea('Descrizione', 'description', i && i.description)
+            + select('Categoria', 'category', ['mare', 'montagna', 'cultura', 'enogastronomia'], (i && String(i.category || '').toLowerCase()))
+            + input('Prezzo (€)', 'price', i && i.price, true, 'number')
+            + input('Durata', 'duration', i && i.duration)
+            + input('Max persone', 'max_people', i && i.max_people, false, 'number')
+            + checkbox('In evidenza', 'featured', i && i.featured),
+        spa: i => input('Nome trattamento', 'name', i && i.name, true)
+            + textarea('Descrizione', 'description', i && i.description)
+            + input('Emoji', 'emoji', (i && i.emoji) || '💆')
+            + select('Categoria', 'category', ['massaggi', 'viso', 'corpo', 'percorsi'], i && i.category)
+            + input('Durata (minuti)', 'duration_minutes', i && i.duration_minutes, true, 'number')
+            + input('Prezzo (€)', 'price', i && i.price, true, 'number')
+            + checkbox('Attivo', 'active', !i || i.active !== false),
+        animation: i => input('Titolo attivita\'', 'title', i && i.title, true)
+            + textarea('Descrizione', 'description', i && i.description)
+            + input('Orario inizio', 'start_time', i && i.start_time, true, 'time')
+            + input('Luogo', 'location', i && i.location)
+            + select('Categoria', 'category', ['sport', 'kids', 'show', 'relax'], i && i.category),
+        last_minute: i => input('Titolo offerta', 'title', i && i.title, true)
+            + textarea('Dettagli offerta', 'description', i && i.description)
+            + select('Applica a', 'type', ['tour', 'ristorante', 'spa'], i && i.type)
+            + input('Prezzo originale (€)', 'original_price', i && i.original_price, true, 'number')
+            + input('Prezzo scontato (€)', 'discounted_price', i && i.discounted_price, true, 'number')
+            + input('Sconto % (calcolato se vuoto)', 'discount_percent', i && i.discount_percent, false, 'number')
+            + input('Posti disponibili', 'slots_available', (i && i.slots_available) || 10, true, 'number'),
+        rewards: i => input('Nome premio', 'name', i && i.name, true)
+            + textarea('Descrizione', 'description', i && i.description)
+            + input('Emoji', 'emoji', (i && i.emoji) || '🎁')
+            + input('Punti richiesti', 'points_required', i && i.points_required, true, 'number')
+            + input('Scorte (-1 = illimitate)', 'stock', (i && i.stock !== undefined && i.stock !== null) ? i.stock : -1, true, 'number')
+            + checkbox('Attivo', 'active', !i || i.active !== false)
+    };
+
+    function openEditForm(kind, item) {
+        currentEditingItem = item || null;
+        setBody(`
+            <div style="max-width:520px; margin:0 auto;">
+                <h3 style="margin-bottom:20px;">${item ? '✏️ Modifica' : '➕ Nuovo'}</h3>
+                <form id="contentForm">
+                    ${FORMS[kind](item)}
+                    <div style="margin-top:20px; display:flex; gap:10px;">
+                        <button type="button" class="modal-btn" data-content-action="cancel">Annulla</button>
+                        <button type="submit" class="modal-btn primary" style="flex:1;">💾 Salva</button>
+                    </div>
+                </form>
+            </div>`);
+        const form = document.getElementById('contentForm');
+        if (form) form.addEventListener('submit', onSubmit);
+    }
+
+    const NUMERIC = ['price', 'points_required', 'stock', 'max_people', 'duration_minutes',
+        'original_price', 'discounted_price', 'discount_percent', 'slots_available'];
+
+    async function onSubmit(event) {
+        event.preventDefault();
+        const kind = currentKind;
+        const form = event.target;
+        const payload = {};
+
+        new FormData(form).forEach((value, key) => { payload[key] = value; });
+
+        // I checkbox assenti dal FormData valgono false.
+        form.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            payload[cb.name] = cb.checked;
+        });
+
+        NUMERIC.forEach(key => {
+            if (payload[key] === undefined || payload[key] === '') { delete payload[key]; return; }
+            const n = Number(payload[key]);
+            payload[key] = isFinite(n) ? n : null;
+        });
+
+        // La tabella tours porta sia `name` sia `title` e il vincolo NOT NULL sta
+        // su name: il form ne chiede uno solo, quindi li allineiamo entrambi.
+        if (kind === 'tours' && payload.title) {
+            payload.name = payload.title;
+        }
+
+        if (kind === 'last_minute') {
+            if (payload.discount_percent === undefined
+                && payload.original_price > 0 && payload.discounted_price !== undefined) {
+                payload.discount_percent = Math.round((1 - payload.discounted_price / payload.original_price) * 100);
+            }
+            payload.active = true;
+        }
+
+        const btn = form.querySelector('button[type="submit"]');
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Salvataggio...'; }
+
+        try {
+            const { q } = db(kind);
+            const { error } = currentEditingItem
+                ? await q.update(payload).eq('id', currentEditingItem.id)
+                : await q.insert(payload);
+            if (error) throw error;
+            await openContentManager(kind);
+        } catch (err) {
+            console.error('salvataggio contenuto ' + kind + ':', err);
+            alert('❌ ' + ((err && err.message) || 'Errore durante il salvataggio.'));
+            if (btn) { btn.disabled = false; btn.textContent = '💾 Salva'; }
+        }
+    }
+
+    async function deleteItem(kind, id) {
+        if (!confirm('Eliminare questo elemento?\nL\'operazione non si annulla.')) return;
+        try {
+            const { q } = db(kind);
+            const { error } = await q.delete().eq('id', id);
+            if (error) throw error;
+            await openContentManager(kind);
+        } catch (err) {
+            console.error('eliminazione contenuto ' + kind + ':', err);
+            alert('❌ ' + ((err && err.message) || 'Errore durante l\'eliminazione.'));
+        }
+    }
+
+    // ==========================================
+    // DELEGA EVENTI
+    // ==========================================
+    document.addEventListener('click', (e) => {
+        const el = e.target.closest('[data-content-action]');
+        if (!el || !currentKind) return;
+
+        const id = el.dataset.id;
+        const item = currentItems.find(x => String(x.id) === String(id)) || null;
+
+        switch (el.dataset.contentAction) {
+            case 'new': openEditForm(currentKind, null); break;
+            case 'edit': if (item) openEditForm(currentKind, item); break;
+            case 'delete': deleteItem(currentKind, id); break;
+            case 'cancel': openContentManager(currentKind); break;
+            default: break;
+        }
+    });
+
+    window.openContentManager = openContentManager;
+    window.closeContentModal = closeContentModal;
+})();

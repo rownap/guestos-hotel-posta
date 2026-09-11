@@ -1,239 +1,429 @@
-# 🏨 GuestOS — Guida Prodotto
+# GuestOS, guida prodotto
 
-> **L'app PWA all-in-one che trasforma l'esperienza degli ospiti in revenue ancillary per hotel e villaggi.**
+App web installabile per gli ospiti di hotel e villaggi, con console di gestione per la direzione.
+Prenotazioni dei servizi interni, punti e premi, offerte a tempo, assistente testuale.
 
-🔗 **Demo live**: [guestos-hotel-posta-gamma.vercel.app](https://guestos-hotel-posta-gamma.vercel.app) · **Accesso demo**: [`/login.html?demo=1`](https://guestos-hotel-posta-gamma.vercel.app/login.html?demo=1)
+Documento a uso commerciale e operativo. Aggiornato all'11 settembre 2026.
 
----
+Contatto: RC Studio, Roberto Ciccarelli, [umidifire22@gmail.com](mailto:umidifire22@gmail.com).
 
-## 1. Cosa fa GuestOS, in 30 secondi
+## 1. Cosa fa GuestOS, in trenta secondi
 
-GuestOS è un'app web installabile (PWA) che gli ospiti di un hotel/villaggio aggiungono alla schermata Home del telefono in 5 secondi. Da quel momento, in autonomia, possono:
+GuestOS è un'app web (PWA) che l'ospite aggiunge alla schermata Home del telefono senza passare
+dagli store. Non richiede installazione di nulla in struttura: è una pagina web con un database
+dedicato.
 
-- chattare 24/7 con un assistente AI (Bubbles) che risponde su orari, servizi e Tropea;
-- prenotare ristorante, SPA, escursioni con calendario e slot orari reali;
-- giocare a 20+ minigame, accumulare punti, scalare la classifica, riscattare premi;
-- ricevere offerte flash last-minute con countdown e scarsità;
-- gestire il proprio profilo, vedere il PIN per accessi futuri, fare check-out.
+Dall'app l'ospite può:
 
-Lato struttura, il direttore (o lo staff autorizzato) ha una dashboard admin completa con:
+- prenotare ristorante, centro benessere ed escursioni scegliendo data, orario e numero di persone;
+- accumulare punti con i minigiochi e usarli come sconto o per riscattare premi;
+- vedere le offerte a tempo pubblicate dalla direzione, con conto alla rovescia reale;
+- consultare programma di animazione, menu e informazioni sulla struttura;
+- gestire il proprio profilo e lo storico delle prenotazioni;
+- scrivere a un assistente testuale che risponde su orari e servizi, se la struttura attiva la
+  funzione.
 
-- elenco soggiorni attivi, check-in/out del giorno, gestione PIN;
-- prenotazioni ristorante / SPA / tour con cambio stato in 1 click;
-- gestione punti utenti, premi riscattati da consegnare;
-- yield management con offerte lampo a tempo, template ad alta conversione;
-- analytics: revenue settimanale per servizio, top ospiti, punti distribuiti;
-- knowledge base AI configurabile per personalizzare le risposte di Bubbles.
+Dalla console di gestione la direzione può:
 
----
+- vedere i soggiorni attivi, gli arrivi e le partenze del giorno;
+- vedere e cambiare stato alle prenotazioni dei tre servizi;
+- pubblicare un'offerta a tempo in meno di un minuto, anche da modello precompilato;
+- correggere i punti di un ospite e segnare come consegnati i premi riscattati;
+- rigenerare il PIN di un ospite che l'ha perso;
+- modificare i contenuti: menu, listino benessere, escursioni, programma serate;
+- scrivere le risposte di riferimento dell'assistente.
 
-## 2. Come si usa — il flusso completo
+## 2. Il flusso dell'ospite, dall'arrivo al check-out
 
-### 2.1 L'ospite arriva in hotel
+### 2.1 Arrivo
 
-1. **Check-in fisico** alla reception. Lo staff gli consegna un QR code (stampato sulla key card o nella welcome bag).
-2. **Scansiona il QR** con il telefono → apre `guestos.it`.
-3. **Prima volta?** Tocca "Registrati" → inserisce numero camera, cognome, email → sceglie durata soggiorno → riceve un **PIN a 6 cifre** generato in automatico (può copiarlo).
-4. **Installa l'app**: la PWA propone "Aggiungi alla schermata Home". Ora ha l'icona Bubbles sul telefono.
+1. Check-in normale alla reception. Lo staff consegna un QR, stampato sulla key card o su un
+   cartoncino in camera.
+2. L'ospite inquadra il QR e apre l'app nel browser del telefono.
+3. Prima volta: tocca Registrati, inserisce numero di camera, cognome ed email, indica la durata del
+   soggiorno e riceve un PIN a sei cifre. Il PIN viene mostrato una volta sola.
+4. Il telefono propone di aggiungere l'app alla schermata Home. Da quel momento l'icona resta lì.
+
+Il PIN non è visibile a nessuno dopo la registrazione, nemmeno allo staff: sul database è salvato
+solo il suo hash. Se l'ospite lo perde, la reception ne genera uno nuovo dalla console.
 
 ### 2.2 Durante il soggiorno
 
-- Apre l'app → vede meteo Tropea, quick action verso ristorante/SPA/tour/animazione/last-minute.
-- Chiede a Bubbles "a che ora apre il ristorante stasera?" → risposta AI istantanea in italiano.
-- Prenota una cena romantica per stasera → sceglie data/ora/persone → conferma → riceve notifica visiva → la prenotazione arriva in dashboard admin.
-- Tra un'attività e l'altra, gioca a un minigame, vince 50 punti, sale in classifica.
-- Vede un'offerta last-minute "Massaggio relax -30%, scade tra 2 ore" → prenota direttamente dall'app.
+- L'ospite apre l'app e trova le scorciatoie verso i servizi della struttura.
+- Prenota un tavolo o un trattamento scegliendo data, orario e persone. Il prezzo finale e l'eventuale
+  sconto in punti li calcola il server, non il telefono: l'ospite non può manipolare l'importo.
+- Paga con i punti, chiede l'addebito in camera oppure, se la struttura ha attivato i pagamenti,
+  paga con carta su pagina Stripe.
+- La prenotazione compare subito nella console di gestione.
+- Gioca ai minigiochi e accumula punti. I punti li assegna il server con tetti giornalieri, quindi
+  non sono gonfiabili dal telefono.
+- Vede un'offerta a tempo e la prenota dall'app finché il conto alla rovescia non scade.
 
-### 2.3 Lato hotel — admin
+### 2.3 Lato struttura
 
-- Il direttore accede a `/guestos-admin-login.html` con credenziali assegnate.
-- **Overview**: vede a colpo d'occhio ospiti attivi, check-in oggi, check-out oggi, prenotazioni pendenti, revenue ultimi 7 giorni divisa per servizio, top 3 ospiti per punti.
-- **Soggiorni attivi**: tabella con tutti gli ospiti correnti, filtri per camera/cognome, azioni rapide (reset PIN, disattiva soggiorno, vedi dettagli).
-- **Prenotazioni**: 3 sezioni (ristorante / tour / SPA) con dropdown per cambiare stato (confermata / completata / annullata).
-- **Yield Management**: lancia un'offerta lampo in 30 secondi scegliendo servizio + sconto + headline + durata (15/30/60 min). Template precaricati per scenari tipici (pioggia → SPA, last-call tour, cena last-minute, late check-out).
-- **Punti & Rewards**: aggiusta manualmente i punti di un ospite (`+100`, `-50`, `=200`), segna premi come consegnati quando l'ospite passa in reception.
-- **Knowledge Base AI**: configura risposte personalizzate per il proprio hotel.
+- Lo staff accede alla console da un indirizzo riservato, escluso dai motori di ricerca.
+- Vista di sintesi: ospiti presenti, arrivi e partenze del giorno, prenotazioni da confermare,
+  incasso dei servizi interni negli ultimi giorni, ospiti con più punti.
+- Soggiorni attivi: elenco filtrabile per camera e cognome, con rigenerazione PIN, proroga del
+  soggiorno e disattivazione immediata.
+- Prenotazioni: tre elenchi separati, ristorante, benessere ed escursioni, con cambio di stato in un
+  clic tra confermata, completata e annullata.
+- Offerte a tempo: si scelgono servizio, sconto, titolo e durata. Esistono modelli pronti per gli
+  scenari ricorrenti: giornata di pioggia verso il centro benessere, ultimi posti su un'escursione,
+  tavoli liberi per la sera.
+- Punti e premi: correzione manuale dei punti con motivazione registrata, elenco dei premi da
+  consegnare.
 
-### 2.4 Check-out
+Ogni operazione sensibile della console viene registrata in un registro interno con data, operatore
+e oggetto dell'intervento.
 
-- L'ospite vede il countdown del soggiorno scadere.
-- Il PIN scade naturalmente con la `stay_end_date`.
-- Lo staff conferma il check-out dalla dashboard.
+### 2.4 Partenza
 
----
+- Il soggiorno ha una data di fine. Alla scadenza l'accesso dell'ospite smette di funzionare da solo.
+- Lo staff può chiudere il soggiorno prima, in qualsiasi momento, e l'effetto è immediato.
+- I premi non ritirati restano nell'elenco della reception.
 
-## 3. A chi serve GuestOS
+## 3. Cosa fa l'app oggi
 
-### 3.1 Cliente ideale
+Tre categorie, senza zone grigie.
 
-- **Hotel 3-4 stelle** o **villaggi turistici** di **30-150 camere**.
-- Direzione che ha già provato (e abbandonato) tool tipo Sirvoy/Cloudbeds perché troppo generici.
-- Target ospite: famiglie italiane in vacanza, smartphone-friendly, abituate a Booking e WhatsApp.
-- Stagionalità marcata (giugno-settembre) → bisogno di massimizzare il revenue ancillary in pochi mesi.
-- Zero personale IT interno: l'app deve "funzionare e basta".
+### 3.1 Attivo subito, serve solo il database della struttura
 
-### 3.2 Non adatto a
+- Registrazione dell'ospite in autonomia, con PIN generato e mostrato una sola volta.
+- Accesso ricorrente con camera, cognome e PIN. Blocco dopo cinque tentativi falliti per dieci minuti.
+- Prenotazione ristorante, centro benessere ed escursioni con calendario e fasce orarie.
+- Pagamento con punti o addebito in camera.
+- Annullamento della prenotazione da parte dell'ospite e storico nel profilo.
+- Sistema punti con tetti per partita e per giornata calcolati dal server.
+- Diciannove minigiochi, più quiz, indovinello del giorno e sfida settimanale.
+- Classifica generale e per singolo gioco, senza email degli altri ospiti.
+- Catalogo premi, riscatto con codice, gestione della consegna lato reception.
+- Offerte a tempo con conto alla rovescia reale.
+- Programma animazione, menu e schede dei servizi, modificabili dalla console.
+- Console di gestione completa: soggiorni, prenotazioni, punti, premi, contenuti, offerte, statistiche.
+- Installazione sulla schermata Home su iOS e Android.
+- Consultazione senza rete delle pagine già visitate, vedi punto 3.4.
 
-- Hotel di lusso 5★ con concierge dedicato (l'app sembrerebbe "tecnologica di troppo").
-- Catene internazionali (richiederebbero versione multi-property + multilingua avanzata).
-- B&B con <10 camere (non c'è abbastanza volume per ripagarlo).
+### 3.2 Richiede la configurazione di una chiave esterna
 
----
+Sono funzioni già scritte e collegate. Restano spente fino a quando la chiave non viene inserita
+nelle variabili d'ambiente. Se la chiave manca, l'app non si rompe: la funzione si comporta come
+descritto qui sotto.
 
-## 4. Perché va acquistata — value proposition
+| Funzione | Chiave necessaria | Comportamento senza la chiave |
+|---|---|---|
+| Assistente testuale | `ANTHROPIC_API_KEY` | Risponde in modalità base, per parole chiave, su orari e informazioni di servizio. Nessun errore visibile all'ospite. |
+| Pagamento con carta | `STRIPE_SECRET_KEY` e `STRIPE_WEBHOOK_SECRET` | Il pulsante di pagamento risponde che il pagamento online non è disponibile. Punti e addebito in camera continuano a funzionare. |
+| Email di conferma prenotazione | `RESEND_API_KEY` e `MAIL_FROM` | La prenotazione resta valida e visibile in console. L'email non parte. |
 
-### 4.1 Numeri di mercato (benchmark settore hospitality)
+Dettagli operativi in [`docs/AI.md`](docs/AI.md) e [`docs/PAYMENTS.md`](docs/PAYMENTS.md).
 
-| Voce | Senza app | Con GuestOS |
-|------|-----------|-------------|
-| Prenotazioni SPA spontanee | ~5/settimana | ~12/settimana (+140%) |
-| Tavoli ristorante riempiti la sera stessa | ~70% capacità | ~88% capacità (+18 punti) |
-| Iscrizioni gite e tour | 30% degli ospiti | 50% degli ospiti |
-| Tempo reception per richieste info | ~3 min/richiesta | ~0.5 min/richiesta |
-| Recensioni TripAdvisor "Esperienza digitale" | non menzionate | citate nel 40% recensioni positive |
+### 3.3 Non incluso
 
-### 4.2 ROI calcolato su hotel tipo (60 camere, 90 giorni stagione)
+- Versione multilingua. Oggi l'app è solo in italiano. Si può fare, è un'opzione a listino.
+- App nativa sugli store Apple e Google.
+- Integrazione con il gestionale o il channel manager della struttura.
+- Tariffe dinamiche calcolate automaticamente.
+- Gestione delle recensioni su portali esterni.
+- CRM e storico ospite pluriennale.
+- Check-in con acquisizione del documento e firma.
+- Notifiche push inviate dalla struttura. La parte sul telefono è pronta, l'invio dal server no.
+- Pagamento al banco con POS fisico.
 
-Assunzioni conservative:
-- Avg 50% occupancy → 27 camere/notte → ~80 ospiti/notte
-- 90 notti stagione → ~7.200 presenze totali
+### 3.4 Cosa significa davvero "funziona senza rete"
 
-| Voce | Senza GuestOS | Con GuestOS | Δ |
-|------|---------------|-------------|---|
-| Revenue SPA stagione | €15.000 | €25.000 | **+€10.000** |
-| Revenue tour stagione | €20.000 | €32.000 | **+€12.000** |
-| Revenue ristorante extra (last-minute) | €8.000 | €13.000 | **+€5.000** |
-| **Totale revenue ancillary in più** | | | **+€27.000** |
+L'app non funziona offline in senso pieno e non lo promettiamo.
 
-Costo GuestOS:
-- Setup one-time: **€3.000**
-- SaaS 12 mesi: **€2.400**
-- **TOT investimento anno 1**: €5.400
+Quello che succede davvero: le pagine già aperte una volta restano consultabili anche senza
+connessione, perché il telefono le ha conservate. L'ospite può quindi rileggere menu, programma e
+informazioni in una zona della struttura dove il segnale non arriva.
 
-**Payback**: 18 giorni di stagione. ROI anno 1: **+400%**.
+Quello che invece richiede connessione: prenotare, annullare, guadagnare punti, riscattare premi,
+vedere le classifiche, parlare con l'assistente. Se la rete manca, l'app dice che l'operazione non è
+riuscita e invita a riprovare. Non esiste una coda che invia le prenotazioni quando la rete torna.
 
-### 4.3 I 5 motivi che chiudono la vendita
+### 3.5 Cosa completiamo prima della prima consegna a un cliente
 
-1. **"Gli ospiti la usano davvero"** — È installabile come app vera (PWA), non un sito web "in più". L'80% degli ospiti la apre più di 3 volte/giorno (dato da test pilota).
-2. **"La reception respira"** — Le 50 chiamate al giorno "a che ora apre/chiude X?" calano dell'85% perché l'AI risponde 24/7 in italiano.
-3. **"Vendi quello che oggi perdi"** — Le offerte last-minute riempiono SPA e ristorante negli slot vuoti. Senza GuestOS, quei posti rimangono vuoti.
-4. **"L'app è anche un cuoco di marketing"** — Yield management con template "pioggia", "last-call", "cena": il direttore lancia un'offerta in 30 secondi e la spinge a tutti gli ospiti.
-5. **"Le recensioni vanno su"** — La gamification tiene gli ospiti "ingaggiati" durante il soggiorno. Più ingaggio = più recensioni positive con menzione esplicita ("c'era un'app divertente").
+Dichiarato in chiaro, perché un direttore se ne accorge comunque.
 
----
+- Tre pagine di prenotazione (ristorante, benessere, escursioni) vanno allineate al modello di
+  sicurezza nuovo, già attivo sulle altre pagine.
+- Cancellazione automatica dei dati degli ospiti dopo la scadenza del periodo di conservazione.
+- Backup a ripristino puntuale attivi sul database.
+- Registro dei trattamenti e nomina dei fornitori come responsabili del trattamento.
 
-## 5. Cosa è incluso nel prezzo
+L'elenco aggiornato e completo sta in [`stato_progetto_guestos.md`](stato_progetto_guestos.md) e, per
+la parte di sicurezza, in [`SECURITY.md`](SECURITY.md).
 
-### 5.1 Setup (€3.000 one-time)
+## 4. A chi serve
 
-- Personalizzazione completa: logo, palette, nome, dominio custom (`tuoalbergo.guestos.it`).
-- Configurazione menu ristorante, catalogo SPA, lista tour, programma animazione.
-- Configurazione knowledge base AI con info specifiche del cliente (orari, allergie, indirizzi, navette).
-- Setup Stripe per pagamenti diretti (commissioni Stripe standard 1.5% + 0.25€).
-- Training dello staff alla dashboard admin (1 sessione 90 minuti via video-call).
-- Stampa di 50 QR card omaggio per le camere.
-- 30 giorni di supporto post-lancio con bug fix illimitati.
+### 4.1 Cliente adatto
 
-### 5.2 SaaS mensile (€200/mese)
+- Hotel tre e quattro stelle o villaggi, da venticinque a centocinquanta camere.
+- Struttura che vende servizi interni: ristorante à la carte, centro benessere, escursioni, noleggi.
+  È lì che l'app può produrre un effetto misurabile.
+- Stagionalità marcata, quindi pochi mesi per fare ricavo accessorio.
+- Ospite italiano o famiglia italiana, abituata a prenotare dal telefono.
+- Nessun informatico interno. L'app deve funzionare senza manutenzione quotidiana.
+- Reception che riceve molte richieste ripetitive su orari e servizi.
 
-- Hosting Vercel (auto-scaling, edge CDN, SSL gratuito).
-- Database Supabase (backup automatici, monitoring).
-- AI Anthropic Claude Haiku (incluso fino a 5.000 chat/mese, poi €0.30/1.000).
-- Aggiornamenti automatici delle feature.
-- Supporto email entro 24h.
-- 2 modifiche contenuti/mese gratuite (es. "cambia prezzo cena", "aggiungi tour").
+### 4.2 Cliente non adatto
 
-### 5.3 Add-on opzionali
+- Strutture sotto le quindici camere: il costo fisso non si giustifica.
+- Hotel che non vende nulla oltre il pernottamento e la colazione. Senza servizi interni non c'è
+  ricavo accessorio da intercettare e l'app resta un gadget.
+- Cinque stelle con concierge dedicato, dove il valore percepito è il rapporto umano.
+- Clientela prevalentemente straniera, fino a quando la versione multilingua non è realizzata.
+- Catene che richiedono gestione multi struttura da un'unica console.
+- Chi cerca un PMS o un channel manager. GuestOS non gestisce camere, tariffe e disponibilità.
 
-- Email/SMS conferma prenotazioni: **+€50/mese**.
-- Multilingua (inglese, francese, tedesco): **+€500 una tantum**.
-- Integrazione PMS esistente (es. Cloudbeds, Octorate): **+€800 una tantum**.
-- Custom branding spinto (animazioni 3D, mascotte personalizzata): **+€1.500 una tantum**.
+## 5. Il valore economico, senza numeri inventati
 
----
+### 5.1 Premessa onesta
 
-## 6. Cosa fa l'app HOGGI (stato fattuale al 23 maggio 2026)
+Nessuna struttura ha ancora completato una stagione con GuestOS. Non esistono quindi dati storici
+d'uso, né percentuali di aumento delle prenotazioni da mostrare. Qualunque numero di questo tipo
+scrivessimo oggi sarebbe inventato, e un direttore che conosce il settore lo smonterebbe in trenta
+secondi.
 
-### ✅ Funzionante e testato live
+Quello che segue è uno scenario aritmetico, non una previsione. Serve a capire quante vendite in più
+servono per coprire il costo, non a promettere che arriveranno.
 
-- Registrazione self-service ospite (camera + cognome + email → PIN auto-generato a 6 cifre).
-- Login ricorrente con email + PIN.
-- Prenotazione ristorante (calendario, slot orari, pagamento via punti o Stripe).
-- Prenotazione SPA (catalogo trattamenti, slot, punti).
-- Prenotazione tour (25 tour preconfigurati, sconto punti).
-- Sistema punti: ogni gioco aggiorna i punti dell'utente (trigger SQL crea automaticamente il record alla registrazione).
-- 20+ minigame: color-match, flappy, memory, neon-blast, slot-machine, star-shooter, sudoku, wheel, ecc.
-- Quiz a punti con storico in `quiz_scores`.
-- Sistema rewards: catalogo premi configurabile, riscatto, admin segna come consegnato.
-- Leaderboard con top ospiti per punti.
-- Last-minute con countdown reali.
-- Chat AI Bubbles (Claude Haiku via Vercel Function `/api/chat`, fallback keyword se key non configurata).
-- Dashboard admin completa con yield management, gestione contenuti, statistiche revenue/punti.
-- PWA installabile su iOS/Android con service worker e modalità offline.
-- Auto-deploy Vercel da GitHub.
+### 5.2 La formula
 
-### ⚠️ Funzionante ma da rifinire prima del rilascio commerciale
+Ricavo accessorio aggiuntivo in una stagione:
 
-- Pagamenti Stripe: usa chiave `pk_test_*` → sostituire con `pk_live_*` per prod reale.
-- Email/SMS conferma prenotazioni: non implementati (oggi solo notifica visiva).
-- Multilingua: solo italiano.
-- Push notifications: tabella DB pronta (`user_push_subscriptions`), implementazione client da fare.
-- Knowledge Base AI editor: scaffold pronto, integrazione completa in roadmap.
+```
+Ricavo aggiuntivo = Presenze x Tasso di acquisto tramite app x Margine medio per vendita
 
-### ❌ In roadmap (non incluso oggi)
+Presenze            = camere x occupazione media x ospiti per camera x notti di stagione
+Tasso di acquisto   = quota di presenze che compra un servizio interno passando dall'app
+                      CHE NON ABBIAMO MISURATO: va stimato dalla direzione o misurato in stagione
+Margine medio       = prezzo del servizio meno costo diretto, dato che la struttura già conosce
+```
 
-- Dynamic pricing automatico.
-- CRM unificato cliente.
-- Review manager TripAdvisor/Google.
-- Self check-in completamente contactless.
-- App nativa iOS/Android (oggi solo PWA).
+Le due grandezze a sinistra le conosce la direzione. Quella al centro è l'incognita. Per questo non
+proponiamo un ritorno sull'investimento: proponiamo un punto di pareggio.
 
----
+### 5.3 Punto di pareggio, l'unico conto difendibile
 
-## 7. Come dimostrarlo al direttore — script demo (5 min)
+Il punto di pareggio non dipende da stime nostre. Dipende solo dal costo di GuestOS e dal margine
+della struttura.
 
-1. **Apro guestos.it sul telefono** → spiego "tu non vedi un menù di amministrazione, sei un ospite normale".
-2. **Mostro la mascotte Bubbles**, le bolle animate, il widget meteo Tropea.
-3. **Chatto con Bubbles**: "a che ora apre la SPA?" → risposta AI in italiano in 2 secondi.
-4. **Apro Ristorante** → "Cena Romantica sul Mare €45" → calendario, slot 20:30 → prenoto.
-5. **Apro Giochi** → faccio 1 round di un minigame → vinco 30 punti.
-6. **Apro Last Minute** → mostro il countdown reale che scende.
-7. **Cambio device** → mostro la dashboard admin: la prenotazione che ho appena fatto è già lì, posso confermarla.
-8. **Mostro Yield Management**: clicco "Lancia offerta lampo", template "Pioggia → SPA -30%, 30 minuti", → l'offerta diventerebbe visibile a tutti gli ospiti istantaneamente.
-9. **Chiudo con**: "Setup nel suo hotel: 2 giorni. Investimento: €3.000 + €200/mese. Si ripaga in 18 giorni di stagione."
+```
+Vendite aggiuntive necessarie = Costo GuestOS nel periodo / Margine medio per vendita
+```
 
----
+Esempio con i prezzi di listino del punto 6 e un margine ipotetico di quaranta euro per trattamento
+o escursione. Il margine va sostituito con quello vero della struttura.
 
-## 8. FAQ direzionale
+| Fascia | Costo prima stagione (sei mesi) | Vendite aggiuntive per andare in pari | Al mese |
+|---|---|---|---|
+| Base | 1.500 + 990 = 2.490 euro | 63 | circa 11 |
+| Pro | 3.000 + (249 x 6) = 4.494 euro | 113 | circa 19 |
+| Villaggio | da 4.500 + (349 x 6) = 6.594 euro | 165 | circa 28 |
 
-**D: Funziona offline?**
-R: Sì. Tutte le pagine sono cached dal service worker. L'ospite può leggere menu, programma, info anche senza WiFi. Le prenotazioni si sincronizzano appena torna online.
+Lettura della tabella, da fare davanti al direttore: non serve credere a nessuna percentuale. Serve
+rispondere a una domanda sola, e il direttore è l'unico che può rispondere: "diciannove trattamenti
+in più al mese, su questo volume di ospiti, sono pochi o molti?".
 
-**D: Cosa succede se l'AI è giù?**
-R: Bubbles ha un fallback keyword-based che risponde alle domande più comuni anche senza Claude. L'ospite non si accorge della differenza.
+### 5.4 Costo per soggiorno
 
-**D: I miei dati ospiti dove finiscono?**
-R: Su Supabase (server EU, GDPR-compliant). Backup automatici. Cancellazione possibile su richiesta dell'interessato (Art. 17 GDPR) — vedi `SECURITY.md`.
+Altro conto utile, anch'esso solo aritmetica. Struttura da quaranta camere, occupazione media del
+settanta per cento, due ospiti per camera, centottanta notti di stagione, soggiorno medio di cinque
+notti.
 
-**D: Posso modificare prezzi e menu io?**
-R: Sì, tramite la dashboard "Gestione Contenuti". Per modifiche più profonde (palette, logo, foto): noi in 24h.
+```
+Presenze notte   = 40 x 0,70 x 2 x 180 = 10.080
+Soggiorni        = 10.080 / 5 = 2.016
+Costo per soggiorno, fascia Base = 2.490 / 2.016 = 1,24 euro
+```
 
-**D: E se la stagione finisce e voglio sospendere?**
-R: Il SaaS è mensile, disdetta in qualsiasi momento. Il database resta congelato fino al ritorno (stagione successiva): bastano 30 min per riattivare.
+Un euro e ventiquattro per soggiorno. Le assunzioni sono quelle scritte sopra: si cambiano con i
+numeri veri della struttura e il conto si rifà in un minuto.
 
-**D: Il PIN può essere rubato?**
-R: Il PIN è generato random (6 cifre, 1M combinazioni), valido solo per la durata del soggiorno, rate-limited a 3 tentativi/10 minuti. Per un soggiorno di 7 giorni il rischio è statisticamente trascurabile. Su richiesta possiamo sostituirlo con OTP via SMS.
+### 5.5 I dati reali arriveranno dal primo caso studio
 
----
+I numeri d'uso veri (quanti ospiti installano l'app, quanti prenotano da lì, quante richieste in
+meno arrivano alla reception) li potremo pubblicare solo dopo la prima stagione completa con una
+struttura reale. Fino a quel momento, in questo documento non ci sarà nessuna percentuale.
 
-## 9. Prossimi passi per chiudere una vendita
+### 5.6 Proposta al primo cliente, caso studio
 
-1. **Demo live** sul telefono del prospect (5 min, è quasi sempre sufficiente).
-2. **Customizzazione preview**: in 2 giorni preparo una versione branded del suo hotel da fargli toccare con mano.
-3. **Trial 30 giorni** gratuito per un sub-set di camere (es. 10 stanze in un'ala) → misuriamo le prenotazioni extra reali.
-4. **Contratto**: setup + 6 mesi pagati anticipatamente, ulteriore sconto 10% se paga annuale.
+A chi entra primo offriamo un canone ridotto in cambio del diritto di pubblicare i numeri.
 
----
+Cosa dà la struttura:
 
-*Contatti: [umidifire22@gmail.com](mailto:umidifire22@gmail.com) — risposta entro 24h.*
-*Aggiornato al 23 maggio 2026.*
+- il diritto di misurare e pubblicare i dati d'uso e di vendita generati dall'app, in forma
+  aggregata, senza alcun dato personale degli ospiti;
+- il nome della struttura come riferimento, se acconsente, e una citazione della direzione;
+- un'ora di confronto al mese per raccontarci cosa funziona e cosa no.
+
+Cosa ottiene la struttura:
+
+- canone della prima stagione scontato, definito nella proposta economica;
+- priorità assoluta sugli interventi e sulle funzioni richieste;
+- prezzo bloccato per la stagione successiva;
+- posizione di struttura pilota, raccontabile nella propria comunicazione.
+
+Il vantaggio è simmetrico e va detto così: noi abbiamo bisogno dei loro numeri, loro pagano meno
+perché ce li danno.
+
+## 6. Listino
+
+Tre fasce. I prezzi sono IVA esclusa.
+
+### 6.1 Base
+
+Per hotel stagionali da venticinque a sessanta camere.
+
+- Attivazione: 1.500 euro una tantum.
+- Canone: 149 euro al mese, oppure 990 euro per una stagione di sei mesi.
+
+Comprende: app ospite completa, prenotazioni dei tre servizi con punti e addebito in camera, giochi
+e premi, offerte a tempo, console di gestione, personalizzazione grafica, formazione dello staff a
+distanza, assistenza via email.
+
+Non comprende: assistente testuale, pagamenti con carta in app.
+
+### 6.2 Pro
+
+Per hotel e villaggi da sessanta a centocinquanta camere.
+
+- Attivazione: 3.000 euro una tantum.
+- Canone: 249 euro al mese.
+
+Comprende tutto il Base, più:
+
+- assistente testuale con base di conoscenza scritta sui dati della struttura;
+- pagamenti con carta in app, su pagina di pagamento esterna;
+- email di conferma delle prenotazioni all'ospite, con copia allo staff.
+
+### 6.3 Villaggio
+
+Oltre le centocinquanta camere, o con più punti ristoro.
+
+- Attivazione: da 4.500 a 6.000 euro, in base al numero di punti ristoro e di servizi da configurare.
+- Canone: da 349 a 399 euro al mese.
+
+Comprende tutto il Pro, più:
+
+- modulo ristoranti a turni, costruito su misura sull'organizzazione della struttura;
+- formazione del personale in loco.
+
+### 6.4 Opzioni
+
+| Opzione | Prezzo |
+|---|---|
+| Versione multilingua (inglese, francese, tedesco) | 1.500 euro una tantum |
+| Integrazione con il gestionale esistente | a preventivo, previa analisi di fattibilità |
+| Personalizzazione grafica spinta (mascotte dedicata, animazioni) | a preventivo |
+| Formazione aggiuntiva in loco, oltre a quella inclusa | a preventivo |
+
+Nota sul prezzo della versione multilingua. Sono oltre cinquanta file, tra pagine e script, con i
+testi scritti dentro il codice e senza alcun sistema di traduzione. Tradurre non significa passare
+un file a un traduttore: significa prima estrarre tutte le stringhe, introdurre un meccanismo di
+lingua, poi tradurre e poi riverificare pagina per pagina. Millecinquecento euro è il costo di quel
+lavoro, fatto una volta sola per tutte le lingue.
+
+### 6.5 Cosa resta a carico della struttura
+
+- Le commissioni di transazione del circuito di pagamento, sull'incassato. Non passano da noi: la
+  struttura incassa direttamente sul proprio conto Stripe e paga le commissioni secondo il contratto
+  che firma con Stripe.
+- L'eventuale dominio personalizzato, se ne vuole uno proprio.
+- I contenuti: testi, foto, listini, orari. Noi li carichiamo, la struttura li fornisce.
+
+Hosting, database, chiave dell'assistente e servizio email sono compresi nel canone della fascia
+corrispondente.
+
+## 7. Come si dimostra alla direzione, script di cinque minuti
+
+1. Apro l'app sul mio telefono e la passo al direttore. Prima frase: "lei in questo momento è un
+   ospite, non vede nessun pannello di amministrazione".
+2. Gli faccio aggiungere l'app alla schermata Home. Dura cinque secondi e chiude la domanda "ma
+   devono scaricare qualcosa?".
+3. Prenoto una cena. Scelgo data, orario, due persone, confermo. Faccio notare che il prezzo lo
+   calcola il server.
+4. Apro i giochi, faccio una partita, vinco dei punti, mostro la classifica.
+5. Apro le offerte a tempo e mostro il conto alla rovescia che scende davvero.
+6. Se la struttura prende la fascia Pro: scrivo all'assistente "a che ora apre il centro benessere" e
+   mostro la risposta.
+7. Passo al mio portatile, apro la console e gli mostro la cena che abbiamo appena prenotato, già lì.
+   La confermo davanti a lui.
+8. Pubblico un'offerta a tempo da modello, trenta minuti di durata, e torno sul telefono: c'è.
+9. Chiudo con il conto del punto 5.3, non con una percentuale: "questa fascia le costa questo. Con il
+   suo margine, vanno in pari con tanti servizi in più al mese. Secondo lei sono pochi o molti?".
+
+Cosa non fare in demo: non citare aumenti percentuali, non dire che l'app funziona offline, non
+promettere integrazioni con il gestionale senza aver visto il gestionale.
+
+## 8. Domande che fa la direzione
+
+**Gli ospiti la usano davvero, o resta un'icona sul telefono?**
+Non lo sappiamo ancora e non le racconteremo numeri che non abbiamo. Sappiamo che non serve scaricare
+nulla dallo store, che il QR la apre in un tocco e che l'aggiunta alla schermata Home dura cinque
+secondi: abbiamo rimosso gli ostacoli che conosciamo. L'unico modo di rispondere con certezza è
+misurarlo nella sua struttura. Per questo offriamo la condizione da caso studio del punto 5.6.
+
+**Funziona senza rete?**
+In parte. Le pagine già aperte restano leggibili senza connessione, quindi menu, programma e
+informazioni si consultano anche dove il segnale non arriva. Prenotare, guadagnare punti e parlare
+con l'assistente richiedono la rete. Non c'è una coda che invia le prenotazioni quando la rete torna:
+se manca la connessione, l'app lo dice.
+
+**Cosa succede se l'assistente smette di rispondere?**
+L'app continua a funzionare. L'assistente passa in modalità base e risponde per parole chiave alle
+domande più frequenti. L'ospite non incontra nessun errore. Le prenotazioni non dipendono in alcun
+modo dall'assistente.
+
+**Dove finiscono i dati dei miei ospiti?**
+Su un database dedicato alla sua struttura, in Unione Europea, con accesso riservato: nessun'altra
+struttura lo vede. Il PIN dell'ospite è salvato solo come hash, quindi nemmeno noi possiamo leggerlo.
+I numeri di carta non entrano mai nel database: li gestisce Stripe. Dettaglio completo in
+[`SECURITY.md`](SECURITY.md) e nell'informativa in `privacy.html`. Prima di trattare dati di ospiti
+reali restano da completare i punti elencati al 3.5.
+
+**Posso cambiare prezzi, menu e orari da solo?**
+Sì, dalla console, nella sezione contenuti. Per interventi più profondi, come palette, logo o nuove
+sezioni, ci pensiamo noi.
+
+**La stagione finisce e voglio sospendere.**
+La fascia Base ha la formula stagionale da sei mesi. Fuori stagione il database resta fermo e i dati
+non si perdono: la riattivazione richiede poche ore di lavoro. Il canone mensile si disdice con
+preavviso secondo contratto.
+
+**Il PIN di sei cifre è sicuro?**
+È casuale, vale solo per la durata del soggiorno e scade con essa. Cinque tentativi sbagliati sulla
+stessa camera bloccano gli accessi per dieci minuti, e il blocco è sul server, non sul telefono. Il
+PIN non è leggibile da nessuno dopo la generazione, staff incluso: si può solo rigenerare. Se la
+struttura vuole un livello più alto, si può passare a un codice inviato per email, a preventivo.
+
+**Un ospite può barare sui punti e svuotare il catalogo premi?**
+No. I punti li calcola il server, con un tetto per partita e un tetto giornaliero. Il riscatto di un
+premio verifica punti e disponibilità nella stessa operazione. Il telefono non può scrivere un
+punteggio arbitrario.
+
+**Chi mi garantisce che non sparite dopo il primo mese?**
+Il codice è nostro, ma il database e l'account Stripe sono suoi, intestati alla struttura.
+L'esportazione dei dati in formato leggibile è sempre possibile e gratuita. È una garanzia verificabile
+prima della firma, non una promessa.
+
+**Quanto tempo serve per partire?**
+Da quando abbiamo contenuti e accessi: pochi giorni per la configurazione e la personalizzazione, più
+una sessione di formazione con lo staff. I tempi certi li mettiamo nella proposta, per iscritto.
+
+## 9. Come si chiude una trattativa
+
+1. Demo di cinque minuti sul telefono del direttore, script al punto 7.
+2. Versione personalizzata con logo, colori e due o tre contenuti veri della struttura, da toccare
+   con mano. Serve a far scattare il "questo è il mio hotel", non a mostrare funzioni nuove.
+3. Prova su un sottoinsieme di camere, per esempio un'ala, con conteggio delle prenotazioni arrivate
+   dall'app. È anche il primo dato d'uso reale che raccogliamo.
+4. Proposta economica con la fascia, il punto di pareggio calcolato sui margini veri della struttura
+   e i tempi di attivazione per iscritto.
+5. Per il primo cliente, condizione da caso studio del punto 5.6.
+
+Documenti correlati: [`README.md`](README.md) per la parte tecnica,
+[`stato_progetto_guestos.md`](stato_progetto_guestos.md) per lo stato dei lavori,
+[`docs/DEPLOY.md`](docs/DEPLOY.md) per la messa in opera di una nuova struttura.

@@ -1,349 +1,259 @@
 /**
- * AI Agent API - Backend Integration
- * Hotel Posta - AI Receptionist
- * 
- * This module handles communication between the chat UI and the Vercel AI function.
+ * AI Agent API - client per la chat "Bubbles" (GuestOS)
+ *
+ * - Invia a /api/chat la storia della conversazione (ultimi 20 messaggi in memoria di pagina).
+ * - Persiste su Supabase tramite le RPC SECURITY DEFINER di supabase/migrations/004_ai.sql
+ *   (log_ai_message, get_my_ai_history, submit_ai_feedback) col token di sessione ospite
+ *   esposto da guest-session.js (window.GuestOS.token()).
+ * - Nessun accesso diretto alle tabelle ai_* dal browser.
+ *
+ * Richiede: config.js + guest-session.js caricati prima di questo file.
  */
 
 const CHAT_API_URL = '/api/chat';
+const HISTORY_LIMIT = 20;
+const MESSAGE_CHAR_LIMIT = 2000;
 
-function getDbClient() {
-    return window.supabaseClient || null;
-}
+/** Storia della conversazione tenuta in memoria di pagina: [{role, content}] */
+let conversationHistory = [];
+/** Id (uuid) della conversazione persistita, se disponibile */
+let currentConversationId = null;
 
-function makeLocalConversationId() {
-    return `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function canPersistUser(userId) {
-    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId || '');
-}
-
-function getLocalBubblesResponse(message) {
-    const text = message.toLowerCase();
-
-    if (text.includes('ristorante') || text.includes('cena') || text.includes('pranzo') || text.includes('tavolo')) {
-        return 'Il ristorante è aperto 12:30-14:30 e 19:30-22:00 🍽️ Puoi prenotare dalla pagina Ristorante dell’app.';
+function getGuestToken() {
+    try {
+        const t = window.GuestOS && typeof window.GuestOS.token === 'function' ? window.GuestOS.token() : null;
+        return t || null;
+    } catch (_) {
+        return null;
     }
-    if (text.includes('spa') || text.includes('massaggio') || text.includes('sauna') || text.includes('benessere')) {
-        return 'La SPA è aperta dalle 10:00 alle 20:00 💆 Vai nella pagina Spa per scegliere trattamento e orario.';
-    }
-    if (text.includes('tour') || text.includes('escurs') || text.includes('barca') || text.includes('tropea')) {
-        return 'Le escursioni disponibili sono nella pagina Escursioni 🚢 Trovi tour in barca, trekking e percorsi enogastronomici.';
-    }
-    if (text.includes('check-out') || text.includes('checkout') || text.includes('partenza')) {
-        return 'Il check-out è entro le 11:00 🕚 Per esigenze particolari chiama la reception digitando 0 dalla camera.';
-    }
-    if (text.includes('wifi') || text.includes('internet')) {
-        return 'Il WiFi è gratuito in tutta la struttura 📶 Se hai problemi di connessione, la reception può aiutarti subito.';
-    }
-    if (text.includes('punti') || text.includes('premi') || text.includes('reward') || text.includes('giochi')) {
-        return 'Puoi guadagnare punti con giochi e quiz 🎮 Poi li riscatti come sconti nella pagina Rewards.';
-    }
-    if (text.includes('last minute') || text.includes('offerta') || text.includes('sconto')) {
-        return 'Le offerte flash sono nella pagina Last Minute ⚡ Controllala spesso: alcune promozioni durano poche ore.';
-    }
-
-    return 'Sono Bubbles, il tuo assistente dell’Hotel Posta 💧 Posso aiutarti con ristorante, SPA, tour, giochi, punti, offerte e informazioni sul soggiorno.';
 }
 
 /**
- * Send message to AI agent via the Vercel function.
- * @param {string} message - User message
- * @param {string} userId - User ID from Supabase auth
- * @param {string} conversationId - Conversation ID (optional, will create new if not provided)
- * @returns {Promise<Object>} AI response
+ * Chiama una RPC Supabase. Preferisce GuestOS.rpc (contratto guest-session.js);
+ * in sua assenza usa supabaseClient.rpc e sbusta {data, error}.
  */
-async function sendMessageToAgent(message, userId, conversationId = null) {
-    const startedAt = performance.now();
+async function callRpc(name, params) {
+    if (window.GuestOS && typeof window.GuestOS.rpc === 'function') {
+        return window.GuestOS.rpc(name, params);
+    }
+    const db = window.supabaseClient;
+    if (!db) throw new Error('Supabase client non disponibile');
+    const { data, error } = await db.rpc(name, params);
+    if (error) throw error;
+    return data;
+}
 
-    try {
-        if (!conversationId) {
-            conversationId = await createConversation(userId).catch(() => makeLocalConversationId());
-        }
-
-        await saveMessage(conversationId, 'user', message).catch(() => {});
-
-        const response = await fetch(CHAT_API_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                messages: [{ role: 'user', content: message }]
-            })
-        });
-
-        const data = await response.json();
-        const aiUnavailable = !response.ok || !data.reply;
-        const reply = aiUnavailable ? getLocalBubblesResponse(message) : data.reply;
-        const actionType = detectActionType(message);
-
-        await saveMessage(conversationId, 'assistant', reply, {
-            action_type: actionType,
-            model: aiUnavailable ? 'local-fallback' : 'claude-haiku',
-            response_time_ms: Math.round(performance.now() - startedAt)
-        }).catch(() => {});
-
-        if (actionType && actionType !== 'info' && typeof handleAIAction === 'function') {
-            handleAIAction(actionType, {});
-        }
-
-        return {
-            success: true,
-            response: reply,
-            conversationId: conversationId,
-            actionType: actionType,
-            timestamp: new Date().toISOString()
-        };
-
-    } catch (error) {
-        console.error('Error sending message to agent:', error);
-        return {
-            success: true,
-            response: getLocalBubblesResponse(message),
-            conversationId: conversationId || makeLocalConversationId(),
-            actionType: detectActionType(message),
-            timestamp: new Date().toISOString(),
-            fallback: true
-        };
+function pushHistory(role, content) {
+    const text = String(content || '').slice(0, MESSAGE_CHAR_LIMIT);
+    if (!text) return;
+    conversationHistory.push({ role, content: text });
+    if (conversationHistory.length > HISTORY_LIMIT) {
+        conversationHistory = conversationHistory.slice(-HISTORY_LIMIT);
     }
 }
 
+function getLocalBubblesResponse(message) {
+    const text = String(message || '').toLowerCase();
+
+    if (text.includes('ristorante') || text.includes('cena') || text.includes('pranzo') || text.includes('tavolo')) {
+        return 'Per orari e prenotazione del ristorante apri la pagina Ristorante dell’app 🍽️';
+    }
+    if (text.includes('spa') || text.includes('massaggio') || text.includes('sauna') || text.includes('benessere')) {
+        return 'Per orari e trattamenti della SPA apri la pagina Spa dell’app 💆';
+    }
+    if (text.includes('tour') || text.includes('escurs') || text.includes('barca')) {
+        return 'Le escursioni disponibili sono nella pagina Escursioni 🚢';
+    }
+    if (text.includes('check-out') || text.includes('checkout') || text.includes('partenza')) {
+        return 'Per l’orario di check-out e richieste particolari contatta la reception 🕚';
+    }
+    if (text.includes('wifi') || text.includes('internet')) {
+        return 'Il WiFi è gratuito in tutta la struttura 📶 Se hai problemi di connessione, la reception può aiutarti.';
+    }
+    if (text.includes('punti') || text.includes('premi') || text.includes('reward') || text.includes('gioch')) {
+        return 'Puoi guadagnare punti con giochi e quiz 🎮 Poi li riscatti come sconti nella pagina Rewards.';
+    }
+    if (text.includes('last minute') || text.includes('offert') || text.includes('sconto')) {
+        return 'Le offerte flash sono nella pagina Last Minute ⚡';
+    }
+
+    return 'Sono Bubbles, il tuo assistente 💧 Al momento rispondo in modalità base: posso indirizzarti a ristorante, SPA, escursioni, giochi, punti e offerte. Per tutto il resto contatta la reception.';
+}
+
+/**
+ * Invia un messaggio all'assistente.
+ * @param {string} message
+ * @returns {Promise<{success:boolean, response:string, conversationId:string|null, actionType:string,
+ *                    timestamp:string, fallback:boolean, messageId:string|null, model:string|null,
+ *                    rateLimited?:boolean}>}
+ */
+async function sendMessageToAgent(message) {
+    const startedAt = performance.now();
+    const text = String(message || '').trim().slice(0, MESSAGE_CHAR_LIMIT);
+    const actionType = detectActionType(text);
+    const token = getGuestToken();
+    const language = detectLanguage();
+
+    pushHistory('user', text);
+
+    // Persistenza del messaggio utente (best-effort, non blocca la risposta).
+    const userLog = token
+        ? persistMessage(token, 'user', text, { action_type: actionType, language })
+        : Promise.resolve(null);
+
+    let reply;
+    let fallback = true;
+    let model = null;
+    let rateLimited = false;
+
+    try {
+        const response = await fetch(CHAT_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: conversationHistory, token })
+        });
+
+        let data = {};
+        try { data = await response.json(); } catch (_) { data = {}; }
+
+        if (response.status === 429) {
+            rateLimited = true;
+            reply = data.error || 'Hai inviato troppi messaggi in pochi minuti. Attendi qualche minuto e riprova.';
+            model = 'rate-limited';
+        } else if (response.ok && data.reply) {
+            reply = String(data.reply);
+            fallback = data.fallback === true;
+            model = data.model || (fallback ? 'local-fallback' : 'claude');
+        } else {
+            reply = getLocalBubblesResponse(text);
+            model = 'local-fallback';
+        }
+    } catch (error) {
+        console.error('Error sending message to agent:', error);
+        reply = getLocalBubblesResponse(text);
+        model = 'local-fallback';
+    }
+
+    if (!rateLimited) pushHistory('assistant', reply);
+
+    let messageId = null;
+    if (token) {
+        await userLog.catch(() => null);
+        const saved = await persistMessage(token, 'assistant', reply, {
+            action_type: actionType,
+            model,
+            fallback,
+            rate_limited: rateLimited || undefined,
+            language,
+            response_time_ms: Math.round(performance.now() - startedAt)
+        }).catch(() => null);
+        messageId = saved && saved.message_id ? saved.message_id : null;
+    }
+
+    if (actionType && actionType !== 'info' && typeof window.handleAIAction === 'function') {
+        try { window.handleAIAction(actionType, {}); } catch (_) { /* opzionale */ }
+    }
+
+    return {
+        success: true,
+        response: reply,
+        conversationId: currentConversationId,
+        actionType,
+        timestamp: new Date().toISOString(),
+        fallback,
+        messageId,
+        model,
+        rateLimited
+    };
+}
+
+/**
+ * Salva un messaggio via RPC log_ai_message. Aggiorna currentConversationId.
+ * @returns {Promise<{conversation_id:string, message_id:string}|null>}
+ */
+async function persistMessage(token, role, content, meta) {
+    try {
+        const result = await callRpc('log_ai_message', {
+            p_token: token,
+            p_conversation_id: currentConversationId,
+            p_role: role,
+            p_content: content,
+            p_meta: meta || {}
+        });
+        if (result && result.conversation_id) currentConversationId = result.conversation_id;
+        return result || null;
+    } catch (error) {
+        console.warn('log_ai_message non riuscito:', error && error.message ? error.message : error);
+        return null;
+    }
+}
+
+/**
+ * Carica l'ultima conversazione dell'ospite (RPC get_my_ai_history) e riempie la storia in memoria.
+ * @param {number} limit
+ * @returns {Promise<Array<{id:string, role:string, content:string, created_at:string, metadata:object, rating:number|null}>>}
+ */
+async function loadAgentHistory(limit = 30) {
+    const token = getGuestToken();
+    if (!token) return [];
+    try {
+        const result = await callRpc('get_my_ai_history', { p_token: token, p_limit: limit });
+        const messages = Array.isArray(result && result.messages) ? result.messages : [];
+        currentConversationId = (result && result.conversation_id) || null;
+        conversationHistory = [];
+        messages
+            .filter(m => m && (m.role === 'user' || m.role === 'assistant'))
+            .slice(-HISTORY_LIMIT)
+            .forEach(m => pushHistory(m.role, m.content));
+        return messages;
+    } catch (error) {
+        console.warn('get_my_ai_history non riuscito:', error && error.message ? error.message : error);
+        return [];
+    }
+}
+
+/**
+ * Feedback su una risposta dell'assistente (RPC submit_ai_feedback).
+ * Il server accetta solo due valori: 1 (utile) e -1 (non utile).
+ * @param {string} messageId uuid di ai_messages
+ * @param {number} rating 1 = utile, -1 = non utile
+ * @param {string|null} comment
+ * @returns {Promise<boolean>}
+ */
+async function submitAgentFeedback(messageId, rating, comment = null) {
+    const token = getGuestToken();
+    if (!token || !messageId) return false;
+    const normalized = Number(rating) < 0 ? -1 : 1;
+    try {
+        const ok = await callRpc('submit_ai_feedback', {
+            p_token: token,
+            p_message_id: messageId,
+            p_rating: normalized,
+            p_comment: comment
+        });
+        return ok === true || ok === null || ok === undefined ? ok !== false : Boolean(ok);
+    } catch (error) {
+        console.warn('submit_ai_feedback non riuscito:', error && error.message ? error.message : error);
+        return false;
+    }
+}
+
+/** Azzera la storia in memoria (nuova conversazione al prossimo messaggio). */
+function resetAgentConversation() {
+    conversationHistory = [];
+    currentConversationId = null;
+}
+
+function getAgentConversationId() {
+    return currentConversationId;
+}
+
 function detectActionType(message) {
-    const text = message.toLowerCase();
+    const text = String(message || '').toLowerCase();
     if (text.includes('ristorante') || text.includes('tavolo') || text.includes('cena')) return 'booking_restaurant';
     if (text.includes('spa') || text.includes('massaggio') || text.includes('sauna')) return 'booking_spa';
     if (text.includes('tour') || text.includes('escurs') || text.includes('barca')) return 'booking_tour';
     return 'info';
-}
-
-/**
- * Create a new conversation
- * @param {string} userId - User ID
- * @returns {Promise<string>} Conversation ID
- */
-async function createConversation(userId) {
-    const db = getDbClient();
-    if (!db || !canPersistUser(userId)) return makeLocalConversationId();
-
-    const { data, error } = await db
-        .from('ai_conversations')
-        .insert({
-            user_id: userId,
-            status: 'active',
-            language: detectLanguage() || 'it'
-        })
-        .select()
-        .single();
-
-    if (error) {
-        console.error('Error creating conversation:', error);
-        throw error;
-    }
-
-    return data.id;
-}
-
-/**
- * Save message to database
- * @param {string} conversationId - Conversation ID
- * @param {string} role - 'user' or 'assistant'
- * @param {string} content - Message content
- * @param {Object} metadata - Additional metadata
- */
-async function saveMessage(conversationId, role, content, metadata = {}) {
-    const db = getDbClient();
-    if (!db || conversationId.startsWith('local-')) return;
-
-    const { error } = await db
-        .from('ai_messages')
-        .insert({
-            conversation_id: conversationId,
-            role: role,
-            content: content,
-            metadata: metadata,
-            tokens_used: metadata.tokens_used,
-            response_time_ms: metadata.response_time_ms
-        });
-
-    if (error) {
-        console.error('Error saving message:', error);
-    }
-}
-
-/**
- * Save action to database
- * @param {string} conversationId - Conversation ID
- * @param {string} actionType - Type of action
- * @param {Object} actionData - Action data
- */
-async function saveAction(conversationId, actionType, actionData) {
-    const db = getDbClient();
-    if (!db || conversationId.startsWith('local-')) return;
-
-    const { error } = await db
-        .from('ai_actions')
-        .insert({
-            conversation_id: conversationId,
-            action_type: actionType,
-            action_data: actionData,
-            status: 'pending'
-        });
-
-    if (error) {
-        console.error('Error saving action:', error);
-    }
-}
-
-/**
- * Get conversation history
- * @param {string} conversationId - Conversation ID
- * @param {number} limit - Number of messages to retrieve
- * @returns {Promise<Array>} Array of messages
- */
-async function getConversationHistory(conversationId, limit = 20) {
-    const db = getDbClient();
-    if (!db || !conversationId || conversationId.startsWith('local-')) return [];
-
-    const { data, error } = await db
-        .from('ai_messages')
-        .select('*')
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true })
-        .limit(limit);
-
-    if (error) {
-        console.error('Error getting conversation history:', error);
-        return [];
-    }
-
-    return data;
-}
-
-/**
- * Get active conversation for user
- * @param {string} userId - User ID
- * @returns {Promise<Object|null>} Active conversation or null
- */
-async function getActiveConversation(userId) {
-    const db = getDbClient();
-    if (!db || !canPersistUser(userId)) return null;
-
-    const { data, error } = await db
-        .from('ai_conversations')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('status', 'active')
-        .order('last_message_at', { ascending: false })
-        .limit(1)
-        .single();
-
-    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-        console.error('Error getting active conversation:', error);
-        return null;
-    }
-
-    return data;
-}
-
-/**
- * Submit feedback for a message
- * @param {string} messageId - Message ID
- * @param {number} rating - 1 for thumbs up, -1 for thumbs down
- * @param {string} comment - Optional comment
- */
-async function submitFeedback(messageId, rating, comment = null) {
-    const db = getDbClient();
-    const userId = localStorage.getItem('guestos_user_id');
-
-    if (!db || !userId) {
-        console.error('User not authenticated');
-        return;
-    }
-
-    // Get conversation ID from message
-    const { data: message } = await db
-        .from('ai_messages')
-        .select('conversation_id')
-        .eq('id', messageId)
-        .single();
-
-    if (!message) {
-        console.error('Message not found');
-        return;
-    }
-
-    const { error } = await db
-        .from('ai_feedback')
-        .insert({
-            message_id: messageId,
-            conversation_id: message.conversation_id,
-            user_id: userId,
-            rating: rating,
-            comment: comment
-        });
-
-    if (error) {
-        console.error('Error submitting feedback:', error);
-    } else {
-        console.log('Feedback submitted successfully');
-    }
-}
-
-/**
- * Execute a booking action
- * @param {string} actionType - Type of booking
- * @param {Object} bookingDetails - Booking details
- * @returns {Promise<Object>} Booking result
- */
-async function executeBookingAction(actionType, bookingDetails) {
-    try {
-        let tableName;
-
-        switch (actionType) {
-            case 'booking_restaurant':
-                tableName = 'restaurant_bookings';
-                break;
-            case 'booking_tour':
-                tableName = 'tour_bookings';
-                break;
-            case 'booking_spa':
-                tableName = 'spa_bookings';
-                break;
-            default:
-                throw new Error(`Unknown booking type: ${actionType}`);
-        }
-
-        const db = getDbClient();
-        if (!db) throw new Error('Database non disponibile');
-
-        const { data, error } = await db
-            .from(tableName)
-            .insert({
-                ...bookingDetails,
-                created_via: 'ai_agent',
-                status: 'pending'
-            })
-            .select()
-            .single();
-
-        if (error) {
-            throw error;
-        }
-
-        return {
-            success: true,
-            booking: data
-        };
-
-    } catch (error) {
-        console.error('Error executing booking:', error);
-        return {
-            success: false,
-            error: error.message
-        };
-    }
 }
 
 /**
@@ -353,17 +263,9 @@ async function executeBookingAction(actionType, bookingDetails) {
 async function getAgentStatus() {
     try {
         const response = await fetch(CHAT_API_URL, { method: 'OPTIONS' });
-
-        return {
-            online: response.ok,
-            status: response.ok ? 'available' : 'unavailable'
-        };
+        return { online: response.ok, status: response.ok ? 'available' : 'unavailable' };
     } catch (error) {
-        return {
-            online: false,
-            status: 'unavailable',
-            error: error.message
-        };
+        return { online: false, status: 'unavailable', error: error.message };
     }
 }
 
@@ -372,40 +274,37 @@ async function getAgentStatus() {
  * @returns {string} Language code
  */
 function detectLanguage() {
-    const lang = navigator.language || navigator.userLanguage;
+    const lang = (navigator.language || navigator.userLanguage || 'it').toLowerCase();
     if (lang.startsWith('it')) return 'it';
     if (lang.startsWith('en')) return 'en';
     if (lang.startsWith('de')) return 'de';
     if (lang.startsWith('fr')) return 'fr';
-    return 'it'; // Default to Italian
+    return 'it';
 }
 
 /**
  * Format message for display
- * @param {Object} message - Message object from database
- * @returns {Object} Formatted message
+ * @param {Object} message - Message object from get_my_ai_history
  */
 function formatMessage(message) {
     return {
         id: message.id,
         role: message.role,
         content: message.content,
-        timestamp: new Date(message.created_at).toLocaleTimeString('it-IT', {
-            hour: '2-digit',
-            minute: '2-digit'
-        }),
-        metadata: message.metadata
+        timestamp: new Date(message.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
+        metadata: message.metadata || {},
+        rating: message.rating ?? null
     };
 }
 
-// Export functions for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         sendMessageToAgent,
-        getConversationHistory,
-        getActiveConversation,
-        submitFeedback,
-        executeBookingAction,
+        loadAgentHistory,
+        submitAgentFeedback,
+        resetAgentConversation,
+        getAgentConversationId,
+        detectActionType,
         getAgentStatus,
         formatMessage
     };

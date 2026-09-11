@@ -1,7 +1,25 @@
 /**
  * GUESTOS APP DATA LOADER
- * Carica dinamicamente i contenuti da Supabase per le pagine utente
+ * Carica dinamicamente i contenuti da Supabase per le pagine utente.
+ *
+ * Qui ci sono SOLO letture di cataloghi pubblici (restaurant_menu, tours,
+ * spa_treatments, animation_activities): restano permesse anche con le RLS attive.
+ * Nessuna scrittura e nessun dato dell'ospite.
+ *
+ * Ogni valore che finisce in innerHTML passa per escapeHtml (guest-session.js,
+ * con fallback locale se la pagina non lo include).
  */
+
+function adlEscape(value) {
+    if (window.escapeHtml) return window.escapeHtml(value);
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname;
@@ -15,9 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
         loadSpaServices();
     } else if (path.includes('animazione.html')) {
         loadAnimation();
-    } else if (path.includes('lastminute.html')) {
-        loadLastMinute();
     }
+    // lastminute.html si carica da sola (pagina riscritta): qui non serve nulla.
 });
 
 /**
@@ -130,18 +147,18 @@ async function loadRestaurantMenu() {
                 const emoji = getCategoryEmoji(cat);
 
                 menuHtml += `
-                    <div class="menu-category" id="${cat}">
+                    <div class="menu-category" id="${adlEscape(cat)}">
                         <div class="category-header">
                             <span>${emoji}</span>
-                            <span>${catTitle}</span>
+                            <span>${adlEscape(catTitle)}</span>
                         </div>
                         ${grouped[cat].map(item => `
                             <div class="menu-item">
                                 <div class="item-info">
-                                    <div class="item-name">${item.name}</div>
-                                    <div class="item-description">${item.description || ''}</div>
+                                    <div class="item-name">${adlEscape(item.name)}</div>
+                                    <div class="item-description">${adlEscape(item.description || '')}</div>
                                 </div>
-                                <div class="item-price">€${item.price}</div>
+                                <div class="item-price">€${adlEscape(item.price)}</div>
                             </div>
                         `).join('')}
                     </div>
@@ -155,14 +172,14 @@ async function loadRestaurantMenu() {
                 const catTitle = cat.charAt(0).toUpperCase() + cat.slice(1);
                 menuHtml += `
                     <div class="menu-category">
-                        <div class="category-header"><span>🍽️</span><span>${catTitle}</span></div>
+                        <div class="category-header"><span>🍽️</span><span>${adlEscape(catTitle)}</span></div>
                         ${grouped[cat].map(item => `
                             <div class="menu-item">
                                 <div class="item-info">
-                                    <div class="item-name">${item.name}</div>
-                                    <div class="item-description">${item.description || ''}</div>
+                                    <div class="item-name">${adlEscape(item.name)}</div>
+                                    <div class="item-description">${adlEscape(item.description || '')}</div>
                                 </div>
-                                <div class="item-price">€${item.price}</div>
+                                <div class="item-price">€${adlEscape(item.price)}</div>
                             </div>
                         `).join('')}
                     </div>
@@ -234,15 +251,16 @@ async function loadTours() {
             const tourPrice = tour.price || 0;
 
             // Onclick sulla card
-            card.onclick = () => window.openBookingModal ? window.openBookingModal(tourName, tourPrice) : null;
+            card.onclick = () => window.openBookingModal ? window.openBookingModal(tourName, tourPrice, tour.id) : null;
 
             // Gestione background
             let styleAttr = 'background: linear-gradient(135deg, #ff0080 0%, #00d4ff 100%); background-size: cover; background-position: center;';
-            if (tour.image_url || tour.images) {
-                styleAttr = `background: url('${tour.image_url || tour.images}'); background-size: cover; background-position: center;`;
+            const imageUrl = tour.image_url || tour.images;
+            if (imageUrl) {
+                styleAttr = `background: url('${adlEscape(imageUrl)}'); background-size: cover; background-position: center;`;
             }
 
-            const badgeHtml = tour.category ? `<div class="tour-badge">${tour.category.toUpperCase()}</div>` : '';
+            const badgeHtml = tour.category ? `<div class="tour-badge">${adlEscape(tour.category.toUpperCase())}</div>` : '';
 
             // Mappa emoji categorie
             const emojis = { 'mare': '🌊', 'montagna': '🏔️', 'cultura': '🏛️', 'enogastronomia': '🍷' };
@@ -253,18 +271,28 @@ async function loadTours() {
                     ${badgeHtml}
                 </div>
                 <div class="tour-content">
-                    <div class="tour-title">${emoji} ${tourName}</div>
-                    <div class="tour-description">${tour.description || ''}</div>
+                    <div class="tour-title">${emoji} ${adlEscape(tourName)}</div>
+                    <div class="tour-description">${adlEscape(tour.description || '')}</div>
                     <div class="tour-info">
-                        <div class="info-item"><span>⏱️</span> ${tour.duration || '3h'}</div>
-                        <div class="info-item"><span>👥</span> Max ${tour.max_people || 10}</div>
+                        <div class="info-item"><span>⏱️</span> ${adlEscape(tour.duration || '3h')}</div>
+                        <div class="info-item"><span>👥</span> Max ${adlEscape(tour.max_people || 10)}</div>
                     </div>
                     <div class="tour-footer">
-                        <div class="tour-price">€${tourPrice}</div>
-                        <button class="tour-book-btn" onclick="event.stopPropagation(); window.openBookingModal('${tourName.replace(/'/g, "\\'")}', ${tourPrice})">Prenota</button>
+                        <div class="tour-price">€${adlEscape(tourPrice)}</div>
+                        <button class="tour-book-btn" data-book-tour="1">Prenota</button>
                     </div>
                 </div>
             `;
+
+            // Niente onclick con stringhe interpolate: il nome del tour arriva dal database.
+            const bookBtn = card.querySelector('[data-book-tour]');
+            if (bookBtn) {
+                bookBtn.addEventListener('click', (ev) => {
+                    ev.stopPropagation();
+                    if (window.openBookingModal) window.openBookingModal(tourName, tourPrice);
+                });
+            }
+
             toursGrid.appendChild(card);
         });
 
@@ -289,7 +317,7 @@ function updateFeaturedTourData(element, data) {
     const featuredImageEl = element.querySelector('.featured-image');
     if (featuredImageEl) {
         if (data.images) {
-            featuredImageEl.style.backgroundImage = `url('${data.images}')`;
+            featuredImageEl.style.backgroundImage = `url('${adlEscape(data.images)}')`;
             // Reset gradient se necessario o mantienilo pulito
         } else {
             // Fallback gradient moderno
@@ -300,7 +328,7 @@ function updateFeaturedTourData(element, data) {
 
     // Aggiorna testi
     const titleEl = element.querySelector('.featured-title');
-    if (titleEl) titleEl.innerHTML = `<span>⚓</span> ${data.title || data.name || 'Tour Esclusivo'}`;
+    if (titleEl) titleEl.innerHTML = `<span>⚓</span> ${adlEscape(data.title || data.name || 'Tour Esclusivo')}`;
 
     const descEl = element.querySelector('.featured-description');
     if (descEl) descEl.textContent = data.description || '';
@@ -316,22 +344,27 @@ function updateFeaturedTourData(element, data) {
     const btn = element.querySelector('.book-btn');
     if (btn) {
         const tName = data.title || data.name || 'Tour';
-        btn.onclick = () => window.openBookingModal && window.openBookingModal(tName, data.price);
+        btn.onclick = () => window.openBookingModal && window.openBookingModal(tName, data.price, data.id);
     }
 }
 
 // ============================================
 // 💆 SPA
 // ============================================
+// Il catalogo prenotabile e' spa_treatments (id interi): e' la tabella a cui
+// punta spa_bookings.treatment_id e da cui create_booking ricava il prezzo.
+// spa_services (ora spa_services_legacy) era una vecchia tabella con id uuid,
+// non collegata alle prenotazioni: non va piu' usata.
 async function loadSpaServices() {
     const grid = document.querySelector('.treatments-grid');
     if (!grid) return;
 
     try {
         const { data, error } = await supabaseClient
-            .from('spa_services')
+            .from('spa_treatments')
             .select('*')
-            .order('price'); // Ordina per prezzo o nome
+            .eq('active', true)
+            .order('price');
 
         if (error) throw error;
         if (!data || data.length === 0) return;
@@ -341,31 +374,38 @@ async function loadSpaServices() {
         data.forEach(item => {
             const card = document.createElement('div');
             card.className = 'treatment-card';
-            // Icona basata sul nome (molto basic)
-            let icon = '💆‍♀️';
-            if (item.name.toLowerCase().includes('viso')) icon = '✨';
-            if (item.name.toLowerCase().includes('stone')) icon = '🪨';
-            if (item.name.toLowerCase().includes('sauna')) icon = '🧖‍♀️';
+            let icon = item.emoji || '💆‍♀️';
 
             card.innerHTML = `
                 <div class="treatment-header">
                     <div class="treatment-icon">${icon}</div>
                     <div class="treatment-info">
-                        <div class="treatment-name">${item.name}</div>
-                        <div class="treatment-description">${item.description || ''}</div>
+                        <div class="treatment-name">${adlEscape(item.name)}</div>
+                        <div class="treatment-description">${adlEscape(item.description || '')}</div>
                     </div>
                 </div>
                 <div class="treatment-details">
                     <div class="detail-item">
                         <i data-lucide="clock" style="width:14px;height:14px;"></i> 
-                        ${item.duration || '60 min'}
+                        ${adlEscape(item.duration_minutes || 60)} min
                     </div>
                 </div>
                 <div class="treatment-footer">
-                    <div class="treatment-price">€${item.price}</div>
-                    <button class="treatment-book-btn" onclick="window.openBookingModal && window.openBookingModal({title: '${item.name.replace(/'/g, "\\'")}', price: ${item.price}})">Prenota</button>
+                    <div class="treatment-price">€${adlEscape(item.price)}</div>
+                    <button class="treatment-book-btn" data-book-treatment="1">Prenota</button>
                 </div>
             `;
+
+            // Niente onclick con stringhe interpolate: il nome arriva dal database.
+            const treatBtn = card.querySelector('[data-book-treatment]');
+            if (treatBtn) {
+                treatBtn.addEventListener('click', () => {
+                    if (window.openBookingModal) {
+                        window.openBookingModal(item.name, item.price, item.duration_minutes || 60, item.id);
+                    }
+                });
+            }
+
             grid.appendChild(card);
         });
 
@@ -410,10 +450,10 @@ async function loadAnimation() {
 
             return `
                 <div class="event-item ${isCurrent ? 'current' : ''}">
-                    <div class="event-time">${event.start_time}</div>
+                    <div class="event-time">${adlEscape(event.start_time)}</div>
                     <div class="event-info">
-                        <div class="event-name">${event.title}</div>
-                        <div class="event-desc">${event.description || ''}</div>
+                        <div class="event-name">${adlEscape(event.title)}</div>
+                        <div class="event-desc">${adlEscape(event.description || '')}</div>
                     </div>
                 </div>
             `;
@@ -422,44 +462,5 @@ async function loadAnimation() {
     } catch (err) {
         console.error('Errore caricamento animazione:', err);
         container.innerHTML = '<div style="text-align:center; color:white;">Impossibile caricare il programma.</div>';
-    }
-}
-
-// ============================================
-// 🔥 LAST MINUTE
-// ============================================
-async function loadLastMinute() {
-    // Cerchiamo un container generico o specifico
-    const container = document.querySelector('.offers-grid') || document.querySelector('.content');
-    if (!container) return;
-
-    try {
-        const { data, error } = await supabaseClient
-            .from('last_minute_offers')
-            .select('*')
-            .eq('active', true)
-            .order('id', { ascending: false });
-
-        if (error) throw error;
-        if (!data || data.length === 0) {
-            container.innerHTML = '<div style="text-align:center; padding:40px; color:white;">Al momento non ci sono offerte last minute.</div>';
-            return;
-        }
-
-        // Se c'è un wrapper statico, svuotalo
-        const staticWrapper = document.querySelector('.offers-wrapper');
-        if (staticWrapper) {
-            staticWrapper.innerHTML = '';
-            // Usa staticWrapper come target
-        } else {
-            // Se siamo in lastminute.html probabilmente serve un refresh totale
-            // Per ora usiamo una logica semplice di append
-        }
-
-        // Logica di renderizzazione simile alle altre
-        // (Omissis per brevità, implementabile su richiesta specifica)
-
-    } catch (err) {
-        console.error(err);
     }
 }

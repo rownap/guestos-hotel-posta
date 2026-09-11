@@ -2,7 +2,7 @@
 <style>
     /* PADDING BODY - evita che nav copra contenuto + margine */
     body {
-        padding-bottom: 110px !important;
+        padding-bottom: 128px !important;
     }
 
     /* Margine extra per ultima sezione prima della nav */
@@ -164,6 +164,26 @@
         transform: scale(1.08);
         font-weight: 900;
     }
+
+    /* Piede: link discreto, non è una voce di navigazione */
+    .bottom-nav-footer {
+        text-align: center;
+        padding: 6px 8px 0;
+        line-height: 1;
+    }
+
+    .bottom-nav-footer a {
+        color: rgba(255, 255, 255, 0.55);
+        font-size: 10px;
+        font-weight: 600;
+        text-decoration: none;
+        letter-spacing: 0.2px;
+        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.35);
+    }
+
+    .bottom-nav-footer a:active {
+        color: rgba(255, 255, 255, 0.9);
+    }
 </style>
 
 <div class="bottom-nav">
@@ -188,6 +208,9 @@
             <div class="bottom-nav-icon">👤</div>
             <div class="bottom-nav-label">Account</div>
         </a>
+    </div>
+    <div class="bottom-nav-footer">
+        <a href="privacy.html">Privacy</a>
     </div>
 </div>
 

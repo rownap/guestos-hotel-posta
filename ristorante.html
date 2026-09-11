@@ -12,6 +12,8 @@
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
+    <script src="guest-session.js"></script>
+    <script src="booking-notify.js"></script>
     <script src="theme-manager.js"></script>
     <script src="payment-handler.js"></script>
     <style>
@@ -1374,6 +1376,8 @@
                         <span>Prezzo:</span>
                         <span id="confirmPrice" style="color: #FF0080; font-size: 18px;">--</span>
                     </div>
+                    <div style="font-size: 12px; font-weight: 600; color: #777; margin-top: 6px;">Il totale viene
+                        confermato al momento della conferma.</div>
 
                     <div class="payment-method-selector">
                         <div style="font-size: 14px; font-weight: 700; color: #333; margin-bottom: 8px;">Metodo di
@@ -1418,21 +1422,10 @@
     </div>
 
     <script>
-        // DATA MOCK UTENTI
-        const MOCK_USERS = [
-            { id: '10', email: 'test@gmail.com', room: '101', name: 'ciccarelli', active: true, start: '2026-01-24', end: '2026-01-31' },
-            { id: '11', email: 'MARIO.@GMAIL.COM', room: '305', name: 'VERDI', active: true, start: '2026-01-23', end: '2026-01-30' },
-            { id: '15', email: 'TEST@HGMAIL.COM', room: '305', name: 'ROSSI', active: true, start: '2026-01-24', end: '2026-01-31' },
-            { id: '16', email: 'FF@GMAIL.COM', room: '306', name: 'ROSSI', active: true, start: '2026-01-24', end: '2026-01-31' },
-            { id: '17', email: 'DD@GMAIL.COM', room: '310', name: 'ROSSI', active: true, start: '2026-01-24', end: '2026-01-31' },
-            { id: '18', email: 'ros@gmail.com', room: '2222', name: 'rosa', active: true, start: '2026-01-24', end: '2026-01-31' },
-            { id: '19', email: 'ciao@gmail.com', room: '102', name: 'Bombino', active: true, start: '2026-01-24', end: '2026-01-31' },
-            { id: '20', email: 'hh@ii', room: '444', name: 'Pablo', active: true, start: '2026-01-24', end: '2026-01-31' },
-            { id: '21', email: 'test@example.com', room: '999', name: 'Rossi', active: true, start: '2026-01-24', end: '2026-01-27' }
-        ];
-
         let selectedMeal = '';
+        // L'ospite è quello della sessione: nessun elenco di utenti nel sorgente.
         let validUser = null;
+        let orderBusy = false;
 
         function checkRestaurantStatus() {
             const now = new Date();
@@ -1457,6 +1450,11 @@
         }
 
         function openRoomServiceModal() {
+            if (!window.GuestOS.isLoggedIn()) {
+                alert('Accedi con la tua camera per ordinare il servizio in camera.');
+                window.GuestOS.requireLogin();
+                return;
+            }
             document.getElementById('roomServiceModal').classList.add('active');
             document.body.style.overflow = 'hidden';
             showStep('step-meal');
@@ -1468,7 +1466,9 @@
             // Reset
             selectedMeal = '';
             validUser = null;
-            document.getElementById('roomNumberInput').value = '';
+            const roomInput = document.getElementById('roomNumberInput');
+            roomInput.value = '';
+            roomInput.readOnly = false;
             document.getElementById('roomError').style.display = 'none';
         }
 
@@ -1480,43 +1480,42 @@
         function selectMeal(meal) {
             selectedMeal = meal;
             showStep('step-room');
+            // La camera la conosce già la sessione: la precompiliamo.
+            const guest = window.GuestOS.user();
+            const input = document.getElementById('roomNumberInput');
+            if (guest.room_number) {
+                input.value = guest.room_number;
+                input.readOnly = true;
+            }
         }
 
+        // Nessun elenco di ospiti nel browser: la camera valida è quella della
+        // sessione, e il soggiorno lo verifica comunque il server sulla RPC.
         function verifyRoom() {
-            const roomInput = document.getElementById('roomNumberInput').value.trim();
             const errorMsg = document.getElementById('roomError');
+            const guest = window.GuestOS.user();
 
-            // Filtra utenti per camera
-            const usersInRoom = MOCK_USERS.filter(u => u.room === roomInput && u.active === true);
-
-            if (usersInRoom.length === 0) {
-                errorMsg.textContent = "Camera non trovata o non attiva.";
+            if (!window.GuestOS.isLoggedIn() || !guest.room_number) {
+                errorMsg.textContent = 'Accedi con la tua camera per ordinare.';
                 errorMsg.style.display = 'block';
                 return;
             }
 
-            // Verifica date
-            // HARDCODED DATE PER SIMULAZIONE (Come da richiesta user: 2026-01-25)
-            const todayStr = '2026-01-25';
-
-            // Cerchiamo un utente valido per la data corrente
-            const userParamsBound = usersInRoom.find(u => {
-                return u.start <= todayStr && u.end >= todayStr;
-            });
-
-            if (userParamsBound) {
-                validUser = userParamsBound;
-                errorMsg.style.display = 'none';
-
-                // Vai alla conferma
-                document.getElementById('confirmRoom').textContent = validUser.room;
-                document.getElementById('confirmMeal').textContent = selectedMeal.charAt(0).toUpperCase() + selectedMeal.slice(1);
-                document.getElementById('confirmPrice').textContent = '€' + (MEAL_PRICES[selectedMeal] || 0);
-                showStep('step-confirm');
-            } else {
-                errorMsg.textContent = "Prenotazione non valida per le date correnti.";
+            const typed = document.getElementById('roomNumberInput').value.trim();
+            if (typed && typed !== String(guest.room_number)) {
+                errorMsg.textContent = 'Puoi ordinare solo per la tua camera (' + guest.room_number + ').';
                 errorMsg.style.display = 'block';
+                return;
             }
+
+            validUser = { room: guest.room_number, email: guest.email, name: guest.last_name };
+            errorMsg.style.display = 'none';
+
+            // Vai alla conferma
+            document.getElementById('confirmRoom').textContent = validUser.room;
+            document.getElementById('confirmMeal').textContent = selectedMeal.charAt(0).toUpperCase() + selectedMeal.slice(1);
+            document.getElementById('confirmPrice').textContent = '€' + (MEAL_PRICES[selectedMeal] || 0);
+            showStep('step-confirm');
         }
 
         const MEAL_PRICES = {
@@ -1534,86 +1533,116 @@
             else document.getElementById('payCardBtn').classList.add('selected');
         }
 
-        async function confirmOrder() {
-            // Store data before closing/resetting
-            // Salviamo tutto in variabili locali perché closeRoomServiceModal resetta validUser a null
-            const room = validUser ? validUser.room : '';
-            const meal = selectedMeal;
-            const email = (validUser && validUser.email) ? validUser.email : (localStorage.getItem('guestos_user_email') || 'guest@hotel.com');
-            const userName = (validUser && validUser.name) ? validUser.name : (localStorage.getItem('guestos_user_name') || 'Ospite');
-            const mealPrice = MEAL_PRICES[meal] || 0;
+        function money(value) {
+            const n = Number(value);
+            if (!isFinite(n)) return '-';
+            try {
+                return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
+            } catch (e) {
+                return '€ ' + n.toFixed(2);
+            }
+        }
 
-            console.log("Tentativo prenotazione:", { email, userName, room, meal, method: selectedPaymentMethod });
+        // L'ordine passa SEMPRE dalla RPC create_booking: il server ricalcola il prezzo.
+        async function confirmOrder() {
+            if (orderBusy) return;
+
+            // Salviamo tutto in variabili locali perché closeRoomServiceModal resetta validUser a null
+            const guest = window.GuestOS.user();
+            const room = validUser ? validUser.room : guest.room_number;
+            const meal = selectedMeal;
+            const email = guest.email;
+            const userName = guest.last_name || 'Ospite';
+            const mealPrice = MEAL_PRICES[meal] || 0;
+            const mealLabel = meal ? meal.charAt(0).toUpperCase() + meal.slice(1) : '';
+            const itemName = `Servizio in Camera - ${mealLabel}`;
+            const bookingDate = new Date().toISOString().split('T')[0];
+            const bookingTime = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
 
             if (!room || !meal) {
                 alert("Dati mancanti per l'ordine.");
                 return;
             }
 
-            try {
-                // Pagamento con Carta (Stripe)
-                if (selectedPaymentMethod === 'card') {
-                    closeRoomServiceModal(); // Resetta validUser, ma ora usiamo le variabili locali
+            orderBusy = true;
 
-                    const paymentHandler = new PaymentHandler();
-                    await paymentHandler.processPaymentWithCheckout({
-                        amount: mealPrice,
+            let result;
+            try {
+                result = await window.GuestOS.rpc('create_booking', {
+                    p_kind: 'restaurant',
+                    p_payload: {
+                        booking_date: bookingDate,
+                        booking_time: bookingTime,
+                        num_people: 1,
+                        meal_type: meal,
+                        // Il ristorante non ha un catalogo di id: il prezzo del pasto
+                        // viaggia in original_price, che e' il campo letto dal server.
+                        original_price: mealPrice,
+                        item_name: itemName,
+                        points_used: 0,
+                        payment_method: selectedPaymentMethod === 'card' ? 'card' : 'room'
+                    }
+                });
+            } catch (err) {
+                orderBusy = false;
+                alert(err && err.message ? err.message : 'Ordine non riuscito.');
+                return;
+            }
+
+            const bookingId = result && result.id;
+            // Il prezzo da mostrare è quello deciso dal server.
+            const finalPrice = result && result.final_price != null
+                ? Number(result.final_price)
+                : mealPrice;
+
+            // Pagamento con Carta (Stripe)
+            if (selectedPaymentMethod === 'card') {
+                closeRoomServiceModal(); // Resetta validUser, ma ora usiamo le variabili locali
+                try {
+                    await new PaymentHandler().processPaymentWithCheckout({
+                        amount: finalPrice,
                         itemType: 'restaurant',
-                        moduleId: 'room-service',
-                        itemId: null,
-                        itemName: `Servizio in Camera - ${meal.charAt(0).toUpperCase() + meal.slice(1)}`,
+                        itemName: itemName,
                         itemDescription: `Room Service: ${meal} per Camera ${room}`,
                         userEmail: email,
                         userName: userName,
-                        metadata: {
-                            room: room,
-                            meal: meal,
-                            type: 'room_service',
-                            price: mealPrice
-                        }
+                        bookingKind: 'restaurant',
+                        bookingId: bookingId,
+                        cancelPath: '/ristorante.html'
                     });
-                    return;
+                } catch (e) {
+                    alert('Non è stato possibile avviare il pagamento.');
                 }
-
-                // Addebito Camera (Metodo Classico)
-                const { data, error } = await supabaseClient.from('restaurant_bookings').insert({
-                    user_email: email,
-                    user_name: userName,
-                    room_number: room,
-                    meal_type: meal,
-                    booking_date: new Date().toISOString().split('T')[0],
-                    booking_time: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
-                    status: 'confirmed',
-                    type: 'Room Service',
-                    num_people: 1,
-                    original_price: mealPrice,
-                    final_price: 0, // 0 perché addebito su camera, non pagato subito
-                    payment_status: 'charged_to_room'
-                });
-
-                if (error) {
-                    console.error("Supabase Error:", error);
-                    alert("Errore durante il salvataggio della prenotazione: " + error.message);
-                    return;
-                }
-
-                console.log("Prenotazione salvata con successo:", data);
-
-                closeRoomServiceModal();
-
-                const successMsg = `Servizio in camera prenotato con successo!<br>
-                                            Camera: ${room}<br>
-                                            Pasto: ${meal}<br>
-                                            Addebito sul conto confermato.`;
-
-                document.getElementById('successMessage').innerHTML = successMsg;
-                document.querySelector('.success-title').textContent = "Ordine Confermato!";
-                document.getElementById('successModal').classList.add('active');
-
-            } catch (e) {
-                console.error("Eccezione salvataggio ordine", e); // corrected logging
-                alert("Si è verificato un errore tecnico: " + e.message);
+                orderBusy = false;
+                return; // in caso di successo la pagina viene rediretta su Stripe
             }
+
+            // Addebito in camera: l'ordine è già registrato.
+            try {
+                await window.GuestOS?.notifyBooking?.({
+                    kind: 'room_service',
+                    booking_id: bookingId,
+                    email: email,
+                    name: userName,
+                    item_name: itemName,
+                    date: bookingDate,
+                    time: bookingTime,
+                    people: 1,
+                    final_price: finalPrice,
+                    room: room
+                });
+            } catch (e) { /* l'email è un extra: l'ordine resta valido */ }
+
+            orderBusy = false;
+            closeRoomServiceModal();
+
+            const esc = window.escapeHtml;
+            document.getElementById('successMessage').innerHTML =
+                'Servizio in camera prenotato con successo!<br>Camera: ' + esc(room) +
+                '<br>Pasto: ' + esc(mealLabel) +
+                '<br>Addebito sul conto: ' + esc(money(finalPrice)) + '.';
+            document.querySelector('.success-title').textContent = "Ordine Confermato!";
+            document.getElementById('successModal').classList.add('active');
         }
 
         function closeSuccessModal() {
@@ -1629,6 +1658,7 @@
         });
 
         async function loadMenu() {
+            const esc = window.escapeHtml;
             const categoriesOrder = ['antipasti', 'primi', 'secondi', 'dolci', 'vini'];
             const categoryLabels = {
                 'antipasti': '🥗 Antipasti',
@@ -1675,16 +1705,16 @@
                     if (grouped[cat] && grouped[cat].length > 0) {
                         htmlContent += `
                     <div class="menu-category">
-                        <div class="category-header">${categoryLabels[cat] || cat.toUpperCase()}</div>
+                        <div class="category-header">${esc(categoryLabels[cat] || cat.toUpperCase())}</div>
                     `;
                         grouped[cat].forEach(item => {
                             htmlContent += `
                         <div class="menu-item">
                             <div class="item-info">
-                                <div class="item-name">${item.name}</div>
-                                <div class="item-description">${item.description || ''}</div>
+                                <div class="item-name">${esc(item.name)}</div>
+                                <div class="item-description">${esc(item.description || '')}</div>
                             </div>
-                            <div class="item-price">€${item.price}</div>
+                            <div class="item-price">€${esc(item.price)}</div>
                         </div>`;
                         });
                         htmlContent += `</div>`;
@@ -1697,16 +1727,16 @@
                     if (grouped[cat].length > 0) {
                         htmlContent += `
                     <div class="menu-category">
-                        <div class="category-header">${cat.toUpperCase()}</div>
+                        <div class="category-header">${esc(cat.toUpperCase())}</div>
                     `;
                         grouped[cat].forEach(item => {
                             htmlContent += `
                         <div class="menu-item">
                             <div class="item-info">
-                                <div class="item-name">${item.name}</div>
-                                <div class="item-description">${item.description || ''}</div>
+                                <div class="item-name">${esc(item.name)}</div>
+                                <div class="item-description">${esc(item.description || '')}</div>
                             </div>
-                            <div class="item-price">€${item.price}</div>
+                            <div class="item-price">€${esc(item.price)}</div>
                         </div>`;
                         });
                         htmlContent += `</div>`;

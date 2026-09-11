@@ -11,6 +11,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
+    <script src="guest-session.js"></script>
     <script src="game-leaderboard.js" defer></script>
     <style>
         :root {
@@ -364,22 +365,12 @@
             document.getElementById('gameScreen').style.display = 'none';
             document.getElementById('resultsScreen').style.display = 'block';
             document.getElementById('correctCount').textContent = score;
-            document.getElementById('correctCount').textContent = score;
 
-            // Calc points: score must be decent (e.g. > 5 correct) to win? No, user said 5 pts per game not per answer.
-            // Old Code: score * 5. This was huge inflation (10 q * 5 = 50!).
-            // User requested: "Decrease points".
-            // New Plan: Flat 5 points if they play decent? Or 5 pts max?
-            // "Points for first 3 games (5 pts/game)" implies flat 5 pts if they win/play?
-            // Let's assume proportional: 0.5 pts per correct answer? (10 * 0.5 = 5).
-            // Or just cap at 5.
-
-            let points = 0;
-            if (gamesLeft > 0) {
-                points = Math.ceil(score * 0.5); // Max 5 pts (10 * 0.5)
-            }
-
-            document.getElementById('totalPoints').textContent = '+' + points;
+            // I punti hotel sono calcolati dal server (award_points) con i suoi tetti;
+            // qui resta solo il limite locale di partite premiate al giorno.
+            const eligible = gamesLeft > 0 && score > 0;
+            const pointsEl = document.getElementById('totalPoints');
+            pointsEl.textContent = eligible ? '...' : '+0';
 
             if (gamesLeft > 0) {
                 gamesLeft--;
@@ -387,27 +378,39 @@
             }
             updateLimitUI();
 
-            if (gamesLeft <= 0 && points === 0) {
+            if (gamesLeft <= 0 && !eligible) {
                 document.getElementById('limitMessage').style.display = 'block';
             } else {
                 document.getElementById('limitMessage').style.display = 'none';
             }
 
-            const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
-
-            try {
-                const { data: current } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
-                const newPoints = (current?.points || 0) + points;
-                await supabaseClient.from('user_points').update({ points: newPoints, updated_at: new Date().toISOString() }).eq('user_email', email);
-
-                if (typeof saveGameScore === 'function') {
-                    saveGameScore('trivia_blitz', score * 10);
-                }
-            } catch (err) {
-                console.error('Error saving trivia score:', err);
-            }
+            if (eligible) await awardHotelPoints(score, pointsEl);
         }
 
+        // Accredito punti hotel: passa SEMPRE dal server (award_points via guest-session.js).
+        // Il server converte il punteggio in punti applicando i tetti e salva anche la classifica.
+        const GAME_ID = 'trivia_blitz';
+        async function awardHotelPoints(score, el, suffix = '') {
+            const safeScore = Math.max(0, Math.floor(Number(score) || 0));
+            let result = null;
+            try {
+                result = await window.GuestOS?.awardPoints?.(GAME_ID, safeScore);
+            } catch (e) {
+                console.error('awardPoints error:', e);
+                if (el) el.textContent = 'Punti non disponibili';
+                return null;
+            }
+            if (el) {
+                if (!result) {
+                    el.textContent = 'Accedi per guadagnare punti';
+                } else {
+                    const awarded = Number(result.points_awarded) || 0;
+                    const total = Number(result.total) || 0;
+                    el.textContent = `+${awarded}${suffix}` + (suffix ? ` (totale ${total})` : '');
+                }
+            }
+            return result || null;
+        }
         // Init
         checkDailyLimit();
     </script>

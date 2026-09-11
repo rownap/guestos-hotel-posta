@@ -11,6 +11,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
+    <script src="guest-session.js"></script>
     <script src="game-leaderboard.js" defer></script>
     <style>
         :root {
@@ -343,23 +344,35 @@
             document.getElementById('gameScreen').style.display = 'none';
             document.getElementById('resultsScreen').style.display = 'block';
             document.getElementById('finalScore').textContent = score;
-            document.getElementById('pointsEarned').textContent = '+' + score;
+            const pointsEl = document.getElementById('pointsEarned');
+            pointsEl.textContent = score > 0 ? '...' : '+0';
 
-            const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
+            if (score > 0) await awardHotelPoints(score, pointsEl);
+        }
 
+        // Accredito punti hotel: passa SEMPRE dal server (award_points via guest-session.js).
+        // Il server converte il punteggio in punti applicando i tetti e salva anche la classifica.
+        const GAME_ID = 'math_dash';
+        async function awardHotelPoints(score, el, suffix = '') {
+            const safeScore = Math.max(0, Math.floor(Number(score) || 0));
+            let result = null;
             try {
-                // Save points
-                const { data: current } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
-                const newPoints = (current?.points || 0) + score;
-                await supabaseClient.from('user_points').update({ points: newPoints, updated_at: new Date().toISOString() }).eq('user_email', email);
-
-                // Save to leaderboard
-                if (typeof saveGameScore === 'function') {
-                    saveGameScore('math_dash', score);
-                }
-            } catch (err) {
-                console.error('Error saving score:', err);
+                result = await window.GuestOS?.awardPoints?.(GAME_ID, safeScore);
+            } catch (e) {
+                console.error('awardPoints error:', e);
+                if (el) el.textContent = 'Punti non disponibili';
+                return null;
             }
+            if (el) {
+                if (!result) {
+                    el.textContent = 'Accedi per guadagnare punti';
+                } else {
+                    const awarded = Number(result.points_awarded) || 0;
+                    const total = Number(result.total) || 0;
+                    el.textContent = `+${awarded}${suffix}` + (suffix ? ` (totale ${total})` : '');
+                }
+            }
+            return result || null;
         }
     </script>
 </body>

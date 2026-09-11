@@ -1,18 +1,32 @@
 {
-  "name": "Hotel Posta Guest Assistant",
-  "short_name": "Hotel Posta",
-  "description": "Il tuo assistente digitale in vacanza",
+  "name": "GuestOS Guest App",
+  "short_name": "GuestOS",
+  "description": "L'app dell'ospite: chat, prenotazioni, giochi e offerte durante il soggiorno",
+  "lang": "it",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#FF0080",
   "theme_color": "#FF0080",
   "orientation": "portrait",
   "icons": [
     {
+      "src": "/assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
       "src": "/assets/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

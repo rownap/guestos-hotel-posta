@@ -1,67 +1,96 @@
+/**
+ * YIELD MANAGEMENT — template di offerta lampo.
+ *
+ * I template scrivevano su `dealTitle` e `dealDesc`, due id che nel modale non
+ * esistono: il click non faceva nulla. Ora scrivono sui campi veri:
+ *   #fd-service  #fd-discount  #fd-duration  #fd-headline
+ * Il servizio 'tours' dei vecchi template viene mappato su 'tour', che e' il
+ * valore reale della <option> e della colonna flash_deals.service_type.
+ */
+(function () {
+    'use strict';
 
-// YIELD MANAGEMENT TEMPLATES LOGIC
-function useTemplate(templateId) {
-    // Open modal if not open
-    openFlashDealModal();
+    const TEMPLATES = {
+        spa_rain: {
+            label: 'Rainy Day Relax',
+            service: 'spa',
+            discount: 30,
+            duration: 60,
+            headline: '🌨️ Fuori piove? Riscaldati in Spa! Solo per questo pomeriggio: '
+                + 'massaggio relax da 50 minuti al {n}% di sconto. Posti limitati.'
+        },
+        tour_last: {
+            label: 'Ultimi posti: Giro delle Isole',
+            service: 'tours',           // -> normalizzato a 'tour'
+            discount: 40,
+            duration: 60,
+            headline: '🚢 Domani si parte! Restano solo 2 posti per il tour in barca: '
+                + 'prenota ora con il {n}% di sconto.'
+        },
+        dinner_promo: {
+            label: 'Cena romantica vista mare',
+            service: 'restaurant',
+            discount: 25,
+            duration: 30,
+            headline: '🍽️ Si e\' appena liberato un tavolo vista mare! '
+                + 'Menu degustazione completo al {n}% di sconto, solo per stasera.'
+        },
+        late_checkout: {
+            label: 'Late check-out',
+            service: 'spa',             // non esiste un servizio "camera": resta in Spa & Relax
+            discount: 50,
+            duration: 60,
+            headline: '🛌 Non scappare via! Tieni la camera fino alle 14:00 '
+                + 'con il {n}% di sconto e goditi l\'ultima mattina con calma.'
+        }
+    };
 
-    let title = "";
-    let description = "";
-    let service = "";
-    let discount = 0; // percentage to suggest
-
-    switch (templateId) {
-        case 'spa_rain':
-            title = "🌨️ Rainy Day Relax - Massaggio";
-            description = "Fuori piove? Riscaldati in SPA! Offerta esclusiva per questo pomeriggio: Massaggio Relax 50min scontato.";
-            service = "spa";
-            discount = 30;
-            break;
-        case 'tour_last':
-            title = "🚢 Ultimi Posti: Giro delle Isole";
-            description = "Domani si parte! Sono rimasti solo 2 posti per il tour in barca. Prenota ora con uno sconto speciale.";
-            service = "tours";
-            discount = 40;
-            break;
-        case 'dinner_promo':
-            title = "🍽️ Cena Romantica Vista Mare";
-            description = "Un tavolo esclusivo si è appena liberato! Approfitta del Menu Degustazione completo a prezzo ridotto.";
-            service = "restaurant";
-            discount = 25;
-            break;
-        case 'late_checkout':
-            title = "🛌 Late Check-out Special";
-            description = "Non scappare via! Tieni la tua camera fino alle 14:00 e goditi l'ultima mattina con calma.";
-            service = "room"; // Assuming room service mapping exist or general
-            discount = 50;
-            break;
+    function setValue(id, value) {
+        const el = document.getElementById(id);
+        if (!el) return false;
+        el.value = String(value);
+        return true;
     }
 
-    // Populate fields
-    if (document.getElementById('dealTitle')) document.getElementById('dealTitle').value = title;
-    if (document.getElementById('dealDesc')) document.getElementById('dealDesc').value = description;
+    function useTemplate(templateId) {
+        const tpl = TEMPLATES[templateId];
+        if (!tpl) {
+            console.warn('Template sconosciuto:', templateId);
+            return;
+        }
 
-    // Simulate setting service (might need adjustment based on your select ID)
-    // document.getElementById('dealService').value = service; 
+        if (typeof window.openFlashDealModal === 'function') window.openFlashDealModal();
 
-    // Suggest prices (mock calculation logic as we don't know original price yet)
-    // Warning: User still needs to set prices manually or we need logic to fetch base price
+        const service = typeof window.normalizeFlashDealService === 'function'
+            ? window.normalizeFlashDealService(tpl.service)
+            : tpl.service;
 
-    // Toast notification
-    showToast(`Template "${title}" applicato!`);
-}
+        setValue('fd-service', service);
+        setValue('fd-discount', tpl.discount);
+        setValue('fd-duration', tpl.duration);
 
-function showToast(message) {
-    // Basic toast implementation if not exists
-    const toast = document.createElement('div');
-    toast.style.position = 'fixed';
-    toast.style.bottom = '20px';
-    toast.style.right = '20px';
-    toast.style.background = '#333';
-    toast.style.color = 'white';
-    toast.style.padding = '12px 24px';
-    toast.style.borderRadius = '8px';
-    toast.style.zIndex = '10000';
-    toast.innerText = message;
-    document.body.appendChild(toast);
-    setTimeout(() => { toast.remove(); }, 3000);
-}
+        const headline = document.getElementById('fd-headline');
+        if (headline) {
+            headline.value = tpl.headline.replace('{n}', String(tpl.discount));
+            // Blocca la riscrittura automatica dell'anteprima: il testo e' voluto.
+            headline.dataset.touched = '1';
+        }
+
+        if (typeof window.loadHeadlineHistory === 'function') window.loadHeadlineHistory();
+        showToast('Template "' + tpl.label + '" applicato');
+    }
+
+    function showToast(message) {
+        const toast = document.createElement('div');
+        toast.style.cssText = 'position:fixed; bottom:20px; right:20px; background:#333; color:white;'
+            + ' padding:12px 24px; border-radius:10px; z-index:10000; font-weight:700; font-size:14px;'
+            + ' box-shadow:0 8px 24px rgba(0,0,0,0.3);';
+        toast.textContent = message;   // textContent: nessun HTML iniettato
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+
+    window.useTemplate = useTemplate;
+    window.showToast = showToast;
+    window.YIELD_TEMPLATES = TEMPLATES;
+})();

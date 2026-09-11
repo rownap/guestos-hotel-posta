@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#FF0080">
+    <meta name="robots" content="noindex">
+    <title>Privacy e cookie - GuestOS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="common.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #FF0080 0%, #FF3399 25%, #00D4FF 75%, #00E5FF 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            position: relative;
+            z-index: 10;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.3);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 20px;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .back-btn:active {
+            transform: scale(0.9);
+        }
+
+        .page-title {
+            color: white;
+            font-size: 21px;
+            font-weight: 900;
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.3);
+            line-height: 1.2;
+        }
+
+        .page-subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .content {
+            padding: 20px 16px 40px;
+        }
+
+        /* Riquadro di avviso: bozza da validare legalmente */
+        .draft-notice {
+            background: #FFF8D6;
+            border: 3px solid #F2C200;
+            border-radius: 18px;
+            padding: 16px 18px;
+            margin-bottom: 22px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+        }
+
+        .draft-notice .draft-title {
+            color: #7A5B00;
+            font-size: 15px;
+            font-weight: 900;
+            margin-bottom: 6px;
+        }
+
+        .draft-notice p {
+            color: #5C4600;
+            font-size: 13.5px;
+            font-weight: 600;
+            line-height: 1.55;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 20px 18px;
+            margin-bottom: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .card h2 {
+            color: #FF0080;
+            font-size: 17px;
+            font-weight: 900;
+            margin-bottom: 10px;
+            line-height: 1.3;
+        }
+
+        .card h3 {
+            color: #333;
+            font-size: 14px;
+            font-weight: 800;
+            margin: 16px 0 6px;
+        }
+
+        .card p {
+            color: #444;
+            font-size: 14px;
+            line-height: 1.65;
+            margin-bottom: 10px;
+        }
+
+        .card ul {
+            margin: 0 0 10px 18px;
+        }
+
+        .card li {
+            color: #444;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 7px;
+        }
+
+        .card a {
+            color: #0077aa;
+            font-weight: 700;
+            word-break: break-word;
+        }
+
+        .fill {
+            background: #FFF3B0;
+            border-bottom: 2px dotted #C79A00;
+            color: #6B5200;
+            font-weight: 800;
+            padding: 0 3px;
+            border-radius: 3px;
+        }
+
+        table.data {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12.5px;
+            margin-bottom: 10px;
+        }
+
+        table.data th,
+        table.data td {
+            border: 1px solid rgba(0, 0, 0, 0.12);
+            padding: 8px 9px;
+            text-align: left;
+            vertical-align: top;
+            color: #444;
+            line-height: 1.45;
+        }
+
+        table.data th {
+            background: rgba(255, 0, 128, 0.08);
+            color: #333;
+            font-weight: 800;
+        }
+
+        .table-scroll {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin-bottom: 10px;
+        }
+
+        .meta {
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 12px;
+            font-weight: 700;
+            text-align: center;
+            text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.3);
+            padding: 6px 10px 0;
+        }
+
+        .toc {
+            list-style: none;
+            margin: 0;
+        }
+
+        .toc li {
+            margin-bottom: 6px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="back-btn" id="backBtn" type="button" aria-label="Torna indietro">&#8592;</button>
+            <div>
+                <div class="page-title">Privacy e cookie</div>
+                <div class="page-subtitle">Informativa per gli ospiti</div>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <div class="draft-notice" role="note">
+                <div class="draft-title">&#9888;&#65039; Bozza tecnica</div>
+                <p>Bozza tecnica. Va verificata da un legale prima della pubblicazione.</p>
+                <p>Le parti tra virgolette basse, come &laquo;questa&raquo;, sono da compilare con i dati reali
+                    della struttura.</p>
+            </div>
+
+            <div class="card">
+                <h2>1. Chi tratta i tuoi dati</h2>
+                <p><strong>Titolare del trattamento</strong> è la struttura che ti ospita:</p>
+                <ul>
+                    <li>Ragione sociale: &laquo;ragione sociale della struttura&raquo;</li>
+                    <li>Indirizzo: &laquo;indirizzo completo&raquo;</li>
+                    <li>Partita IVA / codice fiscale: &laquo;numero&raquo;</li>
+                    <li>Email: &laquo;indirizzo email della struttura&raquo;</li>
+                    <li>Telefono: &laquo;numero di telefono&raquo;</li>
+                </ul>
+                <p>Il titolare decide perché e come i dati vengono trattati. È a lui che puoi rivolgerti per
+                    qualsiasi richiesta.</p>
+
+                <h3>Responsabile del trattamento</h3>
+                <p>L'applicazione GuestOS è realizzata e gestita da <strong>RC Studio</strong>, che tratta i dati
+                    per conto del titolare sulla base di un contratto ai sensi dell'art. 28 GDPR.</p>
+                <ul>
+                    <li>Contatto RC Studio: &laquo;email di contatto RC Studio&raquo;</li>
+                </ul>
+
+                <h3>Responsabile della protezione dei dati (DPO)</h3>
+                <p>&laquo;Indicare il DPO se nominato, altrimenti scrivere che non è stato nominato perché non
+                    ricorrono i casi dell'art. 37 GDPR&raquo;.</p>
+            </div>
+
+            <div class="card">
+                <h2>2. Fornitori che trattano i dati per nostro conto</h2>
+                <p>Per far funzionare l'app usiamo alcuni fornitori esterni, nominati sub responsabili del
+                    trattamento. Ognuno tratta solo i dati che gli servono.</p>
+                <div class="table-scroll">
+                    <table class="data">
+                        <thead>
+                            <tr>
+                                <th>Fornitore</th>
+                                <th>A cosa serve</th>
+                                <th>Dove stanno i server</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Supabase</td>
+                                <td>Database dell'app: profilo ospite, prenotazioni, punti, cronologia chat</td>
+                                <td>Regione del progetto: &laquo;regione scelta, es. EU Central (Francoforte)&raquo;
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Vercel</td>
+                                <td>Hosting delle pagine e delle funzioni server (chat, pagamenti, email)</td>
+                                <td>Rete distribuita; funzioni server eseguite nella regione
+                                    &laquo;regione impostata sul progetto, es. fra1 Francoforte&raquo;</td>
+                            </tr>
+                            <tr>
+                                <td>Anthropic</td>
+                                <td>Modello linguistico che genera le risposte dell'assistente</td>
+                                <td>Stati Uniti. Trasferimento extra UE sulla base delle clausole contrattuali
+                                    tipo (art. 46 GDPR)</td>
+                            </tr>
+                            <tr>
+                                <td>Stripe</td>
+                                <td>Pagamenti con carta. I dati della carta li raccoglie Stripe sulle proprie
+                                    pagine: non passano né dall'app né dal nostro database</td>
+                                <td>Unione Europea e Stati Uniti, con clausole contrattuali tipo</td>
+                            </tr>
+                            <tr>
+                                <td>Resend</td>
+                                <td>Invio delle email di conferma prenotazione</td>
+                                <td>Unione Europea e Stati Uniti, con clausole contrattuali tipo</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p>L'elenco aggiornato dei sub responsabili è disponibile su richiesta al titolare.</p>
+            </div>
+
+            <div class="card">
+                <h2>3. Quali dati raccogliamo</h2>
+                <ul>
+                    <li><strong>Cognome</strong>: per riconoscerti insieme al numero di camera.</li>
+                    <li><strong>Email</strong>: per l'invio delle conferme di prenotazione e per il recupero
+                        dell'accesso.</li>
+                    <li><strong>Numero di camera</strong> e date del soggiorno.</li>
+                    <li><strong>PIN di accesso</strong>: viene mostrato una sola volta al momento della
+                        registrazione. Sul nostro database è conservato solo in forma cifrata (funzione di hash
+                        bcrypt): né noi né lo staff possiamo rileggerlo. Se lo dimentichi, la reception ne genera
+                        uno nuovo.</li>
+                    <li><strong>Token di sessione</strong>: un codice casuale che tiene l'accesso attivo sul tuo
+                        telefono.</li>
+                    <li><strong>Prenotazioni</strong>: ristorante, spa, escursioni, offerte last minute, con data,
+                        orario, numero di persone e importo.</li>
+                    <li><strong>Punti e attività di gioco</strong>: punteggi dei minigiochi, punti accumulati,
+                        premi riscattati, posizione in classifica.</li>
+                    <li><strong>Messaggi scambiati con l'assistente</strong>: il testo delle tue domande e delle
+                        risposte, per mantenere il filo della conversazione e migliorare il servizio.</li>
+                    <li><strong>Notifiche</strong>: se le attivi, l'identificativo tecnico che il tuo browser
+                        assegna al dispositivo per ricevere gli avvisi.</li>
+                </ul>
+                <p>Non raccogliamo dati particolari (salute, opinioni, convinzioni). Se in una prenotazione spa o
+                    in una richiesta al ristorante indichi allergie o esigenze di salute, quel dato viene trattato
+                    solo per erogare il servizio richiesto.</p>
+                <p>Non raccogliamo la tua posizione GPS. Non profiliamo il tuo comportamento a fini pubblicitari e
+                    non vendiamo i tuoi dati a nessuno.</p>
+            </div>
+
+            <div class="card">
+                <h2>4. Perché li trattiamo e con quale base giuridica</h2>
+                <div class="table-scroll">
+                    <table class="data">
+                        <thead>
+                            <tr>
+                                <th>Finalità</th>
+                                <th>Dati usati</th>
+                                <th>Base giuridica</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Crearti l'accesso all'app e tenerti connesso</td>
+                                <td>Cognome, camera, email, PIN cifrato, token di sessione</td>
+                                <td>Esecuzione del contratto di ospitalità e misure precontrattuali
+                                    (art. 6.1.b GDPR)</td>
+                            </tr>
+                            <tr>
+                                <td>Gestire le prenotazioni di ristorante, spa, escursioni e offerte</td>
+                                <td>Prenotazioni, cognome, camera, email</td>
+                                <td>Esecuzione del contratto (art. 6.1.b GDPR)</td>
+                            </tr>
+                            <tr>
+                                <td>Inviarti l'email di conferma di una prenotazione</td>
+                                <td>Email, nome, dettagli della prenotazione</td>
+                                <td>Esecuzione del contratto (art. 6.1.b GDPR)</td>
+                            </tr>
+                            <tr>
+                                <td>Incassare i pagamenti con carta</td>
+                                <td>Importo, riferimento della prenotazione, email</td>
+                                <td>Esecuzione del contratto (art. 6.1.b GDPR) e obblighi fiscali
+                                    (art. 6.1.c GDPR)</td>
+                            </tr>
+                            <tr>
+                                <td>Programma punti, minigiochi e classifica</td>
+                                <td>Punteggi, punti, premi riscattati, nome mostrato in classifica</td>
+                                <td>Esecuzione del contratto per la parte richiesta da te (art. 6.1.b GDPR).
+                                    La partecipazione è libera: se non giochi, non raccogliamo nulla</td>
+                            </tr>
+                            <tr>
+                                <td>Rispondere alle tue domande tramite l'assistente</td>
+                                <td>Testo dei messaggi</td>
+                                <td>Legittimo interesse a fornire assistenza durante il soggiorno
+                                    (art. 6.1.f GDPR)</td>
+                            </tr>
+                            <tr>
+                                <td>Inviarti notifiche su offerte e attività</td>
+                                <td>Identificativo del dispositivo</td>
+                                <td>Consenso, che presti attivando le notifiche e puoi revocare in qualsiasi
+                                    momento (art. 6.1.a GDPR)</td>
+                            </tr>
+                            <tr>
+                                <td>Sicurezza dell'app: limitare i tentativi di accesso e prevenire abusi</td>
+                                <td>Numero di camera, esito e orario dei tentativi di accesso</td>
+                                <td>Legittimo interesse alla sicurezza del servizio (art. 6.1.f GDPR)</td>
+                            </tr>
+                            <tr>
+                                <td>Adempimenti contabili e fiscali</td>
+                                <td>Dati dei pagamenti</td>
+                                <td>Obbligo di legge (art. 6.1.c GDPR)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p>Conferire i dati di registrazione è necessario per usare l'app. Senza, non è possibile creare
+                    l'accesso e prenotare. Puoi comunque prenotare qualsiasi servizio alla reception, senza usare
+                    l'app.</p>
+            </div>
+
+            <div class="card">
+                <h2>5. Per quanto tempo li conserviamo</h2>
+                <p>I dati collegati al tuo soggiorno vengono conservati per <strong>12 mesi dalla data di fine
+                        soggiorno</strong>, poi cancellati.</p>
+                <ul>
+                    <li>Il token di sessione scade prima, al massimo dopo 30 giorni, e comunque alla fine del
+                        soggiorno.</li>
+                    <li>I dati dei pagamenti restano per il periodo previsto dagli obblighi fiscali
+                        (&laquo;10 anni, salvo diversa indicazione del commercialista&raquo;).</li>
+                    <li>Se revochi il consenso alle notifiche, l'identificativo del dispositivo viene rimosso
+                        subito.</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h2>6. Cookie e archiviazione locale</h2>
+                <p>Questa app <strong>non usa cookie di profilazione e non usa cookie di terze parti a fini
+                        pubblicitari</strong>. Non ci sono pixel di tracciamento e non c'è pubblicità.</p>
+                <p>Usiamo solo l'archiviazione locale del browser (localStorage e cache), che resta sul tuo
+                    dispositivo e non viene letta da terzi. Serve a farti restare connesso e a rendere l'app
+                    utilizzabile. Per questo non è richiesto un banner di consenso.</p>
+                <div class="table-scroll">
+                    <table class="data">
+                        <thead>
+                            <tr>
+                                <th>Cosa salviamo</th>
+                                <th>Dove</th>
+                                <th>A cosa serve</th>
+                                <th>Durata</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>guestos_token</code></td>
+                                <td>localStorage</td>
+                                <td>Tiene attivo il tuo accesso senza richiedere il PIN a ogni pagina</td>
+                                <td>Fino al logout, alla fine del soggiorno o alla scadenza della sessione</td>
+                            </tr>
+                            <tr>
+                                <td><code>guestos_user_name</code>, <code>guestos_user_email</code>,
+                                    <code>guestos_room_number</code>, <code>guestos_stay_end_date</code></td>
+                                <td>localStorage</td>
+                                <td>Mostra il tuo nome e i dati del soggiorno senza richiederli di nuovo</td>
+                                <td>Come sopra</td>
+                            </tr>
+                            <tr>
+                                <td>Preferenza di tema</td>
+                                <td>localStorage</td>
+                                <td>Ricorda l'aspetto grafico che hai scelto</td>
+                                <td>Finché non svuoti i dati del browser</td>
+                            </tr>
+                            <tr>
+                                <td>Cache delle pagine (service worker)</td>
+                                <td>Cache del browser</td>
+                                <td>Permette di riaprire le pagine già visitate anche con rete debole</td>
+                                <td>Finché non svuoti i dati del browser</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p>Il PIN in chiaro non viene mai salvato sul dispositivo. Puoi cancellare tutto in due modi: usa
+                    "Esci" dall'area account, oppure cancella i dati del sito dalle impostazioni del browser.</p>
+                <p>Se in futuro la struttura aggiungerà strumenti di statistica o marketing, questa informativa
+                    verrà aggiornata e ti verrà chiesto il consenso prima dell'attivazione.</p>
+            </div>
+
+            <div class="card">
+                <h2>7. I tuoi diritti</h2>
+                <p>Puoi esercitare in qualsiasi momento i diritti previsti dagli articoli da 15 a 22 del GDPR:</p>
+                <ul>
+                    <li><strong>Accesso</strong>: sapere quali dati abbiamo su di te e ottenerne copia.</li>
+                    <li><strong>Rettifica</strong>: correggere dati sbagliati o incompleti. Cognome ed email li
+                        modifichi da solo nella pagina Account.</li>
+                    <li><strong>Cancellazione</strong>: chiedere che i tuoi dati vengano eliminati, quando non
+                        siamo obbligati a conservarli per legge.</li>
+                    <li><strong>Limitazione</strong>: chiedere di sospendere il trattamento mentre verifichiamo
+                        una tua contestazione.</li>
+                    <li><strong>Portabilità</strong>: ricevere i dati che ci hai fornito in un formato leggibile
+                        da un computer.</li>
+                    <li><strong>Opposizione</strong>: opporti ai trattamenti fondati sul legittimo interesse.</li>
+                    <li><strong>Revoca del consenso</strong>: per le notifiche, in qualsiasi momento, senza che
+                        questo renda illecito quanto fatto prima.</li>
+                </ul>
+                <h3>Come si esercitano</h3>
+                <p>Scrivi a &laquo;indirizzo email della struttura&raquo; indicando il tuo cognome, il numero di
+                    camera e le date del soggiorno. Rispondiamo entro 30 giorni. In alternativa puoi rivolgerti
+                    alla reception.</p>
+                <p>Se ritieni che il trattamento violi il GDPR puoi proporre reclamo al Garante per la protezione
+                    dei dati personali, Piazza Venezia 11, 00187 Roma,
+                    <a href="https://www.garanteprivacy.it" target="_blank"
+                        rel="noopener noreferrer">www.garanteprivacy.it</a>.
+                </p>
+            </div>
+
+            <div class="card">
+                <h2>8. Sicurezza e decisioni automatizzate</h2>
+                <p>I dati viaggiano sempre su connessione cifrata (HTTPS). L'accesso al database è limitato da
+                    regole che consentono a ogni ospite di vedere solo i propri dati. Il PIN è conservato solo
+                    cifrato.</p>
+                <p>Non prendiamo decisioni automatizzate che producano effetti giuridici su di te e non facciamo
+                    profilazione.</p>
+            </div>
+
+            <div class="card">
+                <h2>9. Contatti</h2>
+                <ul>
+                    <li>Titolare: &laquo;ragione sociale&raquo; &mdash; &laquo;email&raquo; &mdash;
+                        &laquo;telefono&raquo;</li>
+                    <li>Responsabile tecnico (RC Studio): &laquo;email di contatto RC Studio&raquo;</li>
+                    <li>DPO: &laquo;contatto se nominato&raquo;</li>
+                </ul>
+                <p>Se aggiorniamo questa informativa, la nuova versione viene pubblicata su questa pagina con la
+                    data di aggiornamento.</p>
+            </div>
+
+            <div class="meta">
+                Versione &laquo;1.0&raquo; &mdash; aggiornata il &laquo;data&raquo;
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('backBtn').addEventListener('click', function () {
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+    </script>
+</body>
+
+</html>

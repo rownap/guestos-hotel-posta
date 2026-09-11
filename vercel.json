@@ -6,6 +6,33 @@
     { "source": "/spa", "destination": "/spa.html" },
     { "source": "/tour-detail", "destination": "/tour-detail.html" },
     { "source": "/animazione", "destination": "/animazione.html" },
-    { "source": "/lastminute", "destination": "/lastminute.html" }
+    { "source": "/lastminute", "destination": "/lastminute.html" },
+    { "source": "/privacy", "destination": "/privacy.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=()" }
+      ]
+    },
+    {
+      "source": "/guestos-admin-(.*)",
+      "headers": [
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Cache-Control", "value": "no-store" },
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
+      ]
+    },
+    {
+      "source": "/admin-(.*)",
+      "headers": [
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Cache-Control", "value": "no-store" },
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
+      ]
+    }
   ]
 }

@@ -11,6 +11,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
+    <script src="guest-session.js"></script>
     <script src="game-leaderboard.js" defer></script>
     <style>
         :root {
@@ -225,7 +226,7 @@
                     aggiornata a breve.</p>
                 <div
                     style="background: var(--success); padding: 20px; border-radius: 16px; margin-bottom: 30px; text-align: center;">
-                    <div style="font-size: 32px; font-weight: 900; color: white;">+30 Punti</div>
+                    <div id="awardedPoints" style="font-size: 32px; font-weight: 900; color: white;">+30 Punti</div>
                 </div>
                 <button class="primary-btn" onclick="window.location.href='leaderboard.html'">VAI ALLA
                     CLASSIFICA</button>
@@ -266,22 +267,36 @@
             loadLeaderboard();
         }
 
+        // Classifica dalla vista `game_leaderboard`: niente email, solo nome e
+        // punteggio, con la propria riga evidenziata.
         async function loadLeaderboard() {
-            // Mock leaderboard - in production, fetch from Supabase
-            const mockData = [
-                { name: "Marco R.", score: 150 },
-                { name: "Laura B.", score: 145 },
-                { name: "Giuseppe T.", score: 130 },
-                { name: "Anna M.", score: 120 },
-                { name: "Paolo F.", score: 115 }
-            ];
-
             const lbContent = document.getElementById('lbContent');
-            lbContent.innerHTML = mockData.map((player, idx) => `
-                <div class="lb-row">
+            const esc = window.escapeHtml;
+            let rows = [];
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('game_leaderboard')
+                    .select('score, user_name, username, is_me')
+                    .eq('game_id', 'weekly_challenge')
+                    .order('score', { ascending: false })
+                    .limit(5);
+                if (error) throw error;
+                rows = data || [];
+            } catch (err) {
+                rows = [];
+            }
+
+            if (rows.length === 0) {
+                lbContent.innerHTML = '<div class="lb-row"><span class="player">Nessun punteggio questa settimana.</span></div>';
+                return;
+            }
+
+            lbContent.innerHTML = rows.map((player, idx) => `
+                <div class="lb-row"${player.is_me === true ? ' style="font-weight:700;"' : ''}>
                     <span class="rank">${idx + 1}</span>
-                    <span class="player">${player.name}</span>
-                    <span class="score">${player.score}pts</span>
+                    <span class="player">${esc(player.username || player.user_name || 'Ospite')}</span>
+                    <span class="score">${esc(player.score)}pts</span>
                 </div>
             `).join('');
         }
@@ -299,18 +314,14 @@
                 document.getElementById('gameScreen').style.display = 'none';
                 document.getElementById('resultsScreen').style.display = 'block';
 
-                const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
-                try {
-                    const { data: current } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
-                    const newPoints = (current?.points || 0) + 30;
-                    await supabaseClient.from('user_points').update({ points: newPoints, updated_at: new Date().toISOString() }).eq('user_email', email);
-
-                    if (typeof saveGameScore === 'function') {
-                        saveGameScore('weekly_challenge', 100);
-                    }
-                } catch (err) {
-                    console.error('Error saving score:', err);
+                // I punti li assegna il server: award_points registra la partita e
+                // applica i tetti giornalieri. Nessuna scrittura diretta su user_points.
+                const res = await window.GuestOS.awardPoints('weekly_challenge', 100);
+                const box = document.getElementById('awardedPoints');
+                if (box && res && res.points_awarded != null) {
+                    box.textContent = '+' + res.points_awarded + ' Punti';
                 }
+                loadLeaderboard();
             } else {
                 alert('Risposta errata! Riprova.');
             }

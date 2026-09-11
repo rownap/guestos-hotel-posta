@@ -1,0 +1,9 @@
+{
+  "name": "guestos-hotel-posta",
+  "private": true,
+  "description": "GuestOS - dipendenze server per le Vercel Functions (Stripe, Resend). Nessun build step: il frontend e' HTML/JS statico.",
+  "dependencies": {
+    "resend": "6.27.0",
+    "stripe": "22.6.2"
+  }
+}

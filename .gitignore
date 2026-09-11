@@ -14,18 +14,18 @@
 *.log
 npm-debug.log*
 
-# Env
+# Env (tutte le varianti: .env, .env.local, .env.production, ...)
 .env
-.env.local
-.env*.local
+.env*
+!.env.example
 
 # Dependencies
 node_modules/
 
-# Vercel
+# Vercel (link locale del progetto: non va nel repo)
 .vercel/
+.vercel
 
 # Backup
 *_old.html
 *.bak
-.vercel

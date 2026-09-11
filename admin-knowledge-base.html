@@ -7,8 +7,13 @@
     <title>Knowledge Base Manager - Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.min.js"></script>
+    <!--
+        config.js: chiave anon + client Supabase (nessuna copia della chiave qui).
+        guestos-admin-features.js: window.AdminOS (token, rpc, requireAdmin, escapeHtml).
+    -->
     <script src="config.js"></script>
+    <script src="guestos-admin-features.js"></script>
     <!-- PDF.js for text extraction -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
@@ -559,10 +564,6 @@
                 <h3>Ultimo Aggiornamento</h3>
                 <div class="value" style="font-size: 18px;" id="lastUpdate">-</div>
             </div>
-            <div class="stat-card">
-                <h3>Embeddings Generati</h3>
-                <div class="value" id="totalEmbeddings">0</div>
-            </div>
         </div>
 
         <div class="main-content">
@@ -602,7 +603,7 @@
                         <span class="count" id="count-faq">0</span>
                     </div>
                 </div>
-                <button class="add-btn" onclick="openAddModal()">
+                <button class="add-btn" type="button" data-kb="new">
                     <i data-lucide="plus"></i>
                     Aggiungi Documento
                 </button>
@@ -611,14 +612,13 @@
             <div class="content-area">
                 <div class="toolbar">
                     <div class="search-box">
-                        <input type="text" id="searchInput" placeholder="Cerca documenti..."
-                            onkeyup="searchDocuments()">
+                        <input type="text" id="searchInput" placeholder="Cerca documenti...">
                         <i data-lucide="search"></i>
                     </div>
                     <div class="filter-btns">
-                        <button class="filter-btn active" onclick="filterByStatus('all')">Tutti</button>
-                        <button class="filter-btn" onclick="filterByStatus('active')">Attivi</button>
-                        <button class="filter-btn" onclick="filterByStatus('inactive')">Inattivi</button>
+                        <button class="filter-btn active" type="button" data-kb="filter" data-status="all">Tutti</button>
+                        <button class="filter-btn" type="button" data-kb="filter" data-status="active">Attivi</button>
+                        <button class="filter-btn" type="button" data-kb="filter" data-status="inactive">Inattivi</button>
                     </div>
                 </div>
 
@@ -634,9 +634,9 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="modalTitle">Nuovo Documento</h2>
-                <button class="close-btn" onclick="closeModal()">&times;</button>
+                <button class="close-btn" type="button" data-kb="close" aria-label="Chiudi">&times;</button>
             </div>
-            <form id="documentForm" onsubmit="saveDocument(event)">
+            <form id="documentForm">
                 <div class="form-group">
                     <label>Titolo *</label>
                     <input type="text" id="docTitle" required>
@@ -661,9 +661,8 @@
                 </div>
                 <div class="form-group">
                     <label>Importa da File</label>
-                    <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
-                        <input type="file" id="fileInput" hidden accept=".pdf,.txt,.md,.json"
-                            onchange="handleFileUpload(this.files)">
+                    <div class="upload-zone" id="dropZone">
+                        <input type="file" id="fileInput" hidden accept=".pdf,.txt,.md,.json">
                         <i data-lucide="upload-cloud"></i>
                         <div class="upload-text">Clicca o trascina qui un file</div>
                         <div class="upload-subtext">Supporta PDF, TXT, MD</div>
@@ -686,7 +685,7 @@
                     </label>
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Annulla</button>
+                    <button type="button" class="btn btn-secondary" data-kb="close">Annulla</button>
                     <button type="submit" class="btn btn-primary">Salva Documento</button>
                 </div>
             </form>
@@ -802,15 +801,19 @@
                 return;
             }
 
+            const esc = window.escapeHtml || (v => String(v == null ? '' : v)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;'));
+
             grid.innerHTML = filtered.map(doc => `
-                <div class="document-card" onclick="editDocument('${doc.id}')">
+                <div class="document-card" onclick="editDocument('${esc(doc.id)}')">
                     <div class="document-header">
                         <div>
-                            <div class="document-title">${doc.title}</div>
-                            <span class="document-category">${getCategoryLabel(doc.category)}</span>
+                            <div class="document-title">${esc(doc.title)}</div>
+                            <span class="document-category">${esc(getCategoryLabel(doc.category))}</span>
                         </div>
                     </div>
-                    <div class="document-content">${doc.content.substring(0, 200)}...</div>
+                    <div class="document-content">${esc(String(doc.content || '').substring(0, 200))}...</div>
                     <div class="document-footer">
                         <div class="document-meta">
                             ${doc.is_active ? '✅ Attivo' : '⏸️ Inattivo'} • 
@@ -965,26 +968,13 @@
         }
 
         // Generate embedding via Edge Function
-        async function generateEmbedding(docId, content) {
-            try {
-                // Show toast or updating UI...
-                console.log('Generating embedding for', docId);
-
-                const { data, error } = await supabase.functions.invoke('generate-embedding', {
-                    body: { documentId: docId, content: content }
-                });
-
-                if (error) throw error;
-
-                console.log('Embedding generated:', data);
-                // Refresh list to show updated status
-                await loadDocuments();
-
-            } catch (error) {
-                console.error('Error generating embedding:', error);
-                alert('Errore generazione embedding AI: ' + error.message);
-            }
-        }
+        // Nota: non esiste (e non serve) nessuna generazione di embedding.
+        // api/chat.js costruisce il system prompt di Bubbles leggendo direttamente
+        // le righe attive di ai_knowledge_base come testo, con una cache di 120
+        // secondi: un documento salvato qui e' operativo entro due minuti.
+        // La vecchia chiamata a una Edge Function "generate-embedding" e' stata
+        // rimossa: quella funzione non e' mai esistita e faceva comparire un
+        // messaggio d'errore a ogni salvataggio andato a buon fine.
 
         // Save document
         async function saveDocument(event) {
@@ -1009,31 +999,19 @@
                         .eq('id', editingDocId);
                     if (error) throw error;
 
-                    // Trigger embedding generation
-                    const savedId = editingDocId;
-                    generateEmbedding(savedId, docData.content);
-
                 } else {
                     // Create new
-                    const { data, error } = await supabase
+                    const { error } = await supabase
                         .from('ai_knowledge_base')
-                        .insert(docData)
-                        .select()
-                        .single();
+                        .insert(docData);
 
                     if (error) throw error;
-
-                    // Trigger embedding generation
-                    generateEmbedding(data.id, docData.content);
                 }
 
                 closeModal();
-                // Show optimistic update or wait for reload
-                // await loadDocuments(); // generateEmbedding will refresh
-                // But we refresh here to close modal and show temp state
                 await loadDocuments();
 
-                alert('Documento salvato! Gli embeddings verranno generati automaticamente.');
+                alert('Documento salvato. Bubbles lo usera\' entro un paio di minuti.');
             } catch (error) {
                 console.error('Error saving document:', error);
                 alert('Errore durante il salvataggio: ' + error.message);

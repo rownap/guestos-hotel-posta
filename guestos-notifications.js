@@ -3,6 +3,18 @@
  * Gestisce il real-time via Supabase per Admin e Utenti
  */
 
+// Copia locale identica a quella di guest-session.js (questo file può essere
+// caricato anche in pagine admin che non includono guest-session.js).
+function notifEscapeHtml(str) {
+    if (typeof window.escapeHtml === 'function') return window.escapeHtml(str);
+    return String(str == null ? '' : str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initNotificationService();
 });
@@ -10,79 +22,110 @@ document.addEventListener('DOMContentLoaded', () => {
 function initNotificationService() {
     console.log('🔔 Notification Service Initializing...');
 
-    // 1. ADMIN SIDE: Notifica nuovi utenti registrati
-    if (window.location.pathname.includes('admin')) {
-        subscribeToNewUsers();
-    }
-
-    // 2. USER SIDE: Notifica nuove offerte lampo
-    if (window.location.pathname.includes('index.html') ||
-        window.location.pathname.includes('dynamic-home.html') ||
-        window.location.pathname === '/' ||
-        window.location.pathname.endsWith('posta_1/') ||
-        window.location.pathname.endsWith('/')) {
-        subscribeToFlashDeals();
-
-        // Chiedi permesso per notifiche Push (Background)
-        // In produzione, legare questo a un bottone utente per UX migliore
-        setTimeout(() => {
-            subscribeToPushNotifications();
-        }, 3000);
-    }
-}
-
-// PUBLIC VAPID KEY (Generata per Web Push)
-const PUBLIC_VAPID_KEY = 'BM6uP6OdmqBjMaQJscqXh9W6lKiiJi2yEF0wIZ72h_OWznPh-D1aLPYOvBq-U36ujetYsTrljI484RPz0Pf-TPw';
-
-async function subscribeToPushNotifications() {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        console.log('Push notifications not supported');
+    if (typeof supabaseClient === 'undefined') {
+        console.warn('[notifications] supabaseClient non disponibile: includi config.js prima di guestos-notifications.js');
         return;
     }
 
-    try {
-        // 1. Register Service Worker
-        const register = await navigator.serviceWorker.register('/sw.js');
-        console.log('SW Registered for Push');
+    // 1. ADMIN SIDE: Notifica nuovi utenti registrati
+    if (window.location.pathname.includes('admin')) {
+        subscribeToNewUsers();
+        return;
+    }
 
-        // 2. Check Permission
-        if (Notification.permission === 'denied') {
-            console.log('Push permission denied');
-            return;
+    // 2. USER SIDE: Notifica nuove offerte lampo (realtime)
+    if (window.location.pathname.includes('index.html') ||
+        window.location.pathname === '/' ||
+        window.location.pathname.endsWith('/')) {
+        subscribeToFlashDeals();
+    }
+
+    // NB: il permesso push NON viene più richiesto automaticamente.
+    // Va legato a un gesto dell'utente: <button onclick="GuestOS.enablePush()">Attiva notifiche</button>
+}
+
+// PUBLIC VAPID KEY (Web Push). La chiave privata corrispondente deve stare SOLO
+// nelle env var del server che invia le push (mai nel repository).
+const PUBLIC_VAPID_KEY = 'BM6uP6OdmqBjMaQJscqXh9W6lKiiJi2yEF0wIZ72h_OWznPh-D1aLPYOvBq-U36ujetYsTrljI484RPz0Pf-TPw';
+
+/**
+ * Stato push corrente: 'unsupported' | 'denied' | 'granted' | 'default'
+ */
+function getPushStatus() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+        return 'unsupported';
+    }
+    return Notification.permission;
+}
+
+/**
+ * Attiva le notifiche push. DA CHIAMARE SOLO DA UN GESTO UTENTE (click su bottone).
+ * Ritorna { ok:boolean, status:string, error?:string }.
+ */
+async function enablePushNotifications() {
+    const status = getPushStatus();
+    if (status === 'unsupported') {
+        return { ok: false, status, error: 'Le notifiche push non sono supportate su questo dispositivo/browser.' };
+    }
+    if (status === 'denied') {
+        return { ok: false, status, error: 'Le notifiche sono bloccate nelle impostazioni del browser.' };
+    }
+    if (!window.GuestOS || typeof window.GuestOS.token !== 'function' || !window.GuestOS.token()) {
+        return { ok: false, status, error: 'Effettua il login per attivare le notifiche.' };
+    }
+
+    try {
+        // 1. Service worker unico (già registrato da app.js; register è idempotente)
+        const registration = await navigator.serviceWorker.register('/service-worker.js');
+        await navigator.serviceWorker.ready;
+
+        // 2. Permesso (prompt del browser)
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            return { ok: false, status: permission, error: 'Permesso non concesso.' };
         }
 
-        // 3. Request Permission
-        const permission = await Notification.requestPermission();
-        if (permission !== 'granted') return;
+        // 3. Subscription (riusa quella esistente se presente)
+        let subscription = await registration.pushManager.getSubscription();
+        if (!subscription) {
+            subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
+            });
+        }
 
-        // 4. Subscribe
-        const subscription = await register.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
-        });
-
-        // 5. Save to Supabase
+        // 4. Salvataggio lato server (RPC con token di sessione ospite)
         await saveSubscriptionToDB(subscription);
-
+        return { ok: true, status: 'granted' };
     } catch (err) {
         console.error('Error subscribing to push:', err);
+        return { ok: false, status: getPushStatus(), error: err && err.message ? err.message : String(err) };
     }
 }
 
 async function saveSubscriptionToDB(subscription) {
     const { endpoint, keys } = subscription.toJSON();
-    const userEmail = localStorage.getItem('guestos_user_email');
-
-    await supabaseClient.from('user_push_subscriptions').upsert({
-        endpoint: endpoint,
-        p256dh: keys.p256dh,
-        auth: keys.auth,
-        user_email: userEmail,
-        user_agent: navigator.userAgent
-    }, { onConflict: 'endpoint' });
-
-    console.log('✅ Push Subscription saved!');
+    if (!window.GuestOS || typeof window.GuestOS.rpc !== 'function') {
+        throw new Error('GuestOS.rpc non disponibile: includi guest-session.js');
+    }
+    // RPC SECURITY DEFINER: associa la subscription all'ospite identificato dal token
+    // (upsert su endpoint lato server). Vedi handoff per la firma.
+    await window.GuestOS.rpc('save_push_subscription', {
+        p_token: window.GuestOS.token(),
+        p_endpoint: endpoint,
+        p_p256dh: keys && keys.p256dh ? keys.p256dh : null,
+        p_auth: keys && keys.auth ? keys.auth : null,
+        p_user_agent: navigator.userAgent
+    });
+    console.log('✅ Push Subscription saved');
 }
+
+// Esposizione pubblica: GuestOS.enablePush() / GuestOS.pushStatus()
+// (window.GuestOS viene creato da guest-session.js; se non c'è, lo creiamo vuoto
+// e guest-session.js farà merge — l'ordine di caricamento non è vincolante).
+window.GuestOS = window.GuestOS || {};
+window.GuestOS.enablePush = enablePushNotifications;
+window.GuestOS.pushStatus = getPushStatus;
 
 function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -106,8 +149,11 @@ function subscribeToNewUsers() {
     const channel = supabaseClient
         .channel('admin-notifications')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'users' }, (payload) => {
-            const newUser = payload.new;
-            showAdminAlert(`🆕 Nuovo Lead! <b>${newUser.full_name || 'Un utente'}</b> si è appena registrato!`);
+            const newUser = payload.new || {};
+            const label = newUser.last_name
+                ? `${newUser.last_name} (cam. ${newUser.room_number || '?'})`
+                : 'Un ospite';
+            showAdminAlert(`🆕 Nuovo ospite! <b>${notifEscapeHtml(label)}</b> si è appena registrato.`);
         })
         .subscribe();
 }
@@ -230,6 +276,12 @@ function showFlashDealBanner(deal, silent = false) {
 
     const serviceEmoji = { 'spa': '💆', 'restaurant': '🍽️', 'tour': '🚢', 'bar': '🍹' };
     const emoji = serviceEmoji[deal.service_type] || '⚡';
+    const safePct = notifEscapeHtml(parseInt(deal.discount_pct, 10) || 0);
+    const safeService = notifEscapeHtml(String(deal.service_type || '').toUpperCase());
+    // L'intestazione la scrive lo staff dal pannello yield management: e' il
+    // testo che deve convincere l'ospite, quindi ha la precedenza sul generico
+    // "Sconto N% su SERVIZIO". Resta comunque testo di terzi: va escapato.
+    const safeHeadline = notifEscapeHtml(String(deal.headline || '').trim());
 
     banner.innerHTML = `
         <div style="display: flex; align-items: flex-start; gap: 12px;">
@@ -244,7 +296,7 @@ function showFlashDealBanner(deal, silent = false) {
             
             <div style="flex: 1;">
                 <div style="color: #FF0080; font-weight: 800; font-size: 13px; text-transform: uppercase; margin-bottom: 2px;">Offerta Lampo!</div>
-                <div style="color: #333; font-weight: 700; font-size: 15px; line-height: 1.3;">Sconto ${deal.discount_pct}% su ${deal.service_type.toUpperCase()}</div>
+                <div style="color: #333; font-weight: 700; font-size: 15px; line-height: 1.3;">${safeHeadline || `Sconto ${safePct}% su ${safeService}`}</div>
                 <div id="flash-countdown" style="
                     color: #666; font-size: 12px; font-weight: 600; margin-top: 4px; display: flex; align-items: center; gap: 4px;
                 ">

@@ -11,6 +11,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
+    <script src="guest-session.js"></script>
     <script src="game-leaderboard.js" defer></script>
     <style>
         :root {
@@ -240,7 +241,7 @@
                 <h1>Complimenti!</h1>
                 <p style="text-align: center; opacity: 0.8; margin: 20px 0;">Hai risolto l'indovinello!</p>
                 <div style="background: var(--success); padding: 20px; border-radius: 16px; margin-bottom: 30px;">
-                    <div style="font-size: 32px; font-weight: 900; color: white;">+50 Punti</div>
+                    <div id="awardedPoints" style="font-size: 32px; font-weight: 900; color: white;">+50 Punti</div>
                 </div>
                 <button class="submit-btn" onclick="window.location.href='games.html'">TORNA AI GIOCHI</button>
             </div>
@@ -416,7 +417,7 @@
             if (userAnswer === correctAnswer) {
                 clearInterval(timerInterval);
                 showResult(true, "Esatto! Hai risolto l'indovinello!");
-                awardPoints();
+                grantPoints();
             } else {
                 showResult(false, "Risposta errata. Riprova!");
             }
@@ -437,18 +438,13 @@
             }
         }
 
-        async function awardPoints() {
-            const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
-            try {
-                const { data: current } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
-                const newPoints = (current?.points || 0) + 50;
-                await supabaseClient.from('user_points').update({ points: newPoints, updated_at: new Date().toISOString() }).eq('user_email', email);
-
-                if (typeof saveGameScore === 'function') {
-                    saveGameScore('riddle_of_day', 100);
-                }
-            } catch (err) {
-                console.error('Error awarding points:', err);
+        // I punti li assegna il server: award_points registra la partita e applica
+        // i tetti giornalieri. Nessuna scrittura diretta su user_points.
+        async function grantPoints() {
+            const res = await window.GuestOS.awardPoints('riddle_of_day', 100);
+            const box = document.getElementById('awardedPoints');
+            if (box && res && res.points_awarded != null) {
+                box.textContent = '+' + res.points_awarded + ' Punti';
             }
         }
     </script>

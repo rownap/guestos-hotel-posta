@@ -332,9 +332,10 @@
             listEl.innerHTML = '<div class="loading" style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">Caricamento...</div>';
             podiumEl.innerHTML = '';
 
+            // Vista `game_leaderboard`: nessuna email, flag is_me per la propria riga
             const { data, error } = await supabaseClient
-                .from('game_scores')
-                .select('score, user_name, username, user_email')
+                .from('game_leaderboard')
+                .select('score, user_name, username, is_me')
                 .eq('game_id', gameId)
                 .order('score', { ascending: false })
                 .limit(50);
@@ -358,6 +359,10 @@
         modal.classList.remove('show');
     };
 
+    function esc(value) {
+        return (window.escapeHtml || String)(value);
+    }
+
     // Render function
     function renderGameLeaderboard(scores, podiumEl, listEl) {
         // Render podium
@@ -374,20 +379,19 @@
 
         // Render list
         listEl.innerHTML = '';
-        const currentUserEmail = localStorage.getItem('guestos_user_email') || '';
 
         scores.slice(3).forEach((score, index) => {
             const rank = index + 4;
-            const isMe = score.user_email === currentUserEmail;
+            const isMe = score.is_me === true;
 
             listEl.innerHTML += `
                 <div class="game-ranking-item ${isMe ? 'me' : ''}">
                     <div class="game-rank-number">#${rank}</div>
                     <div class="game-user-avatar">👤</div>
                     <div class="game-user-info">
-                        <div class="game-user-name">${score.username || score.user_name || 'Ospite'}</div>
+                        <div class="game-user-name">${esc(score.username || score.user_name || 'Ospite')}</div>
                     </div>
-                    <div class="game-user-score">${score.score}</div>
+                    <div class="game-user-score">${esc(score.score)}</div>
                 </div>
             `;
         });
@@ -402,8 +406,8 @@
                 </div>
                 <div class="podium-platform">
                     <div class="podium-rank">${medal} #${rank}</div>
-                    <div class="podium-name">${score.username || score.user_name || 'Ospite'}</div>
-                    <div class="podium-score">${score.score}</div>
+                    <div class="podium-name">${esc(score.username || score.user_name || 'Ospite')}</div>
+                    <div class="podium-score">${esc(score.score)}</div>
                 </div>
             </div>
         `;
@@ -425,43 +429,15 @@
     });
 })();
 
-// Helper function to save game score
+// Helper function to save game score.
+// I punteggi NON si scrivono dal browser: la tabella game_scores è protetta da
+// RLS e la riga la crea award_points lato server, che applica anche i tetti
+// giornalieri. Questa funzione resta solo per compatibilità con le pagine che
+// la chiamavano: delega a GuestOS.awardPoints.
 window.saveGameScore = async function (gameId, score) {
-    const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
-    const userName = localStorage.getItem('guestos_user_name') || 'Ospite';
-    const username = localStorage.getItem('guestos_username');
-
-    try {
-        // Check if user has existing score
-        const { data: existing } = await supabaseClient
-            .from('game_scores')
-            .select('score')
-            .eq('user_email', email)
-            .eq('game_id', gameId)
-            .single();
-
-        if (existing && existing.score >= score) {
-            // Don't update if current score is not better
-            return;
-        }
-
-        // Upsert score
-        const { error } = await supabaseClient
-            .from('game_scores')
-            .upsert({
-                user_email: email,
-                user_name: userName,
-                username: username,
-                game_id: gameId,
-                score: score,
-                updated_at: new Date().toISOString()
-            }, {
-                onConflict: 'user_email,game_id'
-            });
-
-        if (error) throw error;
-        console.log(`✅ Saved score ${score} for game ${gameId}`);
-    } catch (error) {
-        console.error('Error saving game score:', error);
+    if (!window.GuestOS || typeof window.GuestOS.awardPoints !== 'function') {
+        console.warn('saveGameScore: guest-session.js non caricato');
+        return null;
     }
+    return await window.GuestOS.awardPoints(gameId, score);
 };

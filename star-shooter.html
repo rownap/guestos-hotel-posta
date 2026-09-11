@@ -10,6 +10,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
+    <script src="guest-session.js"></script>
     <script src="game-leaderboard.js" defer></script>
     <style>
         * {
@@ -479,50 +480,57 @@
 
         async function gameOver() {
             if (gameState === 'over') return;
-            if (gameState === 'over') return;
             gameState = 'over';
 
-            // Score calc: 10 pts per enemy.
-            // Old Logic: score / 50 = points. (100 score -> 2 pts). Max 20.
-            // New Request: 2 pts max per game.
-            // Let's keep / 50 ratio but cap at 2.
-            // So 100 game_score = 2 hotel_pts.
-
-            let hotelPoints = 0;
-            if (gamesLeft > 0) {
-                hotelPoints = Math.min(Math.floor(score / 50), MAX_POINTS);
-            }
+            // I punti hotel sono calcolati dal server (award_points) con i suoi tetti;
+            // qui resta solo il limite locale di partite premiate al giorno.
+            const eligible = gamesLeft > 0 && score > 0;
 
             document.getElementById('finalScoreDisplay').textContent = score;
-            document.getElementById('hotelPointsDisplay').textContent = `+${hotelPoints} Punti Hotel`;
+            const pointsEl = document.getElementById('hotelPointsDisplay');
+            pointsEl.textContent = eligible ? '...' : '+0 Punti Hotel';
 
-            if (gamesLeft > 0 && hotelPoints > 0) {
+            if (eligible) {
                 gamesLeft--;
                 localStorage.setItem('star_shooter_games', gamesLeft);
             }
             updateLimitUI();
 
             const limitMsg = document.getElementById('limitMessage');
-            if (gamesLeft <= 0 && hotelPoints === 0) {
+            if (gamesLeft <= 0 && !eligible) {
                 limitMsg.style.display = 'block';
             } else {
                 limitMsg.style.display = 'none';
             }
             document.getElementById('gameOverOverlay').classList.remove('hidden');
 
-            if (hotelPoints > 0) await savePoints(hotelPoints);
-            if (typeof saveGameScore === 'function') saveGameScore('star_shooter', score);
+            if (eligible) await awardHotelPoints(score, pointsEl, ' Punti Hotel');
         }
 
-        async function savePoints(pts) {
-            const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
+        // Accredito punti hotel: passa SEMPRE dal server (award_points via guest-session.js).
+        // Il server converte il punteggio in punti applicando i tetti e salva anche la classifica.
+        const GAME_ID = 'star_shooter';
+        async function awardHotelPoints(score, el, suffix = '') {
+            const safeScore = Math.max(0, Math.floor(Number(score) || 0));
+            let result = null;
             try {
-                const { data } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
-                const newPts = (data?.points || 0) + pts;
-                await supabaseClient.from('user_points').update({ points: newPts, updated_at: new Date().toISOString() }).eq('user_email', email);
-            } catch (e) { console.error(e); }
+                result = await window.GuestOS?.awardPoints?.(GAME_ID, safeScore);
+            } catch (e) {
+                console.error('awardPoints error:', e);
+                if (el) el.textContent = 'Punti non disponibili';
+                return null;
+            }
+            if (el) {
+                if (!result) {
+                    el.textContent = 'Accedi per guadagnare punti';
+                } else {
+                    const awarded = Number(result.points_awarded) || 0;
+                    const total = Number(result.total) || 0;
+                    el.textContent = `+${awarded}${suffix}` + (suffix ? ` (totale ${total})` : '');
+                }
+            }
+            return result || null;
         }
-
         checkDailyLimit();
     </script>
 </body>

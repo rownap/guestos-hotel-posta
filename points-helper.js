@@ -1,114 +1,50 @@
 // points-helper.js
-// Helper centralizzato per gestire i punti utente.
-// Usa UPDATE (non upsert/insert) perché:
-//   - Le RLS Supabase bloccano INSERT/UPSERT dalla anon key (errore 42501).
-//   - Il trigger PostgreSQL `user_points_auto_create` (vedi db-setup.sql)
-//     garantisce che ogni utente abbia il record già al momento della
-//     registrazione. Quindi UPDATE è sempre sufficiente.
-// USO: await addPoints(20)  // restituisce il nuovo totale, o null se errore.
+// Wrapper sottile su window.GuestOS (guest-session.js).
+//
+// Il browser NON può più leggere né scrivere la tabella user_points: con le RLS
+// attive in produzione ogni accesso diretto è codice morto. I punti si toccano
+// solo attraverso le RPC SECURITY DEFINER:
+//   - award_points(p_game_id, p_score)  -> assegnazione, con i tetti del server
+//   - guest_me()                        -> saldo corrente
+//
+// Va incluso DOPO config.js e guest-session.js:
+//   <script src="config.js"></script>
+//   <script src="guest-session.js"></script>
+//   <script src="points-helper.js"></script>
+//
+// setPoints è stato RIMOSSO di proposito: impostare un saldo arbitrario è
+// un'operazione da amministratore (admin_adjust_points), non da browser.
 
 (function () {
-    function getEmail() {
-        return localStorage.getItem('guestos_user_email') || null;
+    'use strict';
+
+    function guestos() {
+        return window.GuestOS || null;
     }
 
     /**
-     * Aggiunge (o sottrae se negativo) punti all'utente loggato.
-     * @param {number} delta - punti da aggiungere/sottrarre
-     * @returns {Promise<number|null>} nuovo totale punti, o null se errore
+     * Assegna i punti di una partita. È il SERVER a decidere quanti punti valgono:
+     * il punteggio passato è solo il risultato del gioco.
+     * @param {string} gameId identificativo del gioco (es. 'quiz')
+     * @param {number} score punteggio ottenuto
+     * @returns {Promise<{points_awarded:number,total:number}|null>}
      */
-    window.addPoints = async function (delta) {
-        const email = getEmail();
-        if (!email) {
-            console.warn('addPoints: utente non loggato, skip');
+    window.addPoints = async function (gameId, score) {
+        var g = guestos();
+        if (!g) {
+            console.warn('addPoints: guest-session.js non caricato');
             return null;
         }
-        if (typeof supabaseClient === 'undefined') {
-            console.warn('addPoints: supabaseClient non disponibile');
-            return null;
-        }
-        try {
-            const { data: current, error: selErr } = await supabaseClient
-                .from('user_points')
-                .select('points')
-                .eq('user_email', email)
-                .maybeSingle();
-
-            if (selErr) {
-                console.error('addPoints select error:', selErr);
-                return null;
-            }
-            if (!current) {
-                console.warn('addPoints: nessun record per', email,
-                    '— verificare che il trigger db sia attivo (db-setup.sql).');
-                return null;
-            }
-
-            const newPts = Math.max(0, (current.points || 0) + delta);
-
-            const { error: updErr } = await supabaseClient
-                .from('user_points')
-                .update({
-                    points: newPts,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('user_email', email);
-
-            if (updErr) {
-                console.error('addPoints update error:', updErr);
-                return null;
-            }
-            console.log(`✅ Punti: ${current.points || 0} → ${newPts} (${delta > 0 ? '+' : ''}${delta})`);
-            return newPts;
-        } catch (err) {
-            console.error('addPoints error:', err);
-            return null;
-        }
+        return await g.awardPoints(gameId, score);
     };
 
     /**
-     * Restituisce i punti correnti dell'utente loggato.
+     * Restituisce i punti correnti dell'ospite loggato (via guest_me).
      * @returns {Promise<number>}
      */
     window.getPoints = async function () {
-        const email = getEmail();
-        if (!email || typeof supabaseClient === 'undefined') return 0;
-        try {
-            const { data } = await supabaseClient
-                .from('user_points')
-                .select('points')
-                .eq('user_email', email)
-                .maybeSingle();
-            return data?.points || 0;
-        } catch (err) {
-            console.error('getPoints error:', err);
-            return 0;
-        }
-    };
-
-    /**
-     * Imposta direttamente il totale punti.
-     * @param {number} newTotal
-     */
-    window.setPoints = async function (newTotal) {
-        const email = getEmail();
-        if (!email || typeof supabaseClient === 'undefined') return null;
-        try {
-            const { error } = await supabaseClient
-                .from('user_points')
-                .update({
-                    points: Math.max(0, newTotal),
-                    updated_at: new Date().toISOString()
-                })
-                .eq('user_email', email);
-            if (error) {
-                console.error('setPoints error:', error);
-                return null;
-            }
-            return Math.max(0, newTotal);
-        } catch (err) {
-            console.error('setPoints error:', err);
-            return null;
-        }
+        var g = guestos();
+        if (!g) return 0;
+        return await g.getPoints();
     };
 })();

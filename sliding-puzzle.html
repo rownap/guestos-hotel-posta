@@ -11,6 +11,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
+    <script src="guest-session.js"></script>
     <script src="game-leaderboard.js" defer></script>
     <style>
         :root {
@@ -195,7 +196,7 @@
                 <h1>Puzzle Completato!</h1>
                 <p style="opacity: 0.8; margin: 20px 0;">Mosse totali: <span id="finalMoves"></span></p>
                 <div style="background: var(--success); padding: 20px; border-radius: 16px; margin-bottom: 30px;">
-                    <div style="font-size: 32px; font-weight: 900; color: white;">+20 Punti</div>
+                    <div id="pointsEarned" style="font-size: 32px; font-weight: 900; color: white;">+20 Punti</div>
                 </div>
                 <button class="primary-btn" onclick="window.location.href='games.html'">TORNA AI GIOCHI</button>
             </div>
@@ -280,20 +281,36 @@
             document.getElementById('gameScreen').style.display = 'none';
             document.getElementById('resultsScreen').style.display = 'block';
             document.getElementById('finalMoves').textContent = moves;
+            const pointsEl = document.getElementById('pointsEarned');
+            if (pointsEl) pointsEl.textContent = '...';
 
-            const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
+            const score = Math.max(10, 100 - moves);
+            await awardHotelPoints(score, pointsEl, ' Punti');
+        }
+
+        // Accredito punti hotel: passa SEMPRE dal server (award_points via guest-session.js).
+        // Il server converte il punteggio in punti applicando i tetti e salva anche la classifica.
+        const GAME_ID = 'sliding_puzzle';
+        async function awardHotelPoints(score, el, suffix = '') {
+            const safeScore = Math.max(0, Math.floor(Number(score) || 0));
+            let result = null;
             try {
-                const { data: current } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
-                const newPoints = (current?.points || 0) + 20;
-                await supabaseClient.from('user_points').update({ points: newPoints, updated_at: new Date().toISOString() }).eq('user_email', email);
-
-                if (typeof saveGameScore === 'function') {
-                    const score = Math.max(10, 100 - moves);
-                    saveGameScore('sliding_puzzle', score);
-                }
-            } catch (err) {
-                console.error('Error saving score:', err);
+                result = await window.GuestOS?.awardPoints?.(GAME_ID, safeScore);
+            } catch (e) {
+                console.error('awardPoints error:', e);
+                if (el) el.textContent = 'Punti non disponibili';
+                return null;
             }
+            if (el) {
+                if (!result) {
+                    el.textContent = 'Accedi per guadagnare punti';
+                } else {
+                    const awarded = Number(result.points_awarded) || 0;
+                    const total = Number(result.total) || 0;
+                    el.textContent = `+${awarded}${suffix}` + (suffix ? ` (totale ${total})` : '');
+                }
+            }
+            return result || null;
         }
     </script>
 </body>

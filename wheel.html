@@ -9,6 +9,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
+    <script src="guest-session.js"></script>
     <style>
         * {
             margin: 0;
@@ -459,36 +460,54 @@
         async function showWin(pts) {
             const overlay = document.getElementById('winOverlay');
             const content = overlay.querySelector('.win-content');
+            const safePts = Math.max(0, Math.floor(Number(pts) || 0));
 
-            if (pts > 0) {
+            if (safePts > 0) {
                 content.innerHTML = `
                     <div style="font-size: 80px;">🎉</div>
                     <h2 style="font-weight: 900; margin: 20px 0;">Complimenti!</h2>
                     <p style="font-size: 18px; margin-bottom: 10px;">Hai vinto:</p>
-                    <div class="win-points" id="winPointsDisplay">+${pts} Punti</div>
+                    <div class="win-points" id="winPointsDisplay">+${safePts} Punti</div>
                     <button class="spin-btn" style="width: 100%; margin: 0;" onclick="location.reload()">Prendi</button>
                 `;
-                await addPoints(pts);
-            } else {
-                content.innerHTML = `
+                overlay.style.display = 'flex';
+                // Il premio viene accreditato dal server (award_points), che applica i tetti
+                await awardHotelPoints(safePts, document.getElementById('winPointsDisplay'), ' Punti');
+                return;
+            }
+
+            content.innerHTML = `
                     <div style="font-size: 80px;">😢</div>
                     <h2 style="font-weight: 900; margin: 20px 0;">Peccato!</h2>
                     <p style="font-size: 18px; margin-bottom: 10px;">Non hai vinto nulla questa volta.</p>
                     <button class="spin-btn" style="width: 100%; margin-top: 20px;" onclick="location.reload()">Riprova Domani</button>
                 `;
-            }
             overlay.style.display = 'flex';
         }
 
-        async function addPoints(pts) {
-            const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
+        // Accredito punti hotel: passa SEMPRE dal server (award_points via guest-session.js).
+        // Il server converte il punteggio in punti applicando i tetti e salva anche la classifica.
+        const GAME_ID = 'wheel';
+        async function awardHotelPoints(score, el, suffix = '') {
+            const safeScore = Math.max(0, Math.floor(Number(score) || 0));
+            let result = null;
             try {
-                const { data: current } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
-                const newPoints = (current?.points || 0) + pts;
-                await supabaseClient.from('user_points').update({ points: newPoints, updated_at: new Date().toISOString() }).eq('user_email', email);
-            } catch (err) {
-                console.error('Error adding points:', err);
+                result = await window.GuestOS?.awardPoints?.(GAME_ID, safeScore);
+            } catch (e) {
+                console.error('awardPoints error:', e);
+                if (el) el.textContent = 'Punti non disponibili';
+                return null;
             }
+            if (el) {
+                if (!result) {
+                    el.textContent = 'Accedi per guadagnare punti';
+                } else {
+                    const awarded = Number(result.points_awarded) || 0;
+                    const total = Number(result.total) || 0;
+                    el.textContent = `+${awarded}${suffix}` + (suffix ? ` (totale ${total})` : '');
+                }
+            }
+            return result || null;
         }
     </script>
 </body>

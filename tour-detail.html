@@ -9,6 +9,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="common.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="guest-session.js"></script>
+    <script src="booking-notify.js"></script>
     <style>
         * {
             margin: 0;
@@ -804,16 +808,16 @@
             <form id="bookingForm" onsubmit="submitBooking(event)">
                 <div class="form-group">
                     <label class="form-label">Nome Completo *</label>
-                    <input type="text" class="form-input" required placeholder="Mario Rossi">
+                    <input type="text" class="form-input" id="tdName" required placeholder="Mario Rossi">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Email *</label>
-                    <input type="email" class="form-input" required placeholder="mario@email.com">
+                    <input type="email" class="form-input" id="tdEmail" required placeholder="mario@email.com">
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Numero Persone *</label>
-                        <select class="form-select" required>
+                        <select class="form-select" id="tdPeople" required>
                             <option value="">Seleziona</option>
                             <option value="1">1 persona</option>
                             <option value="2">2 persone</option>
@@ -824,7 +828,7 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Data *</label>
-                        <input type="date" class="form-input" required>
+                        <input type="date" class="form-input" id="tdDate" required>
                     </div>
                 </div>
                 <div class="form-group">
@@ -842,8 +846,9 @@
             <div class="success-icon">🎉</div>
             <h3 class="success-title">Prenotazione Confermata!</h3>
             <p class="success-message">
-                Abbiamo ricevuto la tua prenotazione per il <strong>Giro delle Isole Incantate</strong>.<br><br>
-                Riceverai una email di conferma con tutti i dettagli.
+                <span id="tdSuccessText">Abbiamo ricevuto la tua prenotazione per il <strong>Giro delle Isole
+                    Incantate</strong>.<br><br>
+                Riceverai una email di conferma con tutti i dettagli.</span>
             </p>
             <div class="reception-reminder">
                 <div class="reception-text">
@@ -868,16 +873,120 @@
             document.body.style.overflow = 'auto';
         }
         
-        // Submit booking
-        function submitBooking(event) {
+        // Dati dell'escursione mostrata da questa pagina.
+        const TOUR_NAME = 'Giro delle Isole Incantate';
+        const TOUR_UNIT_PRICE = 55;
+
+        // create_booking pretende tour_id: questa pagina e' statica, quindi l'id
+        // del catalogo lo risolviamo dal nome all'apertura. Il prezzo mostrato
+        // resta una stima, quello vero lo calcola il server.
+        let tourId = null;
+        async function resolveTourId() {
+            if (tourId) return tourId;
+            try {
+                const { data, error } = await supabaseClient
+                    .from('tours')
+                    .select('id')
+                    .eq('name', TOUR_NAME)
+                    .eq('active', true)
+                    .order('id')
+                    .limit(1);
+                if (error) throw error;
+                tourId = data && data.length ? data[0].id : null;
+            } catch (e) {
+                console.warn('Catalogo tour non disponibile:', e);
+            }
+            return tourId;
+        }
+        document.addEventListener('DOMContentLoaded', resolveTourId);
+        let tdBusy = false;
+
+        function tdMoney(value) {
+            const n = Number(value);
+            if (!isFinite(n)) return '-';
+            try {
+                return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
+            } catch (e) {
+                return '€ ' + n.toFixed(2);
+            }
+        }
+
+        // Submit booking: passa dalla RPC create_booking, il server decide il prezzo.
+        async function submitBooking(event) {
             event.preventDefault();
-            
-            // Here: save to Supabase / send to n8n webhook
-            console.log('Booking submitted');
-            
+            if (tdBusy) return;
+
+            if (!window.GuestOS || !window.GuestOS.isLoggedIn()) {
+                alert('Accedi con la tua camera per prenotare.');
+                if (window.GuestOS) window.GuestOS.requireLogin();
+                return;
+            }
+
+            const name = document.getElementById('tdName').value.trim();
+            const people = parseInt(document.getElementById('tdPeople').value, 10) || 0;
+            const date = document.getElementById('tdDate').value;
+
+            if (!name || !people || !date) {
+                alert('Compila nome, numero di persone e data.');
+                return;
+            }
+
+            tdBusy = true;
+
+            let result;
+            try {
+                result = await window.GuestOS.rpc('create_booking', {
+                    p_kind: 'tour',
+                    p_payload: {
+                        tour_id: await resolveTourId(),
+                        tour_name: TOUR_NAME,
+                        item_name: TOUR_NAME,
+                        booking_date: date,
+                        tour_date: date,
+                        booking_time: '09:00',
+                        num_people: people,
+                        points_used: 0,
+                        payment_method: 'room'
+                    }
+                });
+            } catch (err) {
+                tdBusy = false;
+                alert(err && err.message ? err.message : 'Prenotazione non riuscita.');
+                return;
+            }
+
+            const guest = window.GuestOS.user();
+            const finalPrice = result && result.final_price != null
+                ? Number(result.final_price)
+                : TOUR_UNIT_PRICE * people;
+
+            try {
+                await window.GuestOS?.notifyBooking?.({
+                    kind: 'tour',
+                    booking_id: result && result.id,
+                    email: guest.email,
+                    name: name,
+                    item_name: TOUR_NAME,
+                    date: date,
+                    time: '09:00',
+                    people: people,
+                    final_price: finalPrice,
+                    room: guest.room_number
+                });
+            } catch (e) { /* l'email è un extra: la prenotazione resta valida */ }
+
+            tdBusy = false;
+
+            const successText = document.getElementById('tdSuccessText');
+            if (successText) {
+                successText.innerHTML = 'Prenotazione registrata per <strong>' +
+                    window.escapeHtml(TOUR_NAME) + '</strong>.<br><br>Totale addebitato in camera: <strong>' +
+                    window.escapeHtml(tdMoney(finalPrice)) + '</strong>.';
+            }
+
             // Close booking modal
             closeBookingModal();
-            
+
             // Show success modal
             setTimeout(() => {
                 document.getElementById('successModal').classList.add('active');

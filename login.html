@@ -9,270 +9,39 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
+    <script src="guest-session.js"></script>
 
     <script>
-        // Check and migrate database schema
-        async function checkAndMigrateSchema() {
-            try {
-                console.log('🔍 Verifica struttura database...');
-
-                // Try to query the users table with new columns
-                const { data, error } = await supabaseClient
-                    .from('users')
-                    .select('id, room_number, stay_start_date, stay_end_date, active, last_name, email, pin')
-                    .limit(1);
-
-                if (error) {
-                    // Table doesn't exist or columns are missing
-                    console.error('❌ Struttura database non corretta:', error);
-
-                    // Show migration instructions
-                    const migrate = confirm(
-                        '⚠️ ATTENZIONE: Il database necessita di aggiornamenti!\n\n' +
-                        'Struttura richiesta nella tabella "users":\n' +
-                        '• stay_start_date (DATE) - invece di room_start_date\n' +
-                        '• stay_end_date (DATE) - nuova colonna\n' +
-                        '• active (BOOLEAN) - deve esistere\n\n' +
-                        'Vincolo UNIQUE su: (room_number, stay_start_date)\n\n' +
-                        'Vuoi vedere le istruzioni SQL per aggiornare il database?'
-                    );
-
-                    if (migrate) {
-                        showMigrationInstructions();
-                    }
-
-                    return false;
-                }
-
-                console.log('✅ Struttura database corretta');
-                return true;
-
-            } catch (err) {
-                console.error('Errore verifica schema:', err);
-                return false;
-            }
-        }
-
-        function showMigrationInstructions() {
-            const instructions = `
--- ============================================
--- MIGRAZIONE DATABASE - SISTEMA SOGGIORNI
--- ============================================
-
--- 1. Rinomina colonna (se esiste room_start_date)
-ALTER TABLE users 
-RENAME COLUMN room_start_date TO stay_start_date;
-
--- 2. Aggiungi colonna stay_end_date
-ALTER TABLE users 
-ADD COLUMN IF NOT EXISTS stay_end_date DATE;
-
--- 3. Imposta stay_end_date per record esistenti (default: +7 giorni)
-UPDATE users 
-SET stay_end_date = stay_start_date + INTERVAL '7 days'
-WHERE stay_end_date IS NULL;
-
--- 4. Rendi stay_end_date NOT NULL
-ALTER TABLE users 
-ALTER COLUMN stay_end_date SET NOT NULL;
-
--- 5. Aggiungi colonna active (se non esiste)
-ALTER TABLE users 
-ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT true;
-
--- 6. Imposta active = true per tutti i record esistenti
-UPDATE users 
-SET active = true 
-WHERE active IS NULL;
-
--- 7. Rendi active NOT NULL
-ALTER TABLE users 
-ALTER COLUMN active SET NOT NULL;
-
--- 8. Rimuovi vecchio vincolo unique (se esiste)
-ALTER TABLE users 
-DROP CONSTRAINT IF EXISTS users_room_number_room_start_date_key;
-
-ALTER TABLE users 
-DROP CONSTRAINT IF EXISTS users_room_number_stay_start_date_key;
-
--- 9. Aggiungi nuovo vincolo UNIQUE
-ALTER TABLE users 
-ADD CONSTRAINT users_room_number_stay_start_date_key 
-UNIQUE (room_number, stay_start_date);
-
--- 10. Crea indice per performance
-CREATE INDEX IF NOT EXISTS idx_users_active_room 
-ON users(room_number, active) 
-WHERE active = true;
-
--- VERIFICA FINALE
-SELECT column_name, data_type, is_nullable 
-FROM information_schema.columns 
-WHERE table_name = 'users' 
-ORDER BY ordinal_position;
-            `;
-
-            // Create modal for SQL instructions
-            const modal = document.createElement('div');
-            modal.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0,0,0,0.9);
-                backdrop-filter: blur(10px);
-                z-index: 10000;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 20px;
-            `;
-
-            modal.innerHTML = `
-                <div style="
-                    background: rgba(255,255,255,0.95);
-                    border-radius: 20px;
-                    padding: 30px;
-                    max-width: 800px;
-                    width: 100%;
-                    max-height: 90vh;
-                    overflow-y: auto;
-                    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-                ">
-                    <h2 style="margin: 0 0 20px 0; color: #FF0080; font-size: 24px;">
-                        🔧 Istruzioni Migrazione Database
-                    </h2>
-                    <p style="margin: 0 0 15px 0; color: #333; line-height: 1.6;">
-                        <strong>Esegui questo SQL nel tuo Supabase SQL Editor:</strong><br>
-                        Dashboard → SQL Editor → New Query
-                    </p>
-                    <textarea readonly style="
-                        width: 100%;
-                        height: 400px;
-                        font-family: 'Courier New', monospace;
-                        font-size: 13px;
-                        padding: 15px;
-                        border: 2px solid #ddd;
-                        border-radius: 10px;
-                        background: #f5f5f5;
-                        color: #333;
-                        resize: vertical;
-                    ">${instructions}</textarea>
-                    <div style="display: flex; gap: 10px; margin-top: 20px;">
-                        <button onclick="copyMigrationSQL()" style="
-                            flex: 1;
-                            background: #00D4FF;
-                            color: white;
-                            border: none;
-                            border-radius: 12px;
-                            padding: 14px;
-                            font-weight: 700;
-                            cursor: pointer;
-                            font-size: 15px;
-                        " id="copySqlBtn">
-                            📋 Copia SQL
-                        </button>
-                        <button onclick="closeMigrationModal()" style="
-                            flex: 1;
-                            background: #666;
-                            color: white;
-                            border: none;
-                            border-radius: 12px;
-                            padding: 14px;
-                            font-weight: 700;
-                            cursor: pointer;
-                            font-size: 15px;
-                        ">
-                            Chiudi
-                        </button>
-                    </div>
-                </div>
-            `;
-
-            document.body.appendChild(modal);
-            modal.id = 'migrationModal';
-
-            window.copyMigrationSQL = function () {
-                navigator.clipboard.writeText(instructions.trim()).then(() => {
-                    const btn = document.getElementById('copySqlBtn');
-                    btn.textContent = '✅ Copiato!';
-                    btn.style.background = '#34C759';
-                    setTimeout(() => {
-                        btn.textContent = '📋 Copia SQL';
-                        btn.style.background = '#00D4FF';
-                    }, 2000);
-                });
-            };
-
-            window.closeMigrationModal = function () {
-                const modal = document.getElementById('migrationModal');
-                if (modal) modal.remove();
-            };
-        }
-
-        // Validate auto-login on page load
+        // Sessione ospite: il token sta in localStorage (guestos_token) e viene
+        // inviato come header x-guest-token da config.js. La validità la decide
+        // il server: guest_me() risponde solo se il token è valido, il soggiorno
+        // è ancora attivo e l'account non è stato disattivato.
         async function validateAutoLogin() {
-            if (localStorage.getItem('guestos_logged_in') !== 'true') return;
+            if (!window.GuestOS || !window.GuestOS.token()) return;
 
-            const userId = localStorage.getItem('guestos_user_id');
-            const stayEndDate = localStorage.getItem('guestos_stay_end_date');
-
-            if (!userId || !stayEndDate) {
-                clearLoginData();
-                return;
-            }
-
-            // Check if stay has ended
-            const today = new Date().toISOString().split('T')[0];
-            if (stayEndDate < today) {
-                clearLoginData();
-                alert('⏰ Il tuo soggiorno è terminato. Per favore registrati nuovamente.');
-                return;
-            }
-
-            // Verify user is still active in database
             try {
-                const { data: user, error } = await supabaseClient
-                    .from('users')
-                    .select('active, stay_end_date')
-                    .eq('id', userId)
-                    .maybeSingle();
-
-                if (error || !user || !user.active || user.stay_end_date < today) {
+                const me = await window.GuestOS.rpc('guest_me', {});
+                if (!me || !me.user) {
                     clearLoginData();
-                    if (user && user.stay_end_date < today) {
-                        alert('⏰ Il tuo soggiorno è terminato. Per favore registrati nuovamente.');
-                    }
                     return;
                 }
-
-                // All checks passed - redirect to dashboard (or theme selection if preferred)
                 window.location.href = 'theme-selection.html';
             } catch (err) {
-                console.error('Auto-login validation error:', err);
                 clearLoginData();
+                if (err && err.code === 'STAY_ENDED') {
+                    alert('⏰ Il tuo soggiorno è terminato. Per favore registrati nuovamente.');
+                }
             }
         }
 
         function clearLoginData() {
-            localStorage.removeItem('guestos_user_email');
-            localStorage.removeItem('guestos_user_name');
-            localStorage.removeItem('guestos_room_number');
-            localStorage.removeItem('guestos_user_id');
-            localStorage.removeItem('guestos_user_pin');
-            localStorage.removeItem('guestos_stay_start_date');
-            localStorage.removeItem('guestos_stay_end_date');
-            localStorage.removeItem('guestos_logged_in');
+            if (window.GuestOS) window.GuestOS.clearSession();
         }
 
-        // Run validation when Supabase is ready
         document.addEventListener('DOMContentLoaded', () => {
-            if (typeof supabaseClient !== 'undefined') {
-                validateAutoLogin();
-            }
+            validateAutoLogin();
         });
+
     </script>
 
     <style>
@@ -549,6 +318,41 @@ ORDER BY ordinal_position;
             }
         }
 
+        .privacy-consent {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-top: 4px;
+            padding: 12px 14px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 14px;
+        }
+
+        .privacy-consent input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+            margin-top: 1px;
+            accent-color: #FF0080;
+            cursor: pointer;
+        }
+
+        .privacy-consent label {
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1.45;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+        }
+
+        .privacy-consent a {
+            color: white;
+            text-decoration: underline;
+            font-weight: 800;
+        }
+
         .help-text {
             text-align: center;
             color: rgba(255, 255, 255, 0.8);
@@ -814,7 +618,15 @@ ORDER BY ordinal_position;
                         autocomplete="off">
                 </div>
 
-                <button type="submit" class="login-btn" id="loginBtn">
+                <div class="privacy-consent">
+                    <input type="checkbox" id="privacyConsent" required>
+                    <label for="privacyConsent">
+                        Ho letto l'<a href="privacy.html" target="_blank" rel="noopener">informativa privacy</a>
+                        e acconsento al trattamento dei miei dati.
+                    </label>
+                </div>
+
+                <button type="submit" class="login-btn" id="loginBtn" disabled>
                     ✨ Registrati
                 </button>
 
@@ -824,7 +636,7 @@ ORDER BY ordinal_position;
 
             <div class="help-text">
                 <span id="toggleText">
-                    Hai già un account? <span class="toggle-link" onclick="toggleMode()">Accedi con PIN</span>
+                    Hai già un account? <span class="toggle-link" id="toggleLink">Accedi con PIN</span>
                 </span>
             </div>
 
@@ -848,19 +660,19 @@ ORDER BY ordinal_position;
             </div>
 
             <div class="duration-options">
-                <button type="button" class="duration-btn" onclick="selectDuration(1)">
+                <button type="button" class="duration-btn" data-days="1">
                     <span class="duration-days">1</span>
                     <span class="duration-label">notte</span>
                 </button>
-                <button type="button" class="duration-btn" onclick="selectDuration(3)">
+                <button type="button" class="duration-btn" data-days="3">
                     <span class="duration-days">3</span>
                     <span class="duration-label">notti</span>
                 </button>
-                <button type="button" class="duration-btn" onclick="selectDuration(7)">
+                <button type="button" class="duration-btn" data-days="7">
                     <span class="duration-days">7</span>
                     <span class="duration-label">notti</span>
                 </button>
-                <button type="button" class="duration-btn" onclick="selectDuration(14)">
+                <button type="button" class="duration-btn" data-days="14">
                     <span class="duration-days">14</span>
                     <span class="duration-label">notti</span>
                 </button>
@@ -873,15 +685,15 @@ ORDER BY ordinal_position;
                 </div>
             </div>
 
-            <div class="modal-warning">
+            <div class="modal-warning" id="durationWarning">
                 ⚠️ La durata del soggiorno non potrà essere modificata successivamente
             </div>
 
             <div class="modal-actions">
-                <button type="button" class="modal-btn" onclick="closeDurationModal()">
+                <button type="button" class="modal-btn" id="cancelDurationBtn">
                     Annulla
                 </button>
-                <button type="button" class="modal-btn primary" onclick="confirmDuration()" id="confirmBtn">
+                <button type="button" class="modal-btn primary" id="confirmBtn">
                     Conferma
                 </button>
             </div>
@@ -895,11 +707,6 @@ ORDER BY ordinal_position;
             return today.toISOString().split('T')[0];
         }
 
-        // Generate a random 6-digit PIN
-        function generatePIN() {
-            return Math.floor(100000 + Math.random() * 900000).toString();
-        }
-
         // Mode toggle (registration vs login)
         let isLoginMode = false;
 
@@ -911,64 +718,84 @@ ORDER BY ordinal_position;
             const formSubtitle = document.getElementById('formSubtitle');
             const loginBtn = document.getElementById('loginBtn');
             const toggleText = document.getElementById('toggleText');
+            const emailInput = document.getElementById('email');
 
             if (isLoginMode) {
                 pinGroup.classList.add('show');
                 pinInput.required = true;
+                emailInput.required = false;
                 formTitle.textContent = 'Bentornato!';
                 formSubtitle.textContent = 'Accedi con i tuoi dati e PIN';
                 loginBtn.innerHTML = '🔓 Accedi';
-                toggleText.innerHTML = 'Prima volta? <span class="toggle-link" onclick="toggleMode()">Registrati qui</span>';
+                toggleText.innerHTML = 'Prima volta? <span class="toggle-link" id="toggleLink">Registrati qui</span>';
+                bindToggleLink();
             } else {
                 pinGroup.classList.remove('show');
                 pinInput.required = false;
+                emailInput.required = true;
                 pinInput.value = '';
                 formTitle.textContent = 'Prima volta?';
                 formSubtitle.textContent = 'Registrati inserendo i tuoi dati';
                 loginBtn.innerHTML = '✨ Registrati';
-                toggleText.innerHTML = 'Hai già un account? <span class="toggle-link" onclick="toggleMode()">Accedi con PIN</span>';
+                toggleText.innerHTML = 'Hai già un account? <span class="toggle-link" id="toggleLink">Accedi con PIN</span>';
+                bindToggleLink();
             }
+            syncConsent();
         };
 
-        // Rate limiting
-        let loginAttempts = 0;
-        const MAX_ATTEMPTS = 3;
-        const LOCKOUT_TIME = 600000;
-        let lockoutUntil = null;
+        // Il link "Accedi con PIN / Registrati qui" viene ricreato a ogni cambio
+        // di modalità: niente onclick nel markup, si ricollega il listener.
+        function bindToggleLink() {
+            const link = document.getElementById('toggleLink');
+            if (link) link.addEventListener('click', window.toggleMode);
+        }
+
+        // Il consenso privacy è obbligatorio: senza spunta il pulsante resta spento.
+        function syncConsent() {
+            const consent = document.getElementById('privacyConsent');
+            const loginBtn = document.getElementById('loginBtn');
+            if (consent && loginBtn) loginBtn.disabled = !consent.checked;
+        }
+
+        // Il rate limiting è lato server (tabella login_attempts): 5 tentativi
+        // falliti bloccano la camera per 10 minuti. Un contatore nel browser
+        // sarebbe aggirabile svuotando localStorage.
 
         // Stay duration modal
         let selectedDays = null;
         let pendingRegistrationData = null;
 
-        window.selectDuration = function (days) {
+        function selectDuration(days, buttonEl) {
             selectedDays = days;
             document.getElementById('customDays').value = '';
 
             const buttons = document.querySelectorAll('.duration-btn');
             buttons.forEach(btn => btn.classList.remove('selected'));
-            event.target.closest('.duration-btn').classList.add('selected');
-        };
+            if (buttonEl) buttonEl.classList.add('selected');
+        }
 
-        window.closeDurationModal = function () {
+        function closeDurationModal() {
             document.getElementById('durationModal').classList.remove('show');
             selectedDays = null;
             pendingRegistrationData = null;
-            document.getElementById('loginBtn').disabled = false;
             document.getElementById('loginBtn').textContent = '✨ Registrati';
-        };
+            syncConsent();
+        }
 
-        window.confirmDuration = async function () {
+        async function confirmDuration() {
             const customDays = document.getElementById('customDays').value;
-            const days = customDays ? parseInt(customDays) : selectedDays;
+            const days = customDays ? parseInt(customDays, 10) : selectedDays;
 
+            const warning = document.getElementById('durationWarning');
             if (!days || days < 1 || days > 365) {
-                alert('⚠️ Seleziona una durata valida (1-365 notti)');
+                warning.textContent = '⚠️ Seleziona una durata valida (1-365 notti)';
                 return;
             }
+            warning.textContent = '⚠️ La durata del soggiorno non potrà essere modificata successivamente';
 
             document.getElementById('durationModal').classList.remove('show');
             await completeRegistration(days);
-        };
+        }
 
         async function completeRegistration(stayDays) {
             const { roomNumber, lastName, email } = pendingRegistrationData;
@@ -980,55 +807,26 @@ ORDER BY ordinal_position;
             loginBtn.textContent = '⏳ Creazione account...';
 
             try {
-                const today = getTodayDate();
+                // Il server crea l'ospite, genera il PIN (lo salva solo come hash
+                // bcrypt), crea il record punti e restituisce il token di sessione.
+                const res = await window.GuestOS.rpc('guest_register', {
+                    p_room: roomNumber,
+                    p_last_name: lastName,
+                    p_email: email,
+                    p_stay_days: stayDays
+                });
 
-                const startDate = new Date(today);
-                const endDate = new Date(startDate);
-                endDate.setDate(endDate.getDate() + stayDays);
-                const stayEndDate = endDate.toISOString().split('T')[0];
+                if (!res || !res.token || !res.pin) throw new Error('Registrazione non completata');
+                window.GuestOS.saveSession(res);
 
-                const newPIN = generatePIN();
-
-                const { data: newUser, error: insertError } = await supabaseClient
-                    .from('users')
-                    .insert({
-                        room_number: roomNumber,
-                        last_name: lastName,
-                        email: email,
-                        pin: newPIN,
-                        stay_start_date: today,
-                        stay_end_date: stayEndDate,
-                        active: true,
-                        last_login: new Date().toISOString()
-                    })
-                    .select()
-                    .single();
-
-                if (insertError) {
-                    if (insertError.code === '23505') {
-                        throw new Error('Camera già occupata per questo periodo');
-                    }
-                    throw new Error('Errore durante la registrazione');
-                }
-
-                // NOTA: il record user_points viene creato automaticamente da un trigger
-                // PostgreSQL (vedi db-setup.sql). Non serve un INSERT lato client (RLS blocca
-                // INSERT da anon key con errore 42501).
-
-                localStorage.setItem('guestos_user_email', email);
-                localStorage.setItem('guestos_user_name', newUser.last_name);
-                localStorage.setItem('guestos_room_number', newUser.room_number);
-                localStorage.setItem('guestos_user_id', newUser.id);
-                localStorage.setItem('guestos_user_pin', newUser.pin);
-                localStorage.setItem('guestos_stay_start_date', newUser.stay_start_date);
-                localStorage.setItem('guestos_stay_end_date', newUser.stay_end_date);
-                localStorage.setItem('guestos_logged_in', 'true');
+                const pin = res.pin;
+                const stayEndDate = res.user.stay_end_date;
 
                 successMsg.innerHTML = `
                     ✅ Registrazione completata!<br>
                     <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 12px; flex-wrap: wrap;">
-                        <strong style="font-size: 32px; letter-spacing: 4px; color: white;">${newPIN}</strong>
-                        <button type="button" onclick="copyPIN('${newPIN}')" style="
+                        <strong style="font-size: 32px; letter-spacing: 4px; color: white;" id="pinValue"></strong>
+                        <button type="button" id="copyBtn" style="
                             background: rgba(255,255,255,0.3);
                             border: 2px solid rgba(255,255,255,0.5);
                             border-radius: 12px;
@@ -1037,31 +835,34 @@ ORDER BY ordinal_position;
                             font-weight: 700;
                             cursor: pointer;
                             font-size: 14px;
-                        " id="copyBtn">📋 Copia PIN</button>
+                        ">📋 Copia PIN</button>
                     </div>
-                    <small style="display: block; margin-top: 8px;">Il tuo PIN per accessi futuri da altri dispositivi!</small>
+                    <small style="display: block; margin-top: 8px;">Annota il PIN: serve per accedere da un altro dispositivo e non viene più mostrato.</small>
                     <small style="display: block; margin-top: 4px; opacity: 0.9;">Soggiorno: ${stayDays} ${stayDays === 1 ? 'notte' : 'notti'} (fino al ${formatDate(stayEndDate)})</small>
                 `;
+                document.getElementById('pinValue').textContent = pin;
+                document.getElementById('copyBtn').addEventListener('click', function (ev) {
+                    ev.preventDefault();
+                    copyPIN(pin);
+                });
                 successMsg.classList.add('show');
 
                 loginBtn.textContent = '✅ Accesso riuscito!';
 
-                console.log('PIN generato per', lastName, ':', newPIN);
-                console.log('Soggiorno dal', today, 'al', stayEndDate);
-
                 setTimeout(() => {
                     window.location.href = 'theme-selection.html';
-                }, 4000);
+                }, 6000);
 
             } catch (error) {
                 console.error('Registration error:', error);
-                errorMsg.textContent = `❌ ${error.message}`;
+                errorMsg.textContent = `❌ ${window.GuestOS.errorMessage(error)}`;
                 errorMsg.classList.add('show');
-                loginBtn.disabled = false;
+                syncConsent();
                 loginBtn.textContent = '✨ Registrati';
                 pendingRegistrationData = null;
             }
         }
+
 
         function formatDate(dateStr) {
             const date = new Date(dateStr);
@@ -1070,14 +871,6 @@ ORDER BY ordinal_position;
 
         document.getElementById('loginForm').addEventListener('submit', async function (e) {
             e.preventDefault();
-
-            if (lockoutUntil && Date.now() < lockoutUntil) {
-                const errorMsg = document.getElementById('errorMessage');
-                const remainingMinutes = Math.ceil((lockoutUntil - Date.now()) / 60000);
-                errorMsg.textContent = `🔒 Troppi tentativi. Riprova tra ${remainingMinutes} minuti o contatta la reception.`;
-                errorMsg.classList.add('show');
-                return;
-            }
 
             const roomNumber = document.getElementById('roomNumber').value.trim();
             const lastName = document.getElementById('lastName').value.trim();
@@ -1094,70 +887,23 @@ ORDER BY ordinal_position;
             loginBtn.textContent = '⏳ Verifica in corso...';
 
             try {
-                const today = getTodayDate();
+                if (isLoginMode) {
+                    // Accesso con PIN: cognome e PIN li verifica il server, che
+                    // applica anche il blocco dopo 5 tentativi falliti.
+                    if (!pin) throw new Error('Inserisci il PIN ricevuto alla registrazione');
 
-                const { data: existingStay, error: checkError } = await supabaseClient
-                    .from('users')
-                    .select('*')
-                    .eq('room_number', roomNumber)
-                    .eq('active', true)
-                    .maybeSingle();
+                    const res = await window.GuestOS.rpc('guest_login', {
+                        p_room: roomNumber,
+                        p_last_name: lastName,
+                        p_pin: pin
+                    });
 
-                if (checkError && checkError.code !== 'PGRST116') {
-                    throw new Error('Errore durante la verifica account');
-                }
+                    if (!res || !res.token) throw new Error('Accesso non riuscito');
+                    window.GuestOS.saveSession(res);
 
-                if (existingStay) {
-                    if (existingStay.stay_end_date < today) {
-                        await supabaseClient
-                            .from('users')
-                            .update({ active: false })
-                            .eq('id', existingStay.id);
-
-                        throw new Error('Il soggiorno precedente è terminato. Registrati nuovamente per un nuovo soggiorno.');
-                    }
-
-                    if (!isLoginMode || !pin) {
-                        throw new Error('Camera già occupata! Usa "Accedi con PIN" per accedere al tuo account.');
-                    }
-
-                    if (existingStay.last_name.toLowerCase() !== lastName.toLowerCase()) {
-                        loginAttempts++;
-                        throw new Error('Credenziali non corrette');
-                    }
-
-                    if (existingStay.pin !== pin) {
-                        loginAttempts++;
-                        throw new Error('PIN non corretto');
-                    }
-
-                    loginAttempts = 0;
-                    lockoutUntil = null;
-
-                    const { data: updatedUser, error: updateError } = await supabaseClient
-                        .from('users')
-                        .update({
-                            last_login: new Date().toISOString(),
-                            email: email
-                        })
-                        .eq('id', existingStay.id)
-                        .select()
-                        .single();
-
-                    if (updateError) {
-                        throw new Error("Errore durante l'aggiornamento profilo");
-                    }
-
-                    localStorage.setItem('guestos_user_email', email);
-                    localStorage.setItem('guestos_user_name', updatedUser.last_name);
-                    localStorage.setItem('guestos_room_number', updatedUser.room_number);
-                    localStorage.setItem('guestos_user_id', updatedUser.id);
-                    localStorage.setItem('guestos_user_pin', updatedUser.pin);
-                    localStorage.setItem('guestos_stay_start_date', updatedUser.stay_start_date);
-                    localStorage.setItem('guestos_stay_end_date', updatedUser.stay_end_date);
-                    localStorage.setItem('guestos_logged_in', 'true');
-
-                    const remainingDays = Math.ceil((new Date(updatedUser.stay_end_date) - new Date(today)) / (1000 * 60 * 60 * 24));
+                    const end = new Date(res.user.stay_end_date);
+                    const today = new Date(getTodayDate());
+                    const remainingDays = Math.max(0, Math.ceil((end - today) / (1000 * 60 * 60 * 24)));
 
                     successMsg.textContent = `✅ Bentornato! Ti rimangono ${remainingDays} ${remainingDays === 1 ? 'notte' : 'notti'}.`;
                     successMsg.classList.add('show');
@@ -1166,35 +912,26 @@ ORDER BY ordinal_position;
                     setTimeout(() => {
                         window.location.href = 'theme-selection.html';
                     }, 1200);
-
-                } else {
-                    if (isLoginMode && pin) {
-                        throw new Error('Nessun account trovato! Usa "Registrati qui" per creare un nuovo soggiorno.');
-                    }
-
-                    pendingRegistrationData = { roomNumber, lastName, email };
-                    document.getElementById('durationModal').classList.add('show');
+                    return;
                 }
+
+                // Registrazione: nessun controllo preventivo sulla camera dal
+                // browser (esporrebbe l'occupazione a un anonimo). Se la camera
+                // è già occupata, guest_register risponde ROOM_OCCUPIED e il
+                // messaggio tradotto arriva dal blocco catch.
+                pendingRegistrationData = { roomNumber, lastName, email };
+                document.getElementById('durationModal').classList.add('show');
 
             } catch (error) {
                 console.error('Login/Registration error:', error);
 
-                if (isLoginMode && loginAttempts > 0) {
-                    if (loginAttempts >= MAX_ATTEMPTS) {
-                        lockoutUntil = Date.now() + LOCKOUT_TIME;
-                        errorMsg.textContent = `🔒 Troppi tentativi falliti. Account bloccato per 10 minuti.`;
-                    } else {
-                        errorMsg.textContent = `❌ ${error.message} (Tentativo ${loginAttempts}/${MAX_ATTEMPTS})`;
-                    }
-                } else {
-                    errorMsg.textContent = `❌ ${error.message}`;
-                }
-
+                errorMsg.textContent = `❌ ${window.GuestOS.errorMessage(error)}`;
                 errorMsg.classList.add('show');
-                loginBtn.disabled = false;
+                syncConsent();
                 loginBtn.textContent = isLoginMode ? '🔓 Accedi' : '✨ Registrati';
             }
         });
+
 
         document.getElementById('pin').addEventListener('input', function (e) {
             this.value = this.value.replace(/[^0-9]/g, '');
@@ -1209,25 +946,35 @@ ORDER BY ordinal_position;
             }
         });
 
-        window.copyPIN = function (pin) {
-            event.preventDefault();
-            event.stopPropagation();
+        function copyPIN(pin) {
+            const btn = document.getElementById('copyBtn');
+            const done = () => {
+                if (!btn) return;
+                btn.textContent = '✅ Copiato!';
+                btn.style.background = 'rgba(52,199,89,0.5)';
+                setTimeout(() => {
+                    btn.textContent = '📋 Copia PIN';
+                    btn.style.background = 'rgba(255,255,255,0.3)';
+                }, 2000);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(pin).then(done).catch(() => {
+                    if (btn) btn.textContent = '⚠️ Copia a mano';
+                });
+            } else if (btn) {
+                btn.textContent = '⚠️ Copia a mano';
+            }
+        }
 
-            navigator.clipboard.writeText(pin).then(() => {
-                const btn = document.getElementById('copyBtn');
-                if (btn) {
-                    btn.textContent = '✅ Copiato!';
-                    btn.style.background = 'rgba(52,199,89,0.5)';
-                    setTimeout(() => {
-                        btn.textContent = '📋 Copia PIN';
-                        btn.style.background = 'rgba(255,255,255,0.3)';
-                    }, 2000);
-                }
-            }).catch(err => {
-                console.error('Errore copia:', err);
-                alert('PIN: ' + pin + '\n\nCopialo manualmente!');
+        // --- Collegamento eventi (niente onclick nel markup) ------------------
+        document.getElementById('privacyConsent').addEventListener('change', syncConsent);
+        document.getElementById('cancelDurationBtn').addEventListener('click', closeDurationModal);
+        document.getElementById('confirmBtn').addEventListener('click', confirmDuration);
+        document.querySelectorAll('.duration-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                selectDuration(parseInt(btn.dataset.days, 10), btn);
             });
-
-            return false;
-        };
+        });
+        bindToggleLink();
+        syncConsent();
     </script>

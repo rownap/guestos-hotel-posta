@@ -1,85 +1,181 @@
 # Security Policy
 
-## Secret Handling
+## Modello di sicurezza
 
-- Never commit production credentials, admin passwords, private API keys, or service-role keys.
-- Keep `ANTHROPIC_API_KEY` in Vercel environment variables only.
-- Supabase anon keys are public by design, but every table exposed to browser clients must rely on Row Level Security and narrow RPC permissions.
-- Stripe publishable keys can be public; Stripe secret keys and webhook secrets must never be committed.
-- Demo credentials must be shared privately and rotated when no longer needed.
+La app è un frontend statico che parla direttamente con Supabase (PostgREST).
+Non esiste un backend che faccia da filtro: **l'unico confine di sicurezza è il
+database**. Da qui derivano le due regole che governano tutto il resto:
 
-## Authentication
+1. La `anon key` in `config.js` è pubblica per progetto. Sta nel sorgente di
+   ogni pagina e nel repository. Non è un segreto e non va rigenerata a ogni
+   deploy: da sola non deve dare accesso a nessun dato personale.
+2. Ogni tabella raggiungibile dal browser ha Row Level Security attiva e
+   policy esplicite. Le operazioni che richiedono di verificare credenziali o
+   applicare regole di business passano da funzioni `SECURITY DEFINER` (RPC),
+   mai da scritture dirette del client.
 
-### Guests
+Lo stato del database è descritto dalle migration in `supabase/migrations/`,
+in ordine cronologico. Sono idempotenti e rieseguibili.
 
-- Self-service flow in `login.html`: room number + last name + email → 6-digit PIN generated and stored in `users` with `UNIQUE (room_number, stay_start_date)` constraint.
-- Returning login: same coordinates + PIN. Rate limiting: 3 failed attempts → 10 minutes lockout.
-- Session stored client-side in `localStorage`; natural expiry at `stay_end_date`.
+## Identità
+
+### Ospiti
+
+Gli ospiti non hanno un account Supabase Auth: si identificano con numero di
+camera, cognome e un PIN a 6 cifre consegnato alla registrazione.
+
+- Registrazione e accesso passano **solo** dalle RPC `guest_register`,
+  `guest_login`, `guest_room_status`. Il client non scrive mai sulla tabella
+  `users`.
+- Il PIN è salvato **solo** come hash bcrypt in `guest_credentials`, tabella
+  senza alcun privilegio per `anon`. Il PIN in chiaro viene restituito una sola
+  volta, al momento in cui viene generato, e non viene salvato sul dispositivo.
+- Il login riuscito crea una riga in `guest_sessions` e restituisce un token
+  UUID con scadenza 30 giorni. Il token sta in `localStorage` (`guestos_token`)
+  e viaggia nell'header `x-guest-token`, impostato da `config.js`.
+- Le policy RLS risolvono l'identità con `guestos_guest_id()` /
+  `guestos_guest_email()`, che leggono quell'header. Un token vale solo se la
+  sessione non è scaduta, l'ospite è `active` e il soggiorno non è terminato:
+  la disattivazione da parte dello staff ha effetto immediato.
+- `guest_room_status` risponde `free` / `occupied` / `ended` senza rivelare chi
+  occupa la camera.
 
 ### Admin
 
-- Login via Supabase RPC `admin_login(p_email, p_password)`.
-- Passwords hashed in DB with `pgcrypto.crypt()` — never in source.
-- 24h admin session timestamp validated on every admin page.
+- L'accesso avviene con `admin_login(email, password)`, che verifica la
+  password bcrypt in `admin_users`, crea una riga in `admin_sessions` e
+  restituisce un token con scadenza 24 ore. Il client lo conserva in
+  `localStorage` (`guestos_admin_token`) e lo presenta come header
+  `x-admin-token` oppure come parametro `p_admin_token`.
+- `is_admin()` è l'unico punto di verità e riconosce due strade: il token di
+  sessione qui sopra, oppure un utente Supabase Auth il cui `auth.uid()`
+  compare in `admin_users.auth_user_id`.
+- **Il riconoscimento per email è stato deliberatamente escluso.** Sul
+  progetto la registrazione pubblica a Supabase Auth è aperta: se un admin
+  fosse riconosciuto dall'email presente nel token di Auth, chiunque
+  riuscisse a registrarsi con l'indirizzo di un amministratore otterrebbe i
+  suoi permessi. Il legame passa quindi dall'identificativo, non
+  dall'indirizzo.
+- Le operazioni sensibili sono RPC che verificano `is_admin()` e scrivono da
+  sole su `admin_audit_log`: `admin_reset_guest_pin`, `admin_adjust_points`,
+  `admin_checkout`, `extend_stay`, `admin_set_staff_note`,
+  `admin_update_hotel_settings`, oltre alle letture aggregate
+  `admin_overview_stats`, `admin_revenue_7d`, `admin_top_guests`.
+- Il PIN di un ospite non è leggibile da nessuno, staff incluso. La dashboard
+  può solo generarne uno nuovo con `admin_reset_guest_pin`, che invalida le
+  sessioni attive di quell'ospite e mostra il PIN una volta sola.
 
-## Row Level Security (Supabase)
+## Rate limiting
 
-Tables exposed to the browser must follow these defaults:
+Il blocco dei tentativi di accesso è lato server, nella tabella
+`login_attempts`: 5 tentativi falliti sulla stessa camera (o sulla stessa email
+admin) bloccano per 10 minuti. Un contatore nel browser era aggirabile
+svuotando `localStorage`.
 
-| Table | anon SELECT | anon INSERT | anon UPDATE | Notes |
-|---|---|---|---|---|
-| `users` | own row only | only via registration flow | own row, narrow fields | last_login update allowed |
-| `user_points` | own row | trigger only (no direct INSERT) | own row | INSERT blocked by RLS, auto-created via trigger on signup |
-| `restaurant_bookings`, `tour_bookings`, `spa_bookings` | own bookings | yes | service_role only | FK on `users.email` |
-| `admin_users`, `payments` | service_role only | service_role only | service_role only | Never reach the browser |
-| `rewards` (catalog) | active rows only | service_role only | service_role only | Read-only for guests |
-| `user_rewards` | own row | yes (redeem) | admin (mark claimed) | FK on `users.email` |
+## Autorizzazioni per tabella
 
-## Data Protection (GDPR)
+Nessuna tabella concede privilegi ad `anon` per default: i grant sono espliciti,
+tabella per tabella, e le `default privileges` per le tabelle future sono
+revocate.
 
-- Personal data collected: surname, email, room number, PIN, booking history, gamification points.
-- Payments handled via Stripe (tokens only, no card numbers stored).
-- Guest rights: access via `account.html`, deletion via admin (`active = false`), rectification via account page or front desk.
-- Retention recommendation: schedule automatic deletion of guest rows 12 months after `stay_end_date`.
-- A privacy policy must be linked from the registration screen before personal data is collected.
+| Gruppo | Tabelle | Ospite | Admin |
+|---|---|---|---|
+| Mai dal browser | `admin_users`, `guest_credentials`, `guest_sessions`, `admin_sessions`, `login_attempts`, viste `dashboard_stats`, `revenue_analytics`, `top_customers` | nessun accesso | nessun accesso (solo `service_role`) |
+| Dati personali | `users` | solo la propria riga, in lettura | tutto |
+| Note interne | `guest_staff_notes` | nessun accesso | tutto |
+| Punti e attività | `user_points`, `game_scores`, `quiz_scores`, `point_transactions`, `challenge_completions`, `weekly_challenge_completions`, `user_rewards`, `user_push_subscriptions` | solo le proprie righe | tutto |
+| Prenotazioni e pagamenti | `restaurant_bookings`, `tour_bookings`, `spa_bookings`, `payments`, `last_minute_purchases`, `stripe_customers` | lettura e inserimento delle proprie | tutto |
+| Chat AI | `ai_conversations`, `ai_messages`, `ai_actions`, `ai_feedback` | solo le proprie conversazioni | tutto |
+| Cataloghi | `tours`, `rewards`, `restaurant_menu`, `spa_services`, `flash_deals`, `last_minute_offers`, `hotel_settings`, `ui_sections`, `activities`, `rooms`, `weekly_challenges`, `daily_riddles`, `ai_knowledge_base` | sola lettura | scrittura |
+| Solo admin | `admin_audit_log`, `hotels`, `bookings`, `animation_bookings`, `lastminute_bookings`, `ai_analytics`, `photo_challenges` | nessun accesso | tutto |
 
-## Application Hardening
+Le classifiche passano dalle viste `leaderboard` e `game_leaderboard`, che non
+espongono le email degli altri ospiti e restituiscono un flag `is_me`. Sono
+visibili solo a un ospite autenticato o a un admin.
 
-Already in place:
+## Regole di business lato server
 
-- HTTPS enforced by Vercel, HSTS header active.
-- Service worker with cache-busting and offline fallback.
-- Login rate limiting (3 attempts, 10 minutes lockout).
-- Demo credentials hidden behind `?demo=1` query string.
+Queste RPC esistono perché la regola non può stare nel client:
 
-Roadmap:
+- `award_points(p_game_id, p_score)`: i punti li calcola il server (1 ogni 10 di
+  punteggio) con tetti di 50 per partita, 300 al giorno e 20 partite al giorno.
+  Accetta solo i 19 identificativi di gioco realmente presenti nell'app.
+- `submit_quiz(...)` e `complete_challenge(...)`: stesso principio, il
+  punteggio arriva dal client ma il valore in punti lo decide il server.
+- `redeem_reward(p_reward_id)`: in una sola transazione verifica punti e
+  disponibilità, scala i punti, decrementa la giacenza e genera il codice.
+- `create_booking(p_kind, p_payload)`: i prezzi vengono letti dal catalogo
+  (`spa_treatments`, `tours`), non accettati dal client: `unit_price` nel
+  payload viene considerato solo per il ristorante, che un catalogo di prezzi
+  non ce l'ha. Lo sconto in punti vale 10 punti per euro, non può superare il
+  totale e i punti vengono scalati nella stessa transazione. Con
+  `payment_method = 'points'` i punti necessari li calcola il server sul prezzo
+  di catalogo e, se non bastano, la prenotazione non viene creata
+  (`INSUFFICIENT_POINTS`). Il metodo ammesso è `points`, `card` o `room`.
+- `get_my_rewards`, `cancel_booking`, `get_my_bookings`, `update_profile`,
+  `save_push_subscription`, `log_ai_message`, `get_my_ai_history`,
+  `submit_ai_feedback`: operano sempre e solo sulle righe dell'ospite che
+  presenta il token.
 
-- [ ] Switch PIN generation from `Math.random` to `crypto.getRandomValues`.
-- [ ] Enable RLS on every table listed above and audit policies.
-- [ ] CSP header via `vercel.json` to mitigate script injection.
-- [ ] HTML-escape all dynamic content rendered via `innerHTML`.
-- [ ] CSRF tokens on sensitive admin operations.
-- [ ] Wire admin actions to the existing `admin_audit_log` table.
-- [ ] Enable Supabase PITR backups.
-- [ ] Error tracking (Sentry or Vercel Observability).
+## Segreti
 
-## Pre-release Checklist (per hotel)
+- Nel repository non esiste nessuna chiave privata. Vedi `.env.example` per
+  l'elenco delle variabili e dove configurarle.
+- `SUPABASE_SERVICE_ROLE_KEY` scavalca la RLS: solo nelle Vercel Functions, mai
+  nel browser. Vale lo stesso per `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
+  `ANTHROPIC_API_KEY` e `RESEND_API_KEY`.
+- La `anon key` e la publishable key Stripe (`pk_*`) sono pubbliche per
+  definizione e possono stare nel sorgente.
 
-Before delivering an instance to a customer:
+## GDPR
 
-- [ ] Replace logo, palette, hotel name across HTML files.
-- [ ] Restrict `OPENWEATHER_API_KEY` to the customer domain.
-- [ ] Configure `ANTHROPIC_API_KEY` in the new Vercel project.
-- [ ] Swap Stripe `pk_test_*` for `pk_live_*`; configure secret key in Vercel env vars only.
-- [ ] Run `db-setup.sql` on the customer's Supabase project.
-- [ ] Verify RLS is enabled on every table.
-- [ ] Configure custom domain with HTTPS.
-- [ ] Generate a random admin PIN and share it via secure channel.
-- [ ] Enable automatic Supabase backups (PITR).
-- [ ] Link privacy and cookie policies in the footer.
-- [ ] Purge demo data (test users and bookings).
-- [ ] Full end-to-end smoke test: registration → booking → points → admin.
+- Dati personali trattati: cognome, email, numero di camera, PIN (solo hash),
+  storico prenotazioni, punti, note interne dello staff.
+- I pagamenti passano da Stripe: nel database non finiscono numeri di carta.
+- Diritti dell'interessato: accesso da `account.html`, rettifica dal front desk,
+  cancellazione da parte dell'admin.
+- Da completare prima di trattare dati di ospiti reali:
+  - [ ] conservazione: cancellazione automatica delle righe ospite 12 mesi dopo
+        `stay_end_date`;
+  - [ ] informativa privacy linkata **prima** della raccolta dei dati, nella
+        schermata di registrazione;
+  - [ ] backup PITR attivi su Supabase;
+  - [ ] registro dei trattamenti e nomina di Supabase, Vercel, Stripe, Anthropic
+        e Resend come responsabili del trattamento.
 
-## Reporting
+## Punti aperti
 
-Report suspected vulnerabilities or leaked credentials privately to the maintainer before opening a public issue.
+- [ ] Passaggio dell'area admin a Supabase Auth. Oggi non è praticabile: la
+      registrazione pubblica è aperta, non c'è un server SMTP configurato,
+      `site_url` punta ancora a `http://localhost:3000` e la lunghezza minima
+      della password è 6. Servono, in quest'ordine: chiudere la registrazione
+      pubblica, configurare SMTP e `site_url` sul dominio di produzione,
+      creare gli utenti, valorizzare `admin_users.auth_user_id`. Solo dopo si
+      possono rimuovere `admin_login`, `admin_sessions` e `x-admin-token`.
+- [ ] Un ospite autenticato può ancora scrivere la colonna `points` della propria
+      riga di `user_points` con una chiamata REST diretta: non espone dati di
+      altri, ma consente di gonfiarsi i punti. Va chiuso revocando il privilegio
+      di UPDATE su quella colonna, **dopo** aver spostato su RPC gli ultimi punti
+      di scrittura diretta (`points-helper.js`, `quiz.html`, `games.html`,
+      `community-board.html`, `riddle-of-day.html`, `weekly-challenge.html`).
+- [ ] Content Security Policy in `vercel.json`.
+- [ ] Escape di tutto il contenuto dinamico inserito con `innerHTML`.
+- [ ] Error tracking (Sentry o Vercel Observability).
+
+## Checklist per ogni nuovo hotel
+
+- [ ] Eseguire in ordine le migration di `supabase/migrations/` sul progetto Supabase del cliente.
+- [ ] Verificare che nessuna tabella risulti senza RLS e che `anon` non abbia grant impliciti.
+- [ ] Creare gli utenti Supabase Auth dello staff e le righe corrispondenti in `admin_users`.
+- [ ] Configurare le variabili d'ambiente su Vercel (vedi `.env.example`).
+- [ ] Sostituire le chiavi Stripe di test con quelle live.
+- [ ] Popolare `hotel_settings` con i dati della struttura.
+- [ ] Attivare i backup PITR.
+- [ ] Collegare informativa privacy e cookie policy.
+- [ ] Cancellare i dati di prova (ospiti e prenotazioni demo).
+- [ ] Smoke test completo: registrazione, accesso con PIN, prenotazione, punti, riscatto premio, area admin.
+
+## Segnalazioni
+
+Segnala vulnerabilità o credenziali esposte in privato al manutentore, prima di
+aprire una issue pubblica.

@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Guestos Admin - Login</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800;900&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.min.js"></script>
+    <script src="config.js"></script>
     <style>
         * {
             margin: 0;
@@ -187,6 +188,31 @@
             color: #00c853;
         }
         
+        .link-row {
+            text-align: center;
+            margin-top: 18px;
+        }
+
+        .link-btn {
+            background: none;
+            border: none;
+            color: #667eea;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            text-decoration: underline;
+            padding: 6px 10px;
+        }
+
+        .link-btn:hover {
+            color: #764ba2;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
         .security-note {
             background: rgba(102, 126, 234, 0.08);
             border: 2px solid rgba(102, 126, 234, 0.2);
@@ -230,7 +256,7 @@
             <div class="error-message message" id="errorMessage"></div>
             <div class="success-message message" id="successMessage"></div>
             
-            <form id="loginForm" onsubmit="handleLogin(event)">
+            <form id="loginForm">
                 <div class="form-group">
                     <label class="form-label">📧 Email</label>
                     <input 
@@ -258,8 +284,22 @@
                 <button type="submit" class="login-btn" id="loginBtn">
                     🚀 Accedi alla Dashboard
                 </button>
+
+                <div class="link-row">
+                    <button type="button" class="link-btn" id="forgotBtn">Password dimenticata?</button>
+                </div>
             </form>
-            
+
+            <!-- Recupero password: non esiste invio email, la reimposta un altro amministratore -->
+            <div id="forgotBox" class="hidden security-note" style="text-align:left;">
+                <div class="security-note-title">Password dimenticata</div>
+                <div class="security-note-text">
+                    L'accesso admin non usa l'email: nessun link di recupero viene inviato.
+                    Chiedi a un altro amministratore di reimpostare la tua password,
+                    oppure segui la procedura in <strong>docs/ADMIN_SETUP.md</strong>.
+                </div>
+            </div>
+
             <div class="security-note">
                 <div class="security-note-title">🛡️ Accesso Sicuro</div>
                 <div class="security-note-text">
@@ -271,94 +311,149 @@
     </div>
     
     <script>
-        // Supabase Config (inline per sicurezza)
-        const SB_URL = "https://gqqgotvbabgxztrxbozu.supabase.co";
-        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxcWdvdHZiYWJneHp0cnhib3p1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwODM4MjgsImV4cCI6MjA4NDY1OTgyOH0.gFc_bLefoFuVW21MSMEg30CD97bFfVeHEQDhkfe_2QY";
-        
-        const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
-        
-        // Check if already logged in
-        window.addEventListener('DOMContentLoaded', () => {
-            const adminSession = localStorage.getItem('guestos_admin_session');
-            if (adminSession) {
-                try {
-                    const session = JSON.parse(adminSession);
-                    // Verify session is not expired (24h)
-                    if (Date.now() - session.timestamp < 24 * 60 * 60 * 1000) {
-                        window.location.href = 'guestos-admin-dashboard.html';
-                        return;
-                    }
-                } catch (e) {
-                    localStorage.removeItem('guestos_admin_session');
-                }
-            }
-        });
-        
-        async function handleLogin(e) {
-            e.preventDefault();
-            
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-            const loginBtn = document.getElementById('loginBtn');
-            const errorMsg = document.getElementById('errorMessage');
-            const successMsg = document.getElementById('successMessage');
-            
-            // Reset messages
+        // ============================================
+        // ADMIN LOGIN - modello a token (RPC admin_login)
+        // Il client Supabase (window.supabaseClient) e la chiave anon arrivano
+        // da config.js: nessuna copia della chiave in questo file.
+        //
+        // admin_login(p_email, p_password) restituisce una riga
+        // {id, email, full_name, hotel_id, hotel_name, role, token}
+        // oppure NESSUNA riga se le credenziali sono sbagliate.
+        // Il token viene salvato in localStorage.guestos_admin_token e
+        // config.js lo rispedisce come header x-admin-token a ogni chiamata.
+        // ============================================
+        const LOGIN_LABEL = '\uD83D\uDE80 Accedi alla Dashboard';
+        const DASHBOARD_URL = 'guestos-admin-dashboard.html';
+        const TOKEN_KEY = 'guestos_admin_token';
+        const PROFILE_KEY = 'guestos_admin_profile';
+
+        const errorMsg = document.getElementById('errorMessage');
+        const successMsg = document.getElementById('successMessage');
+        const loginForm = document.getElementById('loginForm');
+        const loginBtn = document.getElementById('loginBtn');
+
+        function showError(text) {
+            successMsg.classList.remove('show');
+            errorMsg.textContent = '\u274C ' + text;
+            errorMsg.classList.add('show');
+        }
+
+        function showSuccess(text) {
+            errorMsg.classList.remove('show');
+            successMsg.textContent = '\u2705 ' + text;
+            successMsg.classList.add('show');
+        }
+
+        function clearMessages() {
             errorMsg.classList.remove('show');
             successMsg.classList.remove('show');
-            
-            // Disable button
-            loginBtn.disabled = true;
-            loginBtn.textContent = '⏳ Verifica credenziali...';
-            
+        }
+
+        function safeRemove(key) {
+            try { localStorage.removeItem(key); } catch (e) { /* storage non disponibile */ }
+        }
+
+        // Pulizia dei residui del vecchio login finto (sessione JSON in localStorage).
+        safeRemove('guestos_admin_session');
+
+        function clearAdminSession() {
+            safeRemove(TOKEN_KEY);
+            safeRemove(PROFILE_KEY);
+            safeRemove('guestos_admin_session');
+        }
+
+        // Messaggi brevi in italiano per i codici sollevati dalle RPC admin.
+        const ERROR_MESSAGES = {
+            INVALID_CREDENTIALS: 'Email o password non corretti.',
+            TOO_MANY_ATTEMPTS: 'Troppi tentativi. Riprova tra 10 minuti.',
+            RATE_LIMITED: 'Troppi tentativi. Riprova tra 10 minuti.',
+            NOT_AUTHORIZED: 'Questo account non e\' abilitato.',
+            SESSION_INVALID: 'Sessione scaduta. Accedi di nuovo.',
+            INVALID_INPUT: 'Dati non validi.'
+        };
+
+        function messageFor(error) {
+            const raw = String((error && error.message) || '').trim();
+            const m = /^([A-Z_]{4,40})(?::\s*(.*))?$/.exec(raw);
+            if (m && ERROR_MESSAGES[m[1]]) return ERROR_MESSAGES[m[1]];
+            if (/Failed to fetch|NetworkError/i.test(raw)) return 'Server non raggiungibile. Controlla la connessione.';
+            return 'Accesso non riuscito. Riprova.';
+        }
+
+        // Se c'e' gia' un token valido, salta il login.
+        window.addEventListener('DOMContentLoaded', async () => {
+            const reason = new URLSearchParams(window.location.search).get('reason');
+            if (reason === 'expired') showError('Sessione scaduta. Accedi di nuovo.');
+            else if (reason === 'not_admin') showError('Questo account non e\' abilitato.');
+
+            let token = null;
+            try { token = localStorage.getItem(TOKEN_KEY); } catch (e) { /* ignore */ }
+            if (!token) { clearAdminSession(); return; }
+
             try {
-                // Call Supabase function for login
-                const { data, error } = await supabaseClient
-                    .rpc('admin_login', {
-                        p_email: email,
-                        p_password: password
-                    });
-                
-                if (error) {
-                    console.error('Login error:', error);
-                    throw new Error('Errore di connessione al server');
+                const { data, error } = await supabaseClient.rpc('admin_me', { p_admin_token: token });
+                const me = Array.isArray(data) ? data[0] : data;
+                if (error || !me) { clearAdminSession(); return; }
+                window.location.replace(DASHBOARD_URL);
+            } catch (e) {
+                clearAdminSession();
+            }
+        });
+
+        loginForm.addEventListener('submit', handleLogin);
+        document.getElementById('forgotBtn').addEventListener('click', () => {
+            clearMessages();
+            document.getElementById('forgotBox').classList.remove('hidden');
+        });
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            clearMessages();
+
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            if (!email || !password) { showError('Inserisci email e password.'); return; }
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = '\u23F3 Verifica credenziali...';
+
+            try {
+                const { data, error } = await supabaseClient.rpc('admin_login', {
+                    p_email: email,
+                    p_password: password
+                });
+                if (error) throw error;
+
+                // admin_login restituisce una tabella: zero righe = credenziali sbagliate.
+                const row = Array.isArray(data) ? data[0] : data;
+                if (!row || !row.token) {
+                    showError('Email o password non corretti.');
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = LOGIN_LABEL;
+                    return;
                 }
-                
-                if (!data || data.length === 0) {
-                    throw new Error('Email o password non corretti');
-                }
-                
-                const admin = data[0];
-                
-                // Save session
-                const session = {
-                    id: admin.id,
-                    email: admin.email,
-                    full_name: admin.full_name,
-                    hotel_id: admin.hotel_id,
-                    hotel_name: admin.hotel_name,
-                    role: admin.role,
-                    timestamp: Date.now()
-                };
-                
-                localStorage.setItem('guestos_admin_session', JSON.stringify(session));
-                
-                // Show success
-                successMsg.textContent = `✅ Benvenuto ${admin.full_name}!`;
-                successMsg.classList.add('show');
-                loginBtn.textContent = '✅ Accesso riuscito!';
-                
-                // Redirect
-                setTimeout(() => {
-                    window.location.href = 'guestos-admin-dashboard.html';
-                }, 1000);
-                
+
+                localStorage.setItem(TOKEN_KEY, row.token);
+                localStorage.setItem(PROFILE_KEY, JSON.stringify({
+                    id: row.id,
+                    email: row.email,
+                    full_name: row.full_name || '',
+                    role: row.role || 'staff',
+                    hotel_id: row.hotel_id,
+                    hotel_name: row.hotel_name || ''
+                }));
+                safeRemove('guestos_admin_session');
+
+                showSuccess('Accesso riuscito.');
+                loginBtn.textContent = '\u2705 Accesso riuscito';
+                setTimeout(() => { window.location.replace(DASHBOARD_URL); }, 400);
+
             } catch (error) {
-                console.error('Login failed:', error);
-                errorMsg.textContent = '❌ ' + error.message;
-                errorMsg.classList.add('show');
+                console.error('Login admin:', error);
+                clearAdminSession();
+                showError(messageFor(error));
                 loginBtn.disabled = false;
-                loginBtn.textContent = '🚀 Accedi alla Dashboard';
+                loginBtn.textContent = LOGIN_LABEL;
             }
         }
     </script>

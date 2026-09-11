@@ -11,6 +11,12 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
+    <script src="guest-session.js"></script>
+    <script src="guestos-notifications.js"></script>
+    <script>
+        // Pagina riservata: senza sessione valida si torna al login.
+        if (window.GuestOS) window.GuestOS.requireLogin();
+    </script>
     <style>
         * {
             margin: 0;
@@ -727,6 +733,57 @@
             transform: scale(0.95);
         }
 
+        .edit-error {
+            display: none;
+            margin: 4px 0 10px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: rgba(255, 59, 48, 0.12);
+            border: 1px solid rgba(255, 59, 48, 0.3);
+            color: #c62828;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .edit-error.show {
+            display: block;
+        }
+
+        /* Notifiche push */
+        .push-btn {
+            width: 100%;
+            background: rgba(0, 212, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(0, 212, 255, 0.35);
+            color: #0091a7;
+            padding: 18px;
+            border-radius: 18px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 17px;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 6px 25px rgba(0, 212, 255, 0.18);
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .push-btn:active {
+            transform: scale(0.98);
+        }
+
+        .push-btn:disabled {
+            opacity: 0.6;
+            cursor: default;
+        }
+
+        .push-status {
+            margin-top: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            text-align: center;
+            color: #555;
+        }
+
         /* Logout Button */
         .logout-btn {
             width: 100%;
@@ -904,7 +961,7 @@
                     </div>
                     <div class="info-item">
                         <span class="info-label"></span>
-                        <button class="edit-btn" onclick="openEditModal()">&#9998; Modifica</button>
+                        <button class="edit-btn">&#9998; Modifica</button>
                     </div>
                 </div>
             </div>
@@ -953,8 +1010,12 @@
                 </div>
             </div>
 
+            <!-- Notifiche push -->
+            <button class="push-btn" id="enablePushBtn">&#128276; Attiva notifiche</button>
+            <div class="push-status" id="pushStatus"></div>
+
             <!-- Logout Button -->
-            <button class="logout-btn" onclick="logout()">&#128682; Esci dall'Account</button>
+            <button class="logout-btn" id="logoutBtn">&#128682; Esci dall'Account</button>
         </div>
     </div>
 
@@ -967,23 +1028,19 @@
                 <input type="text" class="form-input" id="editName" placeholder="Inserisci nome">
             </div>
             <div class="form-group">
-                <label class="form-label">&#127918; Username (Nickname Classifiche)</label>
-                <input type="text" class="form-input" id="editUsername" placeholder="Es. SuperMario, TheKing..."
-                    maxlength="15">
-                <div style="font-size: 11px; color: #666; margin-top: 4px;">Deve essere unico. Se vuoto, sarà usato il
-                    nome.</div>
-            </div>
-            <div class="form-group">
                 <label class="form-label">&#128231; Email</label>
                 <input type="email" class="form-input" id="editEmail" placeholder="Inserisci email">
             </div>
             <div class="form-group">
                 <label class="form-label">&#127968; Numero Camera</label>
-                <input type="text" class="form-input" id="editRoom" placeholder="Inserisci numero camera">
+                <input type="text" class="form-input" id="editRoom" placeholder="---" readonly>
+                <div style="font-size: 11px; color: #666; margin-top: 4px;">La camera è assegnata dalla reception e non
+                    è modificabile.</div>
             </div>
+            <div class="edit-error" id="editError"></div>
             <div class="modal-buttons">
-                <button class="modal-btn modal-btn-cancel" onclick="closeEditModal()">Annulla</button>
-                <button class="modal-btn modal-btn-save" onclick="saveChanges()">Salva</button>
+                <button class="modal-btn modal-btn-cancel" id="editCancelBtn">Annulla</button>
+                <button class="modal-btn modal-btn-save" id="editSaveBtn">Salva</button>
             </div>
         </div>
     </div>
@@ -995,173 +1052,161 @@
             <div class="code-modal-title" id="codeModalTitle">Il tuo codice premio</div>
             <div class="code-display" id="codeDisplay">------</div>
             <div class="code-instruction">Mostra questo codice alla reception per ritirare il tuo premio</div>
-            <button class="code-close-btn" onclick="closeCodeModal()">Chiudi</button>
+            <button class="code-close-btn">Chiudi</button>
         </div>
     </div>
 
     <script>
-        // Inizializza Lucide icons
+        // Tutti i dati dell'ospite arrivano da RPC SECURITY DEFINER: con la RLS
+        // attiva il browser non può leggere users / user_points / *_bookings.
+        const esc = window.escapeHtml;
+
         if (typeof lucide !== 'undefined') {
             lucide.createIcons();
         }
 
-        // Carica dati utente
-        async function loadUserData() {
+        function formatDay(value) {
+            if (!value) return '---';
+            const d = new Date(value);
+            if (isNaN(d.getTime())) return '---';
+            return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+
+        function countBadges(raw) {
+            if (!raw) return 0;
+            if (Array.isArray(raw)) return raw.length;
             try {
-                const userEmail = localStorage.getItem('guestos_user_email');
-                const userName = localStorage.getItem('guestos_user_name');
-                const userRoom = localStorage.getItem('guestos_room_number');
-                const userUsername = localStorage.getItem('guestos_username');
-
-                document.getElementById('userName').textContent = userName || 'Ospite';
-                document.getElementById('userUsername').textContent = userUsername ? '@' + userUsername : '';
-                document.getElementById('userUsernameDetail').textContent = userUsername || '@---';
-                document.getElementById('userRoom').textContent = 'Camera ' + (userRoom || '---');
-                document.getElementById('userEmail').textContent = userEmail || '---';
-                document.getElementById('userCheckin').textContent = '20/01/2026';
-                document.getElementById('userCheckout').textContent = '27/01/2026';
-
-                // Carica stats da Supabase
-                const { data, error } = await supabaseClient
-                    .from('user_points')
-                    .select('*')
-                    .eq('user_email', userEmail)
-                    .single();
-
-                if (data) {
-                    document.getElementById('userPoints').textContent = data.points || 0;
-                    document.getElementById('userLevel').textContent = data.level || 1;
-                    let badges = 0;
-                    if (data.badges) {
-                        try {
-                            badges = JSON.parse(data.badges).length;
-                        } catch (e) {
-                            badges = 0;
-                        }
-                    }
-                    if (data.username) {
-                        localStorage.setItem('guestos_username', data.username);
-                        document.getElementById('userUsername').textContent = '@' + data.username;
-                        document.getElementById('userUsernameDetail').textContent = data.username;
-                    }
-
-                    document.getElementById('userBadges').textContent = badges;
-                }
-            } catch (error) {
-                console.error('Error loading user data:', error);
+                const parsed = JSON.parse(raw);
+                return Array.isArray(parsed) ? parsed.length : 0;
+            } catch (e) {
+                return 0;
             }
         }
 
-        // Carica premi riscattati da database
+        // --- Dati profilo e punti: guest_me() -------------------------------
+        let currentUser = null;
+
+        async function loadUserData() {
+            const local = window.GuestOS.user();
+            document.getElementById('userName').textContent = local.last_name || 'Ospite';
+            document.getElementById('userRoom').textContent = 'Camera ' + (local.room_number || '---');
+            document.getElementById('userEmail').textContent = local.email || '---';
+
+            try {
+                const me = await window.GuestOS.rpc('guest_me', {});
+                if (!me || !me.user) return;
+
+                currentUser = me.user;
+                const points = me.points || {};
+                const nickname = currentUser.username || '';
+
+                document.getElementById('userName').textContent = currentUser.last_name || 'Ospite';
+                document.getElementById('userUsername').textContent = nickname ? '@' + nickname : '';
+                document.getElementById('userUsernameDetail').textContent = nickname || '---';
+                document.getElementById('userRoom').textContent = 'Camera ' + (currentUser.room_number || '---');
+                document.getElementById('userEmail').textContent = currentUser.email || '---';
+                document.getElementById('userCheckin').textContent = formatDay(currentUser.stay_start_date);
+                document.getElementById('userCheckout').textContent = formatDay(currentUser.stay_end_date);
+
+                document.getElementById('userPoints').textContent = points.points || 0;
+                document.getElementById('userLevel').textContent = points.level || 1;
+                document.getElementById('userBadges').textContent = countBadges(points.badges);
+            } catch (error) {
+                console.warn('guest_me:', error.code || '', error.message);
+            }
+        }
+
+        // --- Premi riscattati ------------------------------------------------
+        // get_my_rewards() non è ancora nel contratto: se il server non la espone
+        // la sezione mostra lo stato vuoto invece di rompere la pagina.
         async function loadRedeemedRewards() {
             const grid = document.getElementById('redeemedRewardsGrid');
 
+            const emptyState = `
+                <div class="rewards-empty">
+                    <div class="rewards-empty-icon">&#127873;</div>
+                    <div class="rewards-empty-title">Nessun premio ancora riscattato</div>
+                    <div class="rewards-empty-text">Accumula punti giocando e riscatta fantastici premi!</div>
+                    <button class="rewards-empty-btn" data-goto="rewards.html">&#127873; Scopri i Premi</button>
+                </div>
+            `;
+
+            let data = null;
             try {
-                const userEmail = localStorage.getItem('guestos_user_email');
-
-                // Query con join su rewards per ottenere dettagli premio
-                const { data, error } = await supabaseClient
-                    .from('user_rewards')
-                    .select('*, rewards(*)')
-                    .eq('user_email', userEmail)
-                    .order('redeemed_at', { ascending: false });
-
-                if (error) throw error;
-
-                // Se nessun premio riscattato
-                if (!data || data.length === 0) {
-                    grid.innerHTML = `
-                        <div class="rewards-empty">
-                            <div class="rewards-empty-icon">&#127873;</div>
-                            <div class="rewards-empty-title">Nessun premio ancora riscattato</div>
-                            <div class="rewards-empty-text">Accumula punti giocando e riscatta fantastici premi!</div>
-                            <button class="rewards-empty-btn" onclick="window.location.href='rewards.html'">&#127873; Scopri i Premi</button>
-                        </div>
-                    `;
-                    return;
-                }
-
-                // Costruisci lista premi
-                let html = '';
-                data.forEach(item => {
-                    const reward = item.rewards;
-                    if (!reward) return;
-
-                    // Formatta data
-                    const date = new Date(item.redeemed_at);
-                    const dateStr = date.toLocaleDateString('it-IT', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric'
-                    });
-
-                    // Emoji del premio (usa default se non presente)
-                    const emoji = reward.emoji || '&#127873;';
-
-                    // Codice
-                    const code = item.code || 'N/A';
-                    const rewardName = reward.name || 'Premio';
-
-                    html += `
-                        <div class="reward-item">
-                            <div class="reward-icon">${emoji}</div>
-                            <div class="reward-info">
-                                <div class="reward-name">${rewardName}</div>
-                                <div class="reward-date">Riscattato il ${dateStr}</div>
-                            </div>
-                            <button class="show-code-btn" onclick="showCode('${code}', '${rewardName.replace(/'/g, "\\'")}')">Mostra Codice</button>
-                        </div>
-                    `;
-                });
-
-                grid.innerHTML = html;
-
-                // Aggiungi pulsante "Accumula altri punti" dopo i premi
-                const earnMoreBtn = document.createElement('button');
-                earnMoreBtn.className = 'earn-more-btn';
-                earnMoreBtn.innerHTML = `
-                    <span>&#127918;</span>
-                    <span>Accumula altri punti</span>
-                    <span>&#8594;</span>
-                `;
-                earnMoreBtn.onclick = () => window.location.href = 'games.html';
-                grid.appendChild(earnMoreBtn);
-
+                data = await window.GuestOS.rpc('get_my_rewards', {});
             } catch (error) {
-                console.error('Error loading redeemed rewards:', error);
-                grid.innerHTML = `
-                    <div class="rewards-empty">
-                        <div class="rewards-empty-icon">&#9888;</div>
-                        <div class="rewards-empty-title">Errore caricamento</div>
-                        <div class="rewards-empty-text">Non è stato possibile caricare i premi. Riprova più tardi.</div>
+                console.warn('get_my_rewards:', error.code || '', error.message);
+                grid.innerHTML = emptyState;
+                bindGotoButtons(grid);
+                return;
+            }
+
+            if (!Array.isArray(data) || data.length === 0) {
+                grid.innerHTML = emptyState;
+                bindGotoButtons(grid);
+                return;
+            }
+
+            let html = '';
+            data.forEach(item => {
+                const emoji = esc(item.emoji || '\u{1F381}');
+                const code = esc(item.code || 'N/A');
+                const rewardName = esc(item.reward_name || item.name || 'Premio');
+                const dateStr = esc(formatDay(item.redeemed_at));
+
+                html += `
+                    <div class="reward-item">
+                        <div class="reward-icon">${emoji}</div>
+                        <div class="reward-info">
+                            <div class="reward-name">${rewardName}</div>
+                            <div class="reward-date">Riscattato il ${dateStr}</div>
+                        </div>
+                        <button class="show-code-btn" data-code="${code}" data-name="${rewardName}">Mostra Codice</button>
                     </div>
                 `;
-            }
+            });
+
+            grid.innerHTML = html;
+
+            grid.querySelectorAll('.show-code-btn').forEach(btn => {
+                btn.addEventListener('click', () => showCode(btn.dataset.code, btn.dataset.name));
+            });
+
+            const earnMoreBtn = document.createElement('button');
+            earnMoreBtn.className = 'earn-more-btn';
+            earnMoreBtn.innerHTML = `
+                <span>&#127918;</span>
+                <span>Accumula altri punti</span>
+                <span>&#8594;</span>
+            `;
+            earnMoreBtn.addEventListener('click', () => { window.location.href = 'games.html'; });
+            grid.appendChild(earnMoreBtn);
         }
 
-        // Mostra modal codice
+        function bindGotoButtons(root) {
+            root.querySelectorAll('[data-goto]').forEach(btn => {
+                btn.addEventListener('click', () => { window.location.href = btn.dataset.goto; });
+            });
+        }
+
+        // --- Modale codice premio -------------------------------------------
         function showCode(code, rewardName) {
-            document.getElementById('codeModalTitle').textContent = rewardName;
+            document.getElementById('codeModalTitle').textContent = rewardName || 'Il tuo codice premio';
             document.getElementById('codeDisplay').textContent = code || 'N/A';
             document.getElementById('codeModal').classList.add('active');
         }
 
-        // Chiudi modal codice
         function closeCodeModal() {
             document.getElementById('codeModal').classList.remove('active');
         }
 
+        // --- Modifica profilo: update_profile --------------------------------
         function openEditModal() {
-            const userName = localStorage.getItem('guestos_user_name');
-            const userEmail = localStorage.getItem('guestos_user_email');
-            const userRoom = localStorage.getItem('guestos_room_number');
-            const userUsername = localStorage.getItem('guestos_username');
-
-            document.getElementById('editName').value = userName || '';
-            document.getElementById('editEmail').value = userEmail || '';
-            document.getElementById('editRoom').value = userRoom || '';
-            document.getElementById('editUsername').value = userUsername || '';
-
+            const local = currentUser || window.GuestOS.user();
+            document.getElementById('editName').value = local.last_name || '';
+            document.getElementById('editEmail').value = local.email || '';
+            document.getElementById('editRoom').value = local.room_number || '';
+            showEditError('');
             document.getElementById('editModal').classList.add('active');
         }
 
@@ -1169,259 +1214,256 @@
             document.getElementById('editModal').classList.remove('active');
         }
 
+        function showEditError(message) {
+            const box = document.getElementById('editError');
+            box.textContent = message || '';
+            box.classList.toggle('show', !!message);
+        }
+
         async function saveChanges() {
             const newName = document.getElementById('editName').value.trim();
             const newEmail = document.getElementById('editEmail').value.trim();
-            const newRoom = document.getElementById('editRoom').value.trim();
-            const newUsername = document.getElementById('editUsername').value.trim();
+            const saveBtn = document.getElementById('editSaveBtn');
 
-            if (!newName || !newEmail || !newRoom) {
-                alert('Compila tutti i campi obbligatori!');
+            if (!newName || !newEmail) {
+                showEditError('Compila nome ed email.');
                 return;
             }
 
+            saveBtn.disabled = true;
+            showEditError('');
+
             try {
-                const oldEmail = localStorage.getItem('guestos_user_email');
+                // Il server valida email e unicità e riscrive la riga users.
+                const updated = await window.GuestOS.rpc('update_profile', {
+                    p_last_name: newName,
+                    p_email: newEmail
+                });
 
-                // 1. Aggiorna Supabase (user_points)
-                // Prima verifichiamo se l'username è cambiato e se è unico
-                const updates = {
-                    user_name: newName,
-                    user_email: newEmail,
-                    room_number: newRoom
-                };
-
-                if (newUsername) {
-                    updates.username = newUsername;
+                if (updated) {
+                    currentUser = updated;
+                    try {
+                        localStorage.setItem('guestos_user_name', updated.last_name || newName);
+                        localStorage.setItem('guestos_user_email', updated.email || newEmail);
+                    } catch (e) { /* storage non disponibile */ }
                 }
 
-                const { error } = await supabaseClient
-                    .from('user_points')
-                    .update(updates)
-                    .eq('user_email', oldEmail);
-
-                if (error) {
-                    if (error.code === '23505') { // Unique violation
-                        alert('Username già in uso! Scegline un altro.');
-                        return;
-                    }
-                    throw error;
-                }
-
-                // 2. Aggiorna anche game_scores se c'è un username
-                if (newUsername) {
-                    await supabaseClient
-                        .from('game_scores')
-                        .update({
-                            username: newUsername,
-                            user_name: newName // Aggiorniamo anche il nome visuale legacy se serve
-                        })
-                        .eq('user_email', oldEmail);
-                }
-
-                // Aggiorna localStorage
-                localStorage.setItem('guestos_user_name', newName);
-                localStorage.setItem('guestos_user_email', newEmail);
-                localStorage.setItem('guestos_room_number', newRoom);
-                if (newUsername) {
-                    localStorage.setItem('guestos_username', newUsername);
-                } else {
-                    localStorage.removeItem('guestos_username');
-                }
-
-                // Ricarica dati e chiudi modal
                 await loadUserData();
                 closeEditModal();
-                alert('Dati aggiornati con successo!');
             } catch (error) {
-                console.error('Error updating user data:', error);
-                alert('Errore durante il salvataggio!');
+                showEditError(window.GuestOS.errorMessage(error));
+            } finally {
+                saveBtn.disabled = false;
             }
         }
 
-        function logout() {
-            if (confirm('Sei sicuro di voler uscire?')) {
-                localStorage.removeItem('guestos_logged_in');
-                localStorage.removeItem('guestos_user_email');
-                localStorage.removeItem('guestos_user_name');
-                localStorage.removeItem('guestos_room_number');
-                localStorage.removeItem('guestos_username');
-                window.location.href = 'login.html';
+        // --- Notifiche push ---------------------------------------------------
+        async function enablePush() {
+            const btn = document.getElementById('enablePushBtn');
+            const status = document.getElementById('pushStatus');
+
+            if (!window.GuestOS || typeof window.GuestOS.enablePush !== 'function') {
+                status.textContent = 'Notifiche non disponibili su questa pagina.';
+                return;
+            }
+
+            btn.disabled = true;
+            status.textContent = 'Attivazione in corso...';
+
+            const res = await window.GuestOS.enablePush();
+            if (res && res.ok) {
+                status.textContent = '✅ Notifiche attive su questo dispositivo.';
+                btn.textContent = '\u{1F514} Notifiche attive';
+            } else {
+                status.textContent = '⚠️ ' + ((res && res.error) || 'Non è stato possibile attivare le notifiche.');
+                btn.disabled = false;
             }
         }
 
-        // Chiudi code modal cliccando fuori
-        document.getElementById('codeModal').addEventListener('click', function (e) {
-            if (e.target === this) {
-                closeCodeModal();
-            }
-        });
+        function refreshPushLabel() {
+            const btn = document.getElementById('enablePushBtn');
+            const status = document.getElementById('pushStatus');
+            const state = window.GuestOS && typeof window.GuestOS.pushStatus === 'function'
+                ? window.GuestOS.pushStatus() : 'unsupported';
 
-        // Chiudi edit modal cliccando fuori
-        document.getElementById('editModal').addEventListener('click', function (e) {
-            if (e.target === this) {
-                closeEditModal();
+            if (state === 'unsupported') {
+                btn.disabled = true;
+                status.textContent = 'Questo dispositivo non supporta le notifiche push.';
+            } else if (state === 'granted') {
+                btn.textContent = '\u{1F514} Notifiche attive';
+                status.textContent = 'Puoi disattivarle dalle impostazioni del browser.';
+            } else if (state === 'denied') {
+                btn.disabled = true;
+                status.textContent = 'Notifiche bloccate nelle impostazioni del browser.';
             }
-        });
+        }
 
-        // Carica prenotazioni
+        // --- Prenotazioni: get_my_bookings / cancel_booking -------------------
+        const BOOKING_META = {
+            restaurant: { label: 'RISTORANTE', icon: '\u{1F37D}️' },
+            spa: { label: 'SPA', icon: '\u{1F486}' },
+            tour: { label: 'TOUR', icon: '\u{1F6A2}' }
+        };
+
+        function bookingItemName(kind, booking) {
+            if (kind === 'spa') return booking.treatment_name || booking.item_name || 'Trattamento';
+            if (kind === 'tour') return booking.tour_name || booking.item_name || 'Escursione';
+            return booking.item_name || 'Prenotazione';
+        }
+
+        function bookingPrice(booking) {
+            const raw = booking.final_price != null ? booking.final_price
+                : (booking.total_price != null ? booking.total_price : booking.price);
+            const n = Number(raw);
+            return isFinite(n) ? n : 0;
+        }
+
         async function loadBookings() {
             const container = document.getElementById('bookingsContainer');
 
+            let grouped;
             try {
-                const userEmail = localStorage.getItem('guestos_user_email');
-
-                // Fetch all booking types in parallel
-                const [spaResult, tourResult, paymentsResult] = await Promise.all([
-                    supabaseClient.from('spa_bookings').select('*').eq('user_email', userEmail).order('booking_date', { ascending: false }),
-                    supabaseClient.from('tour_bookings').select('*').eq('user_email', userEmail).order('booking_date', { ascending: false }),
-                    supabaseClient.from('payments').select('*').eq('user_email', userEmail).eq('status', 'completed').order('created_at', { ascending: false })
-                ]);
-
-                const spaBookings = spaResult.data || [];
-                const tourBookings = tourResult.data || [];
-                const payments = paymentsResult.data || [];
-
-                // Combine all bookings
-                const allBookings = [
-                    ...spaBookings.map(b => ({ ...b, type: 'spa', icon: '💆' })),
-                    ...tourBookings.map(b => ({ ...b, type: 'tour', icon: '🚢' })),
-                    ...payments.map(b => ({ ...b, type: 'payment', icon: '💳' }))
-                ];
-
-                if (allBookings.length === 0) {
-                    container.innerHTML = `
-                        <div class="bookings-empty">
-                            <div class="bookings-empty-icon">📅</div>
-                            <div class="bookings-empty-title">Nessuna prenotazione</div>
-                            <div class="bookings-empty-text">Prenota un trattamento spa o un'escursione per iniziare!</div>
-                            <button class="bookings-empty-btn" onclick="window.location.href='spa.html'">🌟 Esplora Servizi</button>
-                        </div>
-                    `;
-                    return;
-                }
-
-                // Sort by date (most recent first)
-                allBookings.sort((a, b) => {
-                    const dateA = new Date(a.booking_date || a.created_at);
-                    const dateB = new Date(b.booking_date || b.created_at);
-                    return dateB - dateA;
-                });
-
-                // Build HTML
-                let html = '';
-                allBookings.forEach(booking => {
-                    const date = new Date(booking.booking_date || booking.created_at);
-                    const dateStr = date.toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' });
-
-                    let typeName = '';
-                    let itemName = '';
-                    let price = 0;
-                    let status = booking.status || 'confirmed';
-                    let people = booking.num_people || booking.people || 1;
-
-                    if (booking.type === 'spa') {
-                        typeName = 'SPA';
-                        itemName = booking.treatment_name;
-                        price = booking.final_price || booking.price || 0;
-                    } else if (booking.type === 'tour') {
-                        typeName = 'TOUR';
-                        itemName = booking.tour_name;
-                        price = booking.total_price || 0;
-                    } else {
-                        typeName = 'PAGAMENTO';
-                        itemName = booking.item_name;
-                        price = booking.amount || 0;
-                    }
-
-                    const statusClass = status === 'confirmed' ? 'status-confirmed' : 'status-pending';
-                    const statusText = status === 'confirmed' ? 'Confermata' : 'In attesa';
-
-                    html += `
-                        <div class="booking-item">
-                            <div class="booking-header">
-                                <div>
-                                    <div class="booking-type">${booking.icon} ${typeName}</div>
-                                    <div class="booking-name">${itemName}</div>
-                                </div>
-                            </div>
-                            <div class="booking-details">
-                                <div class="booking-detail">
-                                    <span>📅</span>
-                                    <span>${dateStr}</span>
-                                </div>
-                                ${booking.booking_time ? `
-                                <div class="booking-detail">
-                                    <span>🕐</span>
-                                    <span>${booking.booking_time.substring(0, 5)}</span>
-                                </div>
-                                ` : ''}
-                                <div class="booking-detail">
-                                    <span>👥</span>
-                                    <span>${people} ${people === 1 ? 'persona' : 'persone'}</span>
-                                </div>
-                                ${booking.points_used && booking.points_used > 0 ? `
-                                <div class="booking-detail">
-                                    <span>💰</span>
-                                    <span>${booking.points_used} punti utilizzati</span>
-                                </div>
-                                ` : ''}
-                            </div>
-                            <div class="booking-footer">
-                                <div class="booking-price">€${price.toFixed(2)}</div>
-                                <div style="display: flex; gap: 10px; align-items: center;">
-                                    <span class="booking-status ${statusClass}">${statusText}</span>
-                                    ${status === 'confirmed' && booking.type !== 'payment' ? `
-                                        <button class="cancel-booking-btn" onclick="cancelBooking('${booking.type}', '${booking.id}')">
-                                            Cancella
-                                        </button>
-                                    ` : ''}
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-
-                container.innerHTML = html;
-
+                grouped = await window.GuestOS.rpc('get_my_bookings', {});
             } catch (error) {
-                console.error('Error loading bookings:', error);
+                console.warn('get_my_bookings:', error.code || '', error.message);
                 container.innerHTML = `
                     <div class="bookings-empty">
-                        <div class="bookings-empty-icon">⚠️</div>
+                        <div class="bookings-empty-icon">&#9888;</div>
                         <div class="bookings-empty-title">Errore caricamento</div>
                         <div class="bookings-empty-text">Non è stato possibile caricare le prenotazioni.</div>
                     </div>
                 `;
-            }
-        }
-
-        // Cancella prenotazione
-        async function cancelBooking(type, bookingId) {
-            if (!confirm('Sei sicuro di voler cancellare questa prenotazione?')) {
                 return;
             }
 
+            grouped = grouped || {};
+            const allBookings = [];
+            ['restaurant', 'spa', 'tour'].forEach(kind => {
+                (grouped[kind] || []).forEach(b => allBookings.push({ kind, data: b }));
+            });
+
+            if (allBookings.length === 0) {
+                container.innerHTML = `
+                    <div class="bookings-empty">
+                        <div class="bookings-empty-icon">&#128197;</div>
+                        <div class="bookings-empty-title">Nessuna prenotazione</div>
+                        <div class="bookings-empty-text">Prenota un trattamento spa o un'escursione per iniziare!</div>
+                        <button class="bookings-empty-btn" data-goto="spa.html">&#127775; Esplora Servizi</button>
+                    </div>
+                `;
+                bindGotoButtons(container);
+                return;
+            }
+
+            allBookings.sort((a, b) => {
+                const dateA = new Date(a.data.booking_date || a.data.tour_date || a.data.created_at || 0);
+                const dateB = new Date(b.data.booking_date || b.data.tour_date || b.data.created_at || 0);
+                return dateB - dateA;
+            });
+
+            let html = '';
+            allBookings.forEach(entry => {
+                const b = entry.data;
+                const meta = BOOKING_META[entry.kind];
+                const dateStr = esc(formatDay(b.booking_date || b.tour_date || b.created_at));
+                const itemName = esc(bookingItemName(entry.kind, b));
+                const people = Number(b.num_people || b.people || 1);
+                const status = String(b.status || 'confirmed');
+                const statusClass = status === 'confirmed' ? 'status-confirmed' : 'status-pending';
+                const statusText = status === 'confirmed' ? 'Confermata'
+                    : (status === 'cancelled' ? 'Annullata' : 'In attesa');
+                const price = bookingPrice(b);
+                const time = b.booking_time ? esc(String(b.booking_time).substring(0, 5)) : '';
+                const pointsUsed = Number(b.points_used || 0);
+
+                html += `
+                    <div class="booking-item">
+                        <div class="booking-header">
+                            <div>
+                                <div class="booking-type">${meta.icon} ${meta.label}</div>
+                                <div class="booking-name">${itemName}</div>
+                            </div>
+                        </div>
+                        <div class="booking-details">
+                            <div class="booking-detail">
+                                <span>&#128197;</span>
+                                <span>${dateStr}</span>
+                            </div>
+                            ${time ? `
+                            <div class="booking-detail">
+                                <span>&#128336;</span>
+                                <span>${time}</span>
+                            </div>
+                            ` : ''}
+                            <div class="booking-detail">
+                                <span>&#128101;</span>
+                                <span>${people} ${people === 1 ? 'persona' : 'persone'}</span>
+                            </div>
+                            ${pointsUsed > 0 ? `
+                            <div class="booking-detail">
+                                <span>&#128176;</span>
+                                <span>${pointsUsed} punti utilizzati</span>
+                            </div>
+                            ` : ''}
+                        </div>
+                        <div class="booking-footer">
+                            <div class="booking-price">&euro;${price.toFixed(2)}</div>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <span class="booking-status ${statusClass}">${statusText}</span>
+                                ${status === 'confirmed' ? `
+                                    <button class="cancel-booking-btn" data-kind="${esc(entry.kind)}" data-id="${esc(b.id)}">
+                                        Cancella
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+
+            container.querySelectorAll('.cancel-booking-btn').forEach(btn => {
+                btn.addEventListener('click', () => cancelBooking(btn.dataset.kind, btn.dataset.id, btn));
+            });
+        }
+
+        async function cancelBooking(kind, bookingId, btn) {
+            if (!confirm('Sei sicuro di voler cancellare questa prenotazione?')) return;
+
+            if (btn) btn.disabled = true;
             try {
-                const tableName = type === 'spa' ? 'spa_bookings' : 'tour_bookings';
-
-                const { error } = await supabaseClient
-                    .from(tableName)
-                    .update({ status: 'cancelled' })
-                    .eq('id', bookingId);
-
-                if (error) throw error;
-
-                alert('✅ Prenotazione cancellata con successo!');
-                loadBookings(); // Reload bookings
-
+                await window.GuestOS.rpc('cancel_booking', {
+                    p_kind: kind,
+                    p_booking_id: bookingId
+                });
+                await loadBookings();
             } catch (error) {
-                console.error('Error cancelling booking:', error);
-                alert('❌ Errore durante la cancellazione. Riprova.');
+                if (btn) btn.disabled = false;
+                alert(window.GuestOS.errorMessage(error));
             }
         }
 
-        // Carica tutto all'avvio
+        // --- Collegamento eventi ---------------------------------------------
+        document.querySelector('.edit-btn').addEventListener('click', openEditModal);
+        document.getElementById('editCancelBtn').addEventListener('click', closeEditModal);
+        document.getElementById('editSaveBtn').addEventListener('click', saveChanges);
+        document.querySelector('.code-close-btn').addEventListener('click', closeCodeModal);
+        document.getElementById('enablePushBtn').addEventListener('click', enablePush);
+        document.getElementById('logoutBtn').addEventListener('click', function () {
+            if (confirm('Sei sicuro di voler uscire?')) window.GuestOS.logout();
+        });
+
+        document.getElementById('codeModal').addEventListener('click', function (e) {
+            if (e.target === this) closeCodeModal();
+        });
+
+        document.getElementById('editModal').addEventListener('click', function (e) {
+            if (e.target === this) closeEditModal();
+        });
+
+        // --- Avvio -------------------------------------------------------------
+        refreshPushLabel();
         loadUserData();
         loadRedeemedRewards();
         loadBookings();

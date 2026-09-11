@@ -8,15 +8,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&display=swap"
         rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-    <!-- SUPABASE CONFIG INLINE -->
-    <script>
-        const SB_URL = "https://gqqgotvbabgxztrxbozu.supabase.co";
-        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxcWdvdHZiYWJneHp0cnhib3p1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwODM4MjgsImV4cCI6MjA4NDY1OTgyOH0.gFc_bLefoFuVW21MSMEg30CD97bFfVeHEQDhkfe_2QY";
-        const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
-        console.log('✅ Supabase Client initialized:', supabaseClient ? 'SUCCESS' : 'FAILED');
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.min.js"></script>
+    <!--
+        Chiave e client Supabase arrivano da config.js: nessuna copia della chiave
+        in questa pagina. config.js rispedisce il token admin salvato in
+        localStorage come header x-admin-token a ogni chiamata.
+    -->
+    <script src="config.js"></script>
 
     <style>
         .analytics-grid {
@@ -711,12 +709,12 @@
 
 <body>
     <!-- Mobile Menu Toggle -->
-    <button class="menu-toggle" onclick="toggleSidebar()">
+    <button class="menu-toggle" type="button" data-nav="toggle-sidebar" aria-label="Apri il menu">
         <i data-lucide="menu" style="width: 24px; height: 24px;"></i>
     </button>
 
     <!-- Mobile Sidebar Overlay -->
-    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay" data-nav="close-sidebar"></div>
 
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
@@ -732,7 +730,7 @@
 
         <div class="menu-section">
             <div class="menu-title">Dashboard</div>
-            <div class="menu-item active" onclick="showSection('overview')">
+            <div class="menu-item active" data-nav="section" data-section="overview">
                 <i data-lucide="home" style="width: 20px; height: 20px;"></i>
                 <span>Overview</span>
             </div>
@@ -740,15 +738,15 @@
 
         <div class="menu-section">
             <div class="menu-title">Gestione Ospiti</div>
-            <div class="menu-item" onclick="showSection('stays')">
+            <div class="menu-item" data-nav="section" data-section="stays">
                 <i data-lucide="users" style="width: 20px; height: 20px;"></i>
                 <span>Soggiorni Attivi</span>
             </div>
-            <div class="menu-item" onclick="showSection('checkin-today')">
+            <div class="menu-item" data-nav="section" data-section="checkin-today">
                 <i data-lucide="log-in" style="width: 20px; height: 20px;"></i>
                 <span>Check-in Oggi</span>
             </div>
-            <div class="menu-item" onclick="showSection('checkout-today')">
+            <div class="menu-item" data-nav="section" data-section="checkout-today">
                 <i data-lucide="log-out" style="width: 20px; height: 20px;"></i>
                 <span>Check-out Oggi</span>
             </div>
@@ -756,19 +754,19 @@
 
         <div class="menu-section">
             <div class="menu-title">Prenotazioni</div>
-            <div class="menu-item" onclick="showSection('bookings-restaurant')">
+            <div class="menu-item" data-nav="section" data-section="bookings-restaurant">
                 <i data-lucide="utensils" style="width: 20px; height: 20px;"></i>
                 <span>Ristorante</span>
             </div>
-            <div class="menu-item" onclick="showSection('bookings-tours')">
+            <div class="menu-item" data-nav="section" data-section="bookings-tours">
                 <i data-lucide="bus" style="width: 20px; height: 20px;"></i>
                 <span>Tours</span>
             </div>
-            <div class="menu-item" onclick="showSection('bookings-spa')">
+            <div class="menu-item" data-nav="section" data-section="bookings-spa">
                 <i data-lucide="sparkles" style="width: 20px; height: 20px;"></i>
                 <span>Spa</span>
             </div>
-            <div class="menu-item" onclick="openContentManager('last_minute')">
+            <div class="menu-item" data-nav="content" data-content="last_minute">
                 <i data-lucide="zap" style="width: 20px; height: 20px;"></i>
                 <span>Last Minute</span>
             </div>
@@ -776,23 +774,23 @@
 
         <div class="menu-section">
             <div class="menu-title">Gestione Contenuti</div>
-            <div class="menu-item" onclick="openContentManager('restaurant')">
+            <div class="menu-item" data-nav="content" data-content="restaurant">
                 <i data-lucide="utensils" style="width: 20px; height: 20px;"></i>
                 <span>Menu Ristorante</span>
             </div>
-            <div class="menu-item" onclick="openContentManager('tours')">
+            <div class="menu-item" data-nav="content" data-content="tours">
                 <i data-lucide="map" style="width: 20px; height: 20px;"></i>
                 <span>Escursioni</span>
             </div>
-            <div class="menu-item" onclick="openContentManager('spa')">
+            <div class="menu-item" data-nav="content" data-content="spa">
                 <i data-lucide="sparkles" style="width: 20px; height: 20px;"></i>
                 <span>Servizi SPA</span>
             </div>
-            <div class="menu-item" onclick="openContentManager('animation')">
+            <div class="menu-item" data-nav="content" data-content="animation">
                 <i data-lucide="party-popper" style="width: 20px; height: 20px;"></i>
                 <span>Animazione</span>
             </div>
-            <div class="menu-item" onclick="openContentManager('rewards')">
+            <div class="menu-item" data-nav="content" data-content="rewards">
                 <i data-lucide="gift" style="width: 20px; height: 20px;"></i>
                 <span>Premi</span>
             </div>
@@ -800,7 +798,7 @@
 
         <div class="menu-section">
             <div class="menu-title">Marketing & Yield</div>
-            <div class="menu-item" onclick="showSection('yield')">
+            <div class="menu-item" data-nav="section" data-section="yield">
                 <i data-lucide="zap" style="width: 20px; height: 20px; color: #FFD700;"></i>
                 <span>Yield Management</span>
             </div>
@@ -808,7 +806,7 @@
 
         <div class="menu-section">
             <div class="menu-title">AI & Automazione</div>
-            <div class="menu-item" onclick="window.location.href='admin-knowledge-base.html'">
+            <div class="menu-item" data-nav="knowledge-base">
                 <i data-lucide="brain" style="width: 20px; height: 20px;"></i>
                 <span>Knowledge Base AI</span>
             </div>
@@ -816,17 +814,25 @@
 
         <div class="menu-section">
             <div class="menu-title">Sistema Punti</div>
-            <div class="menu-item" onclick="showSection('points')">
+            <div class="menu-item" data-nav="section" data-section="points">
                 <i data-lucide="star" style="width: 20px; height: 20px;"></i>
                 <span>Punti Utenti</span>
             </div>
-            <div class="menu-item" onclick="showSection('rewards')">
+            <div class="menu-item" data-nav="section" data-section="rewards">
                 <i data-lucide="gift" style="width: 20px; height: 20px;"></i>
                 <span>Rewards Riscattati</span>
             </div>
         </div>
 
-        <button class="logout-btn" onclick="logout()">
+        <div class="menu-section">
+            <div class="menu-title">Struttura</div>
+            <div class="menu-item" data-nav="section" data-section="settings">
+                <i data-lucide="settings" style="width: 20px; height: 20px;"></i>
+                <span>Impostazioni struttura</span>
+            </div>
+        </div>
+
+        <button class="logout-btn" type="button" data-nav="logout">
             <i data-lucide="log-out"
                 style="width: 16px; height: 16px; display: inline-block; vertical-align: middle;"></i>
             Esci
@@ -840,7 +846,22 @@
             <div class="top-bar">
                 <div class="page-title">📊 Overview</div>
                 <div class="top-actions">
-                    <button class="action-btn" onclick="refreshData()">🔄 Aggiorna</button>
+                    <button class="action-btn" type="button" data-nav="refresh">🔄 Aggiorna</button>
+                    <button class="action-btn" type="button" data-action="export-csv" data-export="stays"
+                        style="background: linear-gradient(135deg, #667eea, #764ba2);"
+                        title="Scarica i soggiorni in CSV (si apre in Excel, Numbers o LibreOffice)">
+                        ⬇️ Esporta CSV
+                    </button>
+                    <button class="action-btn" type="button" data-action="show-qr"
+                        style="background: linear-gradient(135deg, #00D4FF, #667eea);"
+                        title="QR con il link di registrazione per gli ospiti">
+                        📱 QR registrazione
+                    </button>
+                    <button class="action-btn" type="button" data-action="audit-log"
+                        style="background: linear-gradient(135deg, #999, #666);"
+                        title="Ultime azioni registrate dallo staff">
+                        📋 Storico modifiche
+                    </button>
                 </div>
             </div>
 
@@ -958,7 +979,7 @@
 
             <div class="stats-grid">
                 <!-- Ristorante Manager -->
-                <div class="stat-card hover-trigger" onclick="openContentManager('restaurant')"
+                <div class="stat-card hover-trigger" data-nav="content" data-content="restaurant"
                     style="--gradient-color: #ff6b6b; cursor: pointer;">
                     <div class="stat-header">
                         <div class="stat-title">RISTORANTE</div>
@@ -969,7 +990,7 @@
                 </div>
 
                 <!-- Tours Manager -->
-                <div class="stat-card hover-trigger" onclick="openContentManager('tours')"
+                <div class="stat-card hover-trigger" data-nav="content" data-content="tours"
                     style="--gradient-color: #4ecdc4; cursor: pointer;">
                     <div class="stat-header">
                         <div class="stat-title">ESCURSIONI</div>
@@ -980,7 +1001,7 @@
                 </div>
 
                 <!-- SPA Manager -->
-                <div class="stat-card hover-trigger" onclick="openContentManager('spa')"
+                <div class="stat-card hover-trigger" data-nav="content" data-content="spa"
                     style="--gradient-color: #a78bfa; cursor: pointer;">
                     <div class="stat-header">
                         <div class="stat-title">SPA & WELLNESS</div>
@@ -991,7 +1012,7 @@
                 </div>
 
                 <!-- Animation Manager -->
-                <div class="stat-card hover-trigger" onclick="openContentManager('animation')"
+                <div class="stat-card hover-trigger" data-nav="content" data-content="animation"
                     style="--gradient-color: #ff9f43; cursor: pointer;">
                     <div class="stat-header">
                         <div class="stat-title">ANIMAZIONE</div>
@@ -1002,7 +1023,7 @@
                 </div>
 
                 <!-- Last Minute Manager -->
-                <div class="stat-card hover-trigger" onclick="openContentManager('last_minute')"
+                <div class="stat-card hover-trigger" data-nav="content" data-content="last_minute"
                     style="--gradient-color: #ff5252; cursor: pointer;">
                     <div class="stat-header">
                         <div class="stat-title">LAST MINUTE</div>
@@ -1019,16 +1040,16 @@
             <div class="top-bar">
                 <div class="page-title">👥 Soggiorni Attivi</div>
                 <div class="top-actions">
-                    <button class="action-btn" onclick="loadActiveStays()">🔄 Aggiorna</button>
+                    <button class="action-btn" type="button" data-nav="reload" data-section="stays">🔄 Aggiorna</button>
                 </div>
             </div>
 
             <div class="data-section">
                 <div class="filter-bar">
                     <input type="text" class="filter-input" id="filter-stays-room" placeholder="Cerca per camera..."
-                        onkeyup="filterStays()">
+                        data-filter="stays">
                     <input type="text" class="filter-input" id="filter-stays-name" placeholder="Cerca per cognome..."
-                        onkeyup="filterStays()">
+                        data-filter="stays">
                 </div>
 
                 <div id="stays-table-container">
@@ -1042,7 +1063,7 @@
             <div class="top-bar">
                 <div class="page-title">📥 Check-in Oggi</div>
                 <div class="top-actions">
-                    <button class="action-btn" onclick="loadCheckinToday()">🔄 Aggiorna</button>
+                    <button class="action-btn" type="button" data-nav="reload" data-section="checkin-today">🔄 Aggiorna</button>
                 </div>
             </div>
 
@@ -1058,7 +1079,7 @@
             <div class="top-bar">
                 <div class="page-title">📤 Check-out Oggi</div>
                 <div class="top-actions">
-                    <button class="action-btn" onclick="loadCheckoutToday()">🔄 Aggiorna</button>
+                    <button class="action-btn" type="button" data-nav="reload" data-section="checkout-today">🔄 Aggiorna</button>
                 </div>
             </div>
 
@@ -1074,7 +1095,10 @@
             <div class="top-bar">
                 <div class="page-title">🍽️ Prenotazioni Ristorante</div>
                 <div class="top-actions">
-                    <button class="action-btn" onclick="loadRestaurantBookings()">🔄 Aggiorna</button>
+                    <button class="action-btn" type="button" data-nav="reload" data-section="bookings-restaurant">🔄 Aggiorna</button>
+                    <button class="action-btn" type="button" data-action="export-csv" data-export="bookings"
+                        style="background: linear-gradient(135deg, #667eea, #764ba2);"
+                        title="Scarica le prenotazioni in CSV">⬇️ Esporta CSV</button>
                 </div>
             </div>
 
@@ -1090,7 +1114,7 @@
             <div class="top-bar">
                 <div class="page-title">🚌 Prenotazioni Tours</div>
                 <div class="top-actions">
-                    <button class="action-btn" onclick="loadToursBookings()">🔄 Aggiorna</button>
+                    <button class="action-btn" type="button" data-nav="reload" data-section="bookings-tours">🔄 Aggiorna</button>
                 </div>
             </div>
 
@@ -1106,7 +1130,7 @@
             <div class="top-bar">
                 <div class="page-title">💆 Prenotazioni Spa</div>
                 <div class="top-actions">
-                    <button class="action-btn" onclick="loadSpaBookings()">🔄 Aggiorna</button>
+                    <button class="action-btn" type="button" data-nav="reload" data-section="bookings-spa">🔄 Aggiorna</button>
                 </div>
             </div>
 
@@ -1122,7 +1146,10 @@
             <div class="top-bar">
                 <div class="page-title">⭐ Punti Utenti</div>
                 <div class="top-actions">
-                    <button class="action-btn" onclick="loadPointsManagement()">🔄 Aggiorna</button>
+                    <button class="action-btn" type="button" data-nav="reload" data-section="points">🔄 Aggiorna</button>
+                    <button class="action-btn" type="button" data-action="export-csv" data-export="points"
+                        style="background: linear-gradient(135deg, #667eea, #764ba2);"
+                        title="Scarica le punti in CSV">⬇️ Esporta CSV</button>
                 </div>
             </div>
 
@@ -1138,7 +1165,7 @@
             <div class="top-bar">
                 <div class="page-title">🎁 Rewards Riscattati</div>
                 <div class="top-actions">
-                    <button class="action-btn" onclick="loadRewardsManagement()">🔄 Aggiorna</button>
+                    <button class="action-btn" type="button" data-nav="reload" data-section="rewards">🔄 Aggiorna</button>
                 </div>
             </div>
 
@@ -1149,12 +1176,28 @@
             </div>
         </div>
 
+        <!-- Impostazioni struttura (hotel_settings) -->
+        <div class="content-section" id="section-settings">
+            <div class="top-bar">
+                <div class="page-title">⚙️ Impostazioni struttura</div>
+                <div class="top-actions">
+                    <button class="action-btn" type="button" data-nav="reload" data-section="settings">🔄 Aggiorna</button>
+                </div>
+            </div>
+
+            <div class="data-section">
+                <div id="settings-container">
+                    <div class="loading">⏳ Caricamento impostazioni...</div>
+                </div>
+            </div>
+        </div>
+
         <!-- YIELD MANAGEMENT SECTION -->
         <div id="section-yield" class="content-section">
             <div class="top-bar">
                 <h1 class="page-title">Yield Management</h1>
                 <div class="top-actions">
-                    <button class="action-btn" onclick="openFlashDealModal()"
+                    <button class="action-btn" type="button" data-nav="flash-deal-open"
                         style="background: linear-gradient(135deg, #FF0080, #764ba2);">
                         <i data-lucide="zap"
                             style="width: 18px; height: 18px; display: inline-block; vertical-align: middle; margin-right: 5px;"></i>
@@ -1214,7 +1257,7 @@
                 <div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px;">
 
                     <!-- Template 1: SPA Rain -->
-                    <div onclick="useTemplate('spa_rain')"
+                    <div data-nav="yield-template" data-template="spa_rain"
                         style="min-width: 250px; background: white; padding: 15px; border-radius: 12px; border: 1px dashed #ccc; cursor: pointer; transition: all 0.2s;"
                         onmouseover="this.style.borderColor='#FF0080'; this.style.background='#fff0f6'"
                         onmouseout="this.style.borderColor='#ccc'; this.style.background='white'">
@@ -1226,7 +1269,7 @@
                     </div>
 
                     <!-- Template 2: Tour Last Call -->
-                    <div onclick="useTemplate('tour_last')"
+                    <div data-nav="yield-template" data-template="tour_last"
                         style="min-width: 250px; background: white; padding: 15px; border-radius: 12px; border: 1px dashed #ccc; cursor: pointer; transition: all 0.2s;"
                         onmouseover="this.style.borderColor='#00D4FF'; this.style.background='#f0fbff'"
                         onmouseout="this.style.borderColor='#ccc'; this.style.background='white'">
@@ -1237,7 +1280,7 @@
                     </div>
 
                     <!-- Template 3: Dinner Filler -->
-                    <div onclick="useTemplate('dinner_promo')"
+                    <div data-nav="yield-template" data-template="dinner_promo"
                         style="min-width: 250px; background: white; padding: 15px; border-radius: 12px; border: 1px dashed #ccc; cursor: pointer; transition: all 0.2s;"
                         onmouseover="this.style.borderColor='#FF9F43'; this.style.background='#fff8f0'"
                         onmouseout="this.style.borderColor='#ccc'; this.style.background='white'">
@@ -1249,7 +1292,7 @@
                     </div>
 
                     <!-- Template 4: Late Checkout -->
-                    <div onclick="useTemplate('late_checkout')"
+                    <div data-nav="yield-template" data-template="late_checkout"
                         style="min-width: 250px; background: white; padding: 15px; border-radius: 12px; border: 1px dashed #ccc; cursor: pointer; transition: all 0.2s;"
                         onmouseover="this.style.borderColor='#5e72e4'; this.style.background='#f4f5ff'"
                         onmouseout="this.style.borderColor='#ccc'; this.style.background='white'">
@@ -1285,1393 +1328,182 @@
                 <!-- Populated dynamically -->
             </div>
             <div class="modal-actions">
-                <button class="modal-btn danger" onclick="closeModal()">Chiudi</button>
-                <button class="modal-btn primary" onclick="editStay()">Modifica</button>
+                <button class="modal-btn danger" type="button" data-action="close-modal">Chiudi</button>
             </div>
         </div>
     </div>
 
     <script>
         // ============================================
-        // GLOBAL STATE
+        // DASHBOARD ADMIN — SOLO NAVIGAZIONE E GUARDIA DI ACCESSO
         // ============================================
-        let adminSession = null;
-        let allStays = [];
+        // Tutta la lettura e la scrittura dei dati sta in guestos-admin-features.js
+        // e passa da RPC `admin_*` (window.AdminOS.rpc). Qui dentro NON c'e' nessuna
+        // query diretta alle tabelle: con la RLS attiva tornerebbero vuote.
+        //
+        // La sessione admin e' il token emesso da admin_login() e salvato in
+        // localStorage.guestos_admin_token. Nessuna "sessione" JSON finta.
+        // ============================================
+        'use strict';
+
+        const SECTION_LOADERS = {
+            'stays': 'loadActiveStays',
+            'checkin-today': 'loadCheckinToday',
+            'checkout-today': 'loadCheckoutToday',
+            'bookings-restaurant': 'loadRestaurantBookings',
+            'bookings-tours': 'loadToursBookings',
+            'bookings-spa': 'loadSpaBookings',
+            'points': 'loadPointsManagement',
+            'rewards': 'loadRewardsManagement',
+            'yield': 'loadFlashDeals',
+            'settings': 'loadSettingsSection'
+        };
+
+        function callIfPresent(name) {
+            if (typeof window[name] === 'function') window[name]();
+        }
 
         // ============================================
-        // AUTH CHECK
+        // GUARDIA DI ACCESSO
         // ============================================
-        window.addEventListener('DOMContentLoaded', () => {
-            console.log('🚀 Dashboard loading...');
-            console.log('Supabase check:', supabaseClient ? '✅ OK' : '❌ FAILED');
-
-            const sessionData = localStorage.getItem('guestos_admin_session');
-            if (!sessionData) {
-                console.log('❌ No session, redirecting to login');
-                window.location.href = 'guestos-admin-login.html';
+        window.addEventListener('DOMContentLoaded', async () => {
+            if (!window.AdminOS) {
+                console.error('guestos-admin-features.js non caricato: impossibile verificare la sessione.');
+                window.location.replace('guestos-admin-login.html');
                 return;
             }
 
-            try {
-                adminSession = JSON.parse(sessionData);
+            // Verifica il token con admin_me(): se manca o e' scaduto,
+            // requireAdmin() pulisce localStorage e redirige al login.
+            const me = await window.AdminOS.requireAdmin();
+            if (!me) return;
 
-                // Check if session expired (24h)
-                if (Date.now() - adminSession.timestamp > 24 * 60 * 60 * 1000) {
-                    console.log('❌ Session expired');
-                    logout();
-                    return;
-                }
+            const esc = window.AdminOS.escapeHtml;
+            const hotelEl = document.getElementById('hotelName');
+            const roleEl = document.getElementById('adminRole');
+            if (hotelEl) hotelEl.textContent = me.hotel_name || 'Struttura';
+            if (roleEl) roleEl.textContent = String(me.role || 'staff').toUpperCase();
+            void esc;
 
-                console.log('✅ Session valid:', adminSession.email);
+            if (window.lucide) lucide.createIcons();
 
-                // Update UI with admin info
-                document.getElementById('hotelName').textContent = adminSession.hotel_name;
-                document.getElementById('adminRole').textContent = adminSession.role.toUpperCase();
-
-                // Load initial data
-                console.log('📊 Loading data...');
-                loadOverviewStats();
-                loadAnalytics();
-                loadActiveStays();
-
-                // Initialize Extra Features (se caricato)
-                if (window.initGlobalSearch) window.initGlobalSearch();
-                if (window.initExpiryAlerts) window.initExpiryAlerts();
-                if (window.addQuickStats) window.addQuickStats();
-
-                // Initialize Lucide icons
-                lucide.createIcons();
-
-            } catch (e) {
-                console.error('❌ Invalid session:', e);
-                logout();
-            }
+            // Da' il via a guestos-admin-features.js (che aspetta questo evento).
+            document.dispatchEvent(new CustomEvent('guestos-admin-ready', { detail: me }));
         });
 
         // ============================================
-        // NAVIGATION
+        // NAVIGAZIONE
         // ============================================
         function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebarOverlay');
-            sidebar.classList.toggle('open');
-            overlay.classList.toggle('active');
+            document.getElementById('sidebar')?.classList.toggle('open');
+            document.getElementById('sidebarOverlay')?.classList.toggle('active');
         }
 
         function closeSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebarOverlay');
-            sidebar.classList.remove('open');
-            overlay.classList.remove('active');
+            document.getElementById('sidebar')?.classList.remove('open');
+            document.getElementById('sidebarOverlay')?.classList.remove('active');
         }
 
-        function showSection(sectionName) {
-            console.log('📄 Showing section:', sectionName);
+        function showSection(sectionName, menuItem) {
+            if (window.innerWidth <= 1024) closeSidebar();
 
-            // Close sidebar on mobile
-            if (window.innerWidth <= 1024 && typeof closeSidebar === 'function') {
-                closeSidebar();
+            document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
+            if (menuItem) menuItem.classList.add('active');
+
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+            const target = document.getElementById('section-' + sectionName);
+            if (!target) {
+                console.error('Sezione non trovata: section-' + sectionName);
+                return;
             }
+            target.classList.add('active');
 
-            // Update menu active state
-            document.querySelectorAll('.menu-item').forEach(item => {
-                item.classList.remove('active');
-            });
-
-            // Safe menu update
-            if (event && event.target) {
-                const menuItem = event.target.closest('.menu-item');
-                if (menuItem) menuItem.classList.add('active');
-            }
-
-            // Update content visibility
-            document.querySelectorAll('.content-section').forEach(section => {
-                section.classList.remove('active');
-            });
-
-            const targetSection = document.getElementById('section-' + sectionName);
-            if (targetSection) {
-                targetSection.classList.add('active');
-            } else {
-                console.error('❌ Section not found: section-' + sectionName);
-            }
-
-            // CUSTOM LOGIC: Load data for Yield Management
-            if (sectionName === 'yield' && typeof loadFlashDeals === 'function') {
-                loadFlashDeals();
-            }
-
-            // HIDE/SHOW analytics - solo in Overview
-            const analyticsGrid = document.querySelector(".analytics-grid");
+            const analyticsGrid = document.querySelector('.analytics-grid');
             if (analyticsGrid) {
-                analyticsGrid.style.display = (sectionName === "overview") ? "grid" : "none";
+                analyticsGrid.style.display = (sectionName === 'overview') ? 'grid' : 'none';
             }
 
-            // Load data for section
-            if (sectionName === 'stays') loadActiveStays();
-            else if (sectionName === 'checkin-today') loadCheckinToday();
-            else if (sectionName === 'checkout-today') loadCheckoutToday();
-            else if (sectionName === 'bookings-restaurant') loadRestaurantBookings();
-            else if (sectionName === 'bookings-tours') loadToursBookings();
-            else if (sectionName === 'bookings-spa') loadSpaBookings();
-            else if (sectionName === 'points') loadPointsManagement();
-            else if (sectionName === 'rewards') loadRewardsManagement();
+            if (SECTION_LOADERS[sectionName]) callIfPresent(SECTION_LOADERS[sectionName]);
         }
-
-        // ============================================
-        // OVERVIEW STATS
-        // ============================================
-        async function loadOverviewStats() {
-            console.log('📊 Loading overview stats...');
-
-            try {
-                const today = new Date().toISOString().split('T')[0];
-
-                // Active guests
-                const { count: activeCount, error: activeError } = await supabaseClient
-                    .from('users')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('active', true)
-                    .gte('stay_end_date', today);
-
-                if (activeError) {
-                    console.error('Error loading active guests:', activeError);
-                } else {
-                    console.log('✅ Active guests:', activeCount);
-                    document.getElementById('stat-active-guests').textContent = activeCount || 0;
-                }
-
-                // Check-in today
-                const { count: checkinCount, error: checkinError } = await supabaseClient
-                    .from('users')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('stay_start_date', today)
-                    .eq('active', true);
-
-                if (checkinError) {
-                    console.error('Error loading check-ins:', checkinError);
-                } else {
-                    console.log('✅ Check-ins today:', checkinCount);
-                    document.getElementById('stat-checkin-today').textContent = checkinCount || 0;
-                }
-
-                // Check-out today
-                const { count: checkoutCount, error: checkoutError } = await supabaseClient
-                    .from('users')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('stay_end_date', today)
-                    .eq('active', true);
-
-                if (checkoutError) {
-                    console.error('Error loading check-outs:', checkoutError);
-                } else {
-                    console.log('✅ Check-outs today:', checkoutCount);
-                    document.getElementById('stat-checkout-today').textContent = checkoutCount || 0;
-                }
-
-                // Pending bookings (all tables)
-                const { count: pendingRestaurant } = await supabaseClient
-                    .from('restaurant_bookings')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('status', 'pending');
-
-                const { count: pendingTours } = await supabaseClient
-                    .from('tour_bookings')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('status', 'pending');
-
-                const { count: pendingSpa } = await supabaseClient
-                    .from('spa_bookings')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('status', 'pending');
-
-                const totalPending = (pendingRestaurant || 0) + (pendingTours || 0) + (pendingSpa || 0);
-                console.log('✅ Pending bookings:', totalPending);
-                document.getElementById('stat-pending-bookings').textContent = totalPending;
-
-            } catch (error) {
-                console.error('❌ Error loading stats:', error);
-            }
-        }
-
-        // ============================================
-        // LOAD ACTIVE STAYS
-        // ============================================
-        async function loadActiveStays() {
-            console.log('👥 Loading active stays...');
-
-            const container = document.getElementById('stays-table-container');
-            container.innerHTML = '<div class="loading">⏳ Caricamento soggiorni...</div>';
-
-            try {
-                const today = new Date().toISOString().split('T')[0];
-
-                const { data, error } = await supabaseClient
-                    .from('users')
-                    .select('*')
-                    .eq('active', true)
-                    .gte('stay_end_date', today)
-                    .order('stay_end_date', { ascending: true });
-
-                if (error) {
-                    console.error('❌ Error:', error);
-                    throw error;
-                }
-
-                console.log('✅ Loaded stays:', data.length);
-                allStays = data || [];
-
-                if (allStays.length === 0) {
-                    container.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-icon">🏨</div>
-                            <div class="empty-title">Nessun soggiorno attivo</div>
-                            <div class="empty-text">Non ci sono ospiti al momento</div>
-                        </div>
-                    `;
-                    return;
-                }
-
-                renderStaysTable(allStays);
-
-            } catch (error) {
-                console.error('❌ Error loading stays:', error);
-                container.innerHTML = `<div class="loading">❌ Errore caricamento dati</div>`;
-            }
-        }
-
-        function renderStaysTable(stays) {
-            const container = document.getElementById('stays-table-container');
-            const today = new Date().toISOString().split('T')[0];
-
-            let html = `
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Camera</th>
-                            <th>Cognome</th>
-                            <th>Email</th>
-                            <th>Check-in</th>
-                            <th>Check-out</th>
-                            <th>Stato</th>
-                            <th>Azioni</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-
-            stays.forEach(stay => {
-                const daysLeft = Math.ceil((new Date(stay.stay_end_date) - new Date(today)) / (1000 * 60 * 60 * 24));
-                let statusBadge = '<span class="badge active">Attivo</span>';
-
-                if (stay.stay_end_date === today) {
-                    statusBadge = '<span class="badge pending">Scade oggi</span>';
-                } else if (daysLeft <= 2) {
-                    statusBadge = '<span class="badge pending">Scade tra ' + daysLeft + ' giorni</span>';
-                }
-
-                html += `
-                    <tr>
-                        <td><strong>${stay.room_number}</strong></td>
-                        <td>${stay.last_name}</td>
-                        <td>${stay.email || '-'}</td>
-                        <td>${formatDate(stay.stay_start_date)}</td>
-                        <td>${formatDate(stay.stay_end_date)}</td>
-                        <td>${statusBadge}</td>
-                        <td>
-                            <div class="action-buttons">
-                                <button class="btn-icon view" onclick="viewStay(${stay.id})" title="Dettagli">
-                                    <i data-lucide="eye" style="width: 18px; height: 18px;"></i>
-                                </button>
-                                <button class="btn-icon edit" onclick="resetPIN(${stay.id})" title="Reset PIN">
-                                    <i data-lucide="key" style="width: 18px; height: 18px;"></i>
-                                </button>
-                                <button class="btn-icon delete" onclick="deactivateStay(${stay.id})" title="Disattiva">
-                                    <i data-lucide="x-circle" style="width: 18px; height: 18px;"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            });
-
-            html += `</tbody></table>`;
-            container.innerHTML = html;
-            lucide.createIcons();
-        }
-
-        function filterStays() {
-            const roomFilter = document.getElementById('filter-stays-room').value.toLowerCase();
-            const nameFilter = document.getElementById('filter-stays-name').value.toLowerCase();
-
-            const filtered = allStays.filter(stay =>
-                stay.room_number.toLowerCase().includes(roomFilter) &&
-                stay.last_name.toLowerCase().includes(nameFilter)
-            );
-
-            console.log('🔍 Filtered stays:', filtered.length);
-            renderStaysTable(filtered);
-        }
-
-        // ============================================
-        // CHECK-IN TODAY
-        // ============================================
-        async function loadCheckinToday() {
-            console.log('📥 Loading check-ins today...');
-
-            const container = document.getElementById('checkin-today-container');
-            container.innerHTML = '<div class="loading">⏳ Caricamento arrivi...</div>';
-
-            try {
-                const today = new Date().toISOString().split('T')[0];
-
-                const { data, error } = await supabaseClient
-                    .from('users')
-                    .select('*')
-                    .eq('stay_start_date', today)
-                    .eq('active', true);
-
-                if (error) throw error;
-
-                console.log('✅ Check-ins today:', data.length);
-
-                if (!data || data.length === 0) {
-                    container.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-icon">📥</div>
-                            <div class="empty-title">Nessun arrivo oggi</div>
-                        </div>
-                    `;
-                    return;
-                }
-
-                renderCheckinTable(data);
-
-            } catch (error) {
-                console.error('❌ Error loading check-ins:', error);
-                container.innerHTML = `<div class="loading">❌ Errore caricamento dati</div>`;
-            }
-        }
-
-        function renderCheckinTable(checkins) {
-            const container = document.getElementById('checkin-today-container');
-
-            let html = `
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Camera</th>
-                            <th>Cognome</th>
-                            <th>Email</th>
-                            <th>Durata</th>
-                            <th>PIN</th>
-                            <th>Azioni</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-
-            checkins.forEach(checkin => {
-                const duration = Math.ceil((new Date(checkin.stay_end_date) - new Date(checkin.stay_start_date)) / (1000 * 60 * 60 * 24));
-
-                html += `
-                    <tr>
-                        <td><strong>${checkin.room_number}</strong></td>
-                        <td>${checkin.last_name}</td>
-                        <td>${checkin.email || '-'}</td>
-                        <td>${duration} ${duration === 1 ? 'notte' : 'notti'}</td>
-                        <td><code style="background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 6px; font-weight: 800;">${checkin.pin}</code></td>
-                        <td>
-                            <button class="btn-icon view" onclick="viewStay(${checkin.id})">
-                                <i data-lucide="eye" style="width: 18px; height: 18px;"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            });
-
-            html += `</tbody></table>`;
-            container.innerHTML = html;
-            lucide.createIcons();
-        }
-
-        // ============================================
-        // CHECK-OUT TODAY
-        // ============================================
-        async function loadCheckoutToday() {
-            console.log('📤 Loading check-outs today...');
-
-            const container = document.getElementById('checkout-today-container');
-            container.innerHTML = '<div class="loading">⏳ Caricamento partenze...</div>';
-
-            try {
-                const today = new Date().toISOString().split('T')[0];
-
-                const { data, error } = await supabaseClient
-                    .from('users')
-                    .select('*')
-                    .eq('stay_end_date', today)
-                    .eq('active', true);
-
-                if (error) throw error;
-
-                console.log('✅ Check-outs today:', data.length);
-
-                if (!data || data.length === 0) {
-                    container.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-icon">📤</div>
-                            <div class="empty-title">Nessuna partenza oggi</div>
-                        </div>
-                    `;
-                    return;
-                }
-
-                renderCheckoutTable(data);
-
-            } catch (error) {
-                console.error('❌ Error loading check-outs:', error);
-                container.innerHTML = `<div class="loading">❌ Errore caricamento dati</div>`;
-            }
-        }
-
-        function renderCheckoutTable(checkouts) {
-            const container = document.getElementById('checkout-today-container');
-
-            let html = `
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Camera</th>
-                            <th>Cognome</th>
-                            <th>Email</th>
-                            <th>Check-in</th>
-                            <th>Durata Totale</th>
-                            <th>Azioni</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-
-            checkouts.forEach(checkout => {
-                const duration = Math.ceil((new Date(checkout.stay_end_date) - new Date(checkout.stay_start_date)) / (1000 * 60 * 60 * 24));
-
-                html += `
-                    <tr>
-                        <td><strong>${checkout.room_number}</strong></td>
-                        <td>${checkout.last_name}</td>
-                        <td>${checkout.email || '-'}</td>
-                        <td>${formatDate(checkout.stay_start_date)}</td>
-                        <td>${duration} ${duration === 1 ? 'notte' : 'notti'}</td>
-                        <td>
-                            <div class="action-buttons">
-                                <button class="btn-icon view" onclick="viewStay(${checkout.id})">
-                                    <i data-lucide="eye" style="width: 18px; height: 18px;"></i>
-                                </button>
-                                <button class="btn-icon delete" onclick="completeCheckout(${checkout.id})">
-                                    <i data-lucide="check-circle" style="width: 18px; height: 18px;"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            });
-
-            html += `</tbody></table>`;
-            container.innerHTML = html;
-            lucide.createIcons();
-        }
-
-        // ============================================
-        // BOOKINGS - RESTAURANT
-        // ============================================
-        async function loadRestaurantBookings() {
-            console.log('🍽️ Loading restaurant bookings...');
-
-            const container = document.getElementById('restaurant-bookings-container');
-            container.innerHTML = '<div class="loading">⏳ Caricamento prenotazioni...</div>';
-
-            try {
-                const { data, error } = await supabaseClient
-                    .from('restaurant_bookings')
-                    .select('*')
-                    .order('booking_date', { ascending: false })
-                    .order('booking_time', { ascending: false })
-                    .limit(100);
-
-                if (error) throw error;
-
-                console.log('✅ Restaurant bookings:', data.length);
-
-                if (!data || data.length === 0) {
-                    container.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-icon">🍽️</div>
-                            <div class="empty-title">Nessuna prenotazione</div>
-                        </div>
-                    `;
-                    return;
-                }
-
-                renderRestaurantBookingsTable(data);
-
-            } catch (error) {
-                console.error('❌ Error loading restaurant bookings:', error);
-                container.innerHTML = '<div class="loading">❌ Errore caricamento</div>';
-            }
-        }
-
-        function renderRestaurantBookingsTable(bookings) {
-            const container = document.getElementById('restaurant-bookings-container');
-
-            let html = `
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Data</th>
-                            <th>Ora</th>
-                            <th>Nome</th>
-                            <th>Persone</th>
-                            <th>Prezzo</th>
-                            <th>Stato</th>
-                            <th>Azioni</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-
-            bookings.forEach(booking => {
-                const statusClass = booking.status || 'pending';
-                const statusText = {
-                    'pending': 'In attesa',
-                    'confirmed': 'Confermata',
-                    'completed': 'Completata',
-                    'cancelled': 'Annullata'
-                }[booking.status] || 'Sconosciuto';
-
-                html += `
-                    <tr>
-                        <td>${formatDate(booking.booking_date)}</td>
-                        <td><strong>${booking.booking_time || '-'}</strong></td>
-                        <td>${booking.user_name || '-'}<br><small style="color: #999;">${booking.user_email || ''}</small></td>
-                        <td>${booking.num_people} persone</td>
-                        <td>€${(booking.final_price || booking.original_price || 0).toFixed(2)}</td>
-                        <td><span class="badge ${statusClass}">${statusText}</span></td>
-                        <td>
-                            <select onchange="changeBookingStatus('restaurant', ${booking.id}, this.value)" 
-                                    style="padding: 8px; border-radius: 8px; border: 2px solid rgba(0,0,0,0.1); font-weight: 700; font-size: 12px;">
-                                <option value="">Cambia...</option>
-                                <option value="confirmed">Conferma</option>
-                                <option value="completed">Completata</option>
-                                <option value="cancelled">Annulla</option>
-                            </select>
-                        </td>
-                    </tr>
-                `;
-            });
-
-            html += '</tbody></table>';
-            container.innerHTML = html;
-        }
-
-        // ============================================
-        // BOOKINGS - TOURS
-        // ============================================
-        async function loadToursBookings() {
-            console.log('🚌 Loading tours bookings...');
-
-            const container = document.getElementById('tours-bookings-container');
-            container.innerHTML = '<div class="loading">⏳ Caricamento prenotazioni...</div>';
-
-            try {
-                const { data, error } = await supabaseClient
-                    .from('tour_bookings')
-                    .select('*')
-                    .order('booking_date', { ascending: false })
-                    .limit(100);
-
-                if (error) throw error;
-
-                console.log('✅ Tours bookings:', data.length);
-
-                if (!data || data.length === 0) {
-                    container.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-icon">🚌</div>
-                            <div class="empty-title">Nessuna prenotazione</div>
-                        </div>
-                    `;
-                    return;
-                }
-
-                renderToursBookingsTable(data);
-
-            } catch (error) {
-                console.error('❌ Error loading tours bookings:', error);
-                container.innerHTML = '<div class="loading">❌ Errore caricamento</div>';
-            }
-        }
-
-        function renderToursBookingsTable(bookings) {
-            const container = document.getElementById('tours-bookings-container');
-
-            let html = `
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Data Tour</th>
-                            <th>Nome Tour</th>
-                            <th>Ospite</th>
-                            <th>Persone</th>
-                            <th>Prezzo</th>
-                            <th>Stato</th>
-                            <th>Azioni</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-
-            bookings.forEach(booking => {
-                const statusClass = booking.status || 'pending';
-                const statusText = {
-                    'pending': 'In attesa',
-                    'confirmed': 'Confermata',
-                    'completed': 'Completata',
-                    'cancelled': 'Annullata'
-                }[booking.status] || 'Sconosciuto';
-
-                html += `
-                    <tr>
-                        <td>${formatDate(booking.tour_date || booking.booking_date)}</td>
-                        <td><strong>${booking.tour_name || '-'}</strong></td>
-                        <td>${booking.user_name || '-'}<br><small style="color: #999;">${booking.user_email || ''}</small></td>
-                        <td>${booking.num_people} persone</td>
-                        <td>€${(booking.final_price || booking.original_price || 0).toFixed(2)}</td>
-                        <td><span class="badge ${statusClass}">${statusText}</span></td>
-                        <td>
-                            <select onchange="changeBookingStatus('tour', ${booking.id}, this.value)" 
-                                    style="padding: 8px; border-radius: 8px; border: 2px solid rgba(0,0,0,0.1); font-weight: 700; font-size: 12px;">
-                                <option value="">Cambia...</option>
-                                <option value="confirmed">Conferma</option>
-                                <option value="completed">Completata</option>
-                                <option value="cancelled">Annulla</option>
-                            </select>
-                        </td>
-                    </tr>
-                `;
-            });
-
-            html += '</tbody></table>';
-            container.innerHTML = html;
-        }
-
-        // ============================================
-        // BOOKINGS - SPA
-        // ============================================
-        async function loadSpaBookings() {
-            console.log('💆 Loading spa bookings...');
-
-            const container = document.getElementById('spa-bookings-container');
-            container.innerHTML = '<div class="loading">⏳ Caricamento prenotazioni...</div>';
-
-            try {
-                const { data, error } = await supabaseClient
-                    .from('spa_bookings')
-                    .select('*')
-                    .order('booking_date', { ascending: false })
-                    .limit(100);
-
-                if (error) throw error;
-
-                console.log('✅ Spa bookings:', data.length);
-
-                if (!data || data.length === 0) {
-                    container.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-icon">💆</div>
-                            <div class="empty-title">Nessuna prenotazione</div>
-                        </div>
-                    `;
-                    return;
-                }
-
-                renderSpaBookingsTable(data);
-
-            } catch (error) {
-                console.error('❌ Error loading spa bookings:', error);
-                container.innerHTML = '<div class="loading">❌ Errore caricamento</div>';
-            }
-        }
-
-        function renderSpaBookingsTable(bookings) {
-            const container = document.getElementById('spa-bookings-container');
-
-            let html = `
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Data</th>
-                            <th>Ora</th>
-                            <th>Trattamento</th>
-                            <th>Ospite</th>
-                            <th>Durata</th>
-                            <th>Prezzo</th>
-                            <th>Stato</th>
-                            <th>Azioni</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-
-            bookings.forEach(booking => {
-                const statusClass = booking.status || 'pending';
-                const statusText = {
-                    'pending': 'In attesa',
-                    'confirmed': 'Confermata',
-                    'completed': 'Completata',
-                    'cancelled': 'Annullata'
-                }[booking.status] || 'Sconosciuto';
-
-                html += `
-                    <tr>
-                        <td>${formatDate(booking.booking_date)}</td>
-                        <td><strong>${booking.booking_time || '-'}</strong></td>
-                        <td>${booking.treatment_name || '-'}</td>
-                        <td>${booking.user_name || '-'}<br><small style="color: #999;">${booking.user_email || ''}</small></td>
-                        <td>${booking.duration_minutes || '-'} min</td>
-                        <td>€${(booking.final_price || booking.original_price || 0).toFixed(2)}</td>
-                        <td><span class="badge ${statusClass}">${statusText}</span></td>
-                        <td>
-                            <select onchange="changeBookingStatus('spa', ${booking.id}, this.value)" 
-                                    style="padding: 8px; border-radius: 8px; border: 2px solid rgba(0,0,0,0.1); font-weight: 700; font-size: 12px;">
-                                <option value="">Cambia...</option>
-                                <option value="confirmed">Conferma</option>
-                                <option value="completed">Completata</option>
-                                <option value="cancelled">Annulla</option>
-                            </select>
-                        </td>
-                    </tr>
-                `;
-            });
-
-            html += '</tbody></table>';
-            container.innerHTML = html;
-        }
-
-        // ============================================
-        // CHANGE BOOKING STATUS
-        // ============================================
-        async function changeBookingStatus(type, bookingId, newStatus) {
-            if (!newStatus) return;
-
-            if (!confirm(`Cambiare stato prenotazione a "${newStatus}"?`)) {
-                event.target.value = '';
-                return;
-            }
-
-            try {
-                console.log(`🔄 Changing ${type} booking ${bookingId} to ${newStatus}`);
-
-                const table = type === 'restaurant' ? 'restaurant_bookings' :
-                    type === 'tour' ? 'tour_bookings' : 'spa_bookings';
-
-                const { error } = await supabaseClient
-                    .from(table)
-                    .update({ status: newStatus })
-                    .eq('id', bookingId);
-
-                if (error) throw error;
-
-                console.log('✅ Status changed');
-                alert('✅ Stato aggiornato');
-
-                // Reload
-                if (type === 'restaurant') loadRestaurantBookings();
-                else if (type === 'tour') loadToursBookings();
-                else loadSpaBookings();
-
-                loadOverviewStats();
-                loadAnalytics();
-
-            } catch (error) {
-                console.error('❌ Error changing status:', error);
-                alert('❌ Errore aggiornamento stato');
-            }
-        }
-
-        // ============================================
-        // POINTS MANAGEMENT
-        // ============================================
-        async function loadPointsManagement() {
-            console.log('⭐ Loading points...');
-
-            const container = document.getElementById('points-management-container');
-            container.innerHTML = '<div class="loading">⏳ Caricamento punti...</div>';
-
-            try {
-                const { data, error } = await supabaseClient
-                    .from('user_points')
-                    .select('*')
-                    .order('points', { ascending: false });
-
-                if (error) throw error;
-
-                console.log('✅ Points loaded:', data.length);
-
-                if (!data || data.length === 0) {
-                    container.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-icon">⭐</div>
-                            <div class="empty-title">Nessun utente con punti</div>
-                        </div>
-                    `;
-                    return;
-                }
-
-                renderPointsTable(data);
-
-            } catch (error) {
-                console.error('❌ Error loading points:', error);
-                container.innerHTML = '<div class="loading">❌ Errore caricamento</div>';
-            }
-        }
-
-        function renderPointsTable(users) {
-            const container = document.getElementById('points-management-container');
-
-            let html = `
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Email</th>
-                            <th>Punti</th>
-                            <th>Livello</th>
-                            <th>Ultima Attività</th>
-                            <th>Azioni</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-
-            users.forEach(user => {
-                html += `
-                    <tr>
-                        <td><strong>${user.user_email}</strong></td>
-                        <td style="font-size: 20px; font-weight: 900; color: #FF0080;">${user.points || 0}</td>
-                        <td><span class="badge active">Livello ${user.level || 1}</span></td>
-                        <td>${user.updated_at ? formatDate(user.updated_at.split('T')[0]) : '-'}</td>
-                        <td>
-                            <button class="btn-icon edit" onclick="adjustPoints('${user.user_email}', ${user.points})" title="Modifica punti">
-                                <i data-lucide="edit-3" style="width: 18px; height: 18px;"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            });
-
-            html += '</tbody></table>';
-            container.innerHTML = html;
-            lucide.createIcons();
-        }
-
-        function adjustPoints(userEmail, currentPoints) {
-            const adjustment = prompt(
-                `Punti attuali: ${currentPoints}\n\n` +
-                `Inserisci modifica:\n` +
-                `+100 (aggiunge 100 punti)\n` +
-                `-50 (rimuove 50 punti)\n` +
-                `=200 (imposta a 200 punti)`
-            );
-
-            if (!adjustment) return;
-
-            let newPoints = currentPoints;
-
-            if (adjustment.startsWith('+')) {
-                newPoints += parseInt(adjustment.substring(1));
-            } else if (adjustment.startsWith('-')) {
-                newPoints -= parseInt(adjustment.substring(1));
-            } else if (adjustment.startsWith('=')) {
-                newPoints = parseInt(adjustment.substring(1));
-            } else {
-                alert('❌ Formato non valido. Usa: +100, -50, oppure =200');
-                return;
-            }
-
-            if (newPoints < 0) {
-                alert('❌ I punti non possono essere negativi');
-                return;
-            }
-
-            if (confirm(`Confermare modifica punti?\n${currentPoints} → ${newPoints}`)) {
-                updateUserPoints(userEmail, newPoints);
-            }
-        }
-
-        async function updateUserPoints(userEmail, newPoints) {
-            try {
-                console.log(`⭐ Updating points for ${userEmail}: ${newPoints}`);
-
-                const { error } = await supabaseClient
-                    .from('user_points')
-                    .update({
-                        points: newPoints,
-                        updated_at: new Date().toISOString()
-                    })
-                    .eq('user_email', userEmail);
-
-                if (error) throw error;
-
-                console.log('✅ Points updated');
-                alert('✅ Punti aggiornati con successo');
-                loadPointsManagement();
-
-            } catch (error) {
-                console.error('❌ Error updating points:', error);
-                alert('❌ Errore aggiornamento punti');
-            }
-        }
-
-        // ============================================
-        // REWARDS MANAGEMENT
-        // ============================================
-        async function loadRewardsManagement() {
-            console.log('🎁 Loading rewards...');
-
-            const container = document.getElementById('rewards-management-container');
-            container.innerHTML = '<div class="loading">⏳ Caricamento rewards...</div>';
-
-            try {
-                const { data, error } = await supabaseClient
-                    .from('user_rewards')
-                    .select(`
-                        *,
-                        rewards (
-                            name,
-                            emoji,
-                            points_required
-                        )
-                    `)
-                    .order('id', { ascending: false });
-
-                if (error) throw error;
-
-                console.log('✅ Rewards loaded:', data.length);
-
-                if (!data || data.length === 0) {
-                    container.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-icon">🎁</div>
-                            <div class="empty-title">Nessun reward riscattato</div>
-                        </div>
-                    `;
-                    return;
-                }
-
-                renderRewardsTable(data);
-
-            } catch (error) {
-                console.error('❌ Error loading rewards:', error);
-                container.innerHTML = '<div class="loading">❌ Errore caricamento</div>';
-            }
-        }
-
-        function renderRewardsTable(rewards) {
-            const container = document.getElementById('rewards-management-container');
-
-            let html = `
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Premio</th>
-                            <th>Utente</th>
-                            <th>Data</th>
-                            <th>Codice</th>
-                            <th>Stato</th>
-                            <th>Azioni</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-
-            rewards.forEach(reward => {
-                const statusClass = reward.status || 'pending';
-                const statusText = {
-                    'pending': 'Da consegnare',
-                    'claimed': 'Consegnato'
-                }[reward.status] || 'Sconosciuto';
-
-                const dateStr = reward.redeemed_at || reward.created_at || reward.date || '';
-                const displayDate = dateStr ? formatDate(dateStr.split('T')[0]) : '-';
-
-                html += `
-                    <tr>
-                        <td>
-                            <span style="font-size: 24px;">${reward.rewards?.emoji || '🎁'}</span>
-                            <strong>${reward.rewards?.name || 'Premio'}</strong>
-                        </td>
-                        <td>${reward.user_email}</td>
-                        <td>${displayDate}</td>
-                        <td><code style="background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 6px; font-weight: 800;">${reward.code || 'N/A'}</code></td>
-                        <td><span class="badge ${statusClass}">${statusText}</span></td>
-                        <td>
-                            ${reward.status === 'pending' ? `
-                                <button class="btn-icon view" onclick="markRewardClaimed(${reward.id})" title="Segna come consegnato">
-                                    <i data-lucide="check-circle" style="width: 18px; height: 18px;"></i>
-                                </button>
-                            ` : '✅'}
-                        </td>
-                    </tr>
-                `;
-            });
-
-            html += '</tbody></table>';
-            container.innerHTML = html;
-            lucide.createIcons();
-        }
-
-        async function markRewardClaimed(rewardId) {
-            if (!confirm('Confermare consegna premio all\'ospite?')) return;
-
-            try {
-                console.log(`🎁 Marking reward ${rewardId} as claimed`);
-
-                const { error } = await supabaseClient
-                    .from('user_rewards')
-                    .update({ status: 'claimed' })
-                    .eq('id', rewardId);
-
-                if (error) throw error;
-
-                console.log('✅ Reward marked as claimed');
-                alert('✅ Premio segnato come consegnato');
-                loadRewardsManagement();
-
-            } catch (error) {
-                console.error('❌ Error marking reward:', error);
-                alert('❌ Errore aggiornamento stato');
-            }
-        }
-
-        // ============================================
-        // STAY ACTIONS
-        // ============================================
-        async function viewStay(stayId) {
-            try {
-                console.log('👁️ Viewing stay:', stayId);
-
-                const { data, error } = await supabaseClient
-                    .from('users')
-                    .select('*')
-                    .eq('id', stayId)
-                    .single();
-
-                if (error) throw error;
-
-                const duration = Math.ceil((new Date(data.stay_end_date) - new Date(data.stay_start_date)) / (1000 * 60 * 60 * 24));
-                const today = new Date().toISOString().split('T')[0];
-                const daysLeft = Math.ceil((new Date(data.stay_end_date) - new Date(today)) / (1000 * 60 * 60 * 24));
-
-                const modalBody = document.getElementById('modalStayBody');
-                modalBody.innerHTML = `
-                    <div class="info-row">
-                        <div class="info-label">Camera</div>
-                        <div class="info-value">${data.room_number}</div>
-                    </div>
-                    <div class="info-row">
-                        <div class="info-label">Cognome</div>
-                        <div class="info-value">${data.last_name}</div>
-                    </div>
-                    <div class="info-row">
-                        <div class="info-label">Email</div>
-                        <div class="info-value">${data.email || '-'}</div>
-                    </div>
-                    <div class="info-row">
-                        <div class="info-label">PIN</div>
-                        <div class="info-value"><code style="background: rgba(0,0,0,0.05); padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 18px;">${data.pin}</code></div>
-                    </div>
-                    <div class="info-row">
-                        <div class="info-label">Check-in</div>
-                        <div class="info-value">${formatDate(data.stay_start_date)}</div>
-                    </div>
-                    <div class="info-row">
-                        <div class="info-label">Check-out</div>
-                        <div class="info-value">${formatDate(data.stay_end_date)}</div>
-                    </div>
-                    <div class="info-row">
-                        <div class="info-label">Durata Totale</div>
-                        <div class="info-value">${duration} ${duration === 1 ? 'notte' : 'notti'}</div>
-                    </div>
-                    <div class="info-row">
-                        <div class="info-label">Notti Rimanenti</div>
-                        <div class="info-value">${daysLeft > 0 ? daysLeft + ' ' + (daysLeft === 1 ? 'notte' : 'notti') : 'Scade oggi'}</div>
-                    </div>
-                    <div class="info-row">
-                        <div class="info-label">Stato</div>
-                        <div class="info-value">${data.active ? '<span class="badge active">Attivo</span>' : '<span class="badge expired">Disattivato</span>'}</div>
-                    </div>
-                `;
-
-                document.getElementById('modalStayDetails').classList.add('active');
-
-            } catch (error) {
-                console.error('❌ Error loading stay details:', error);
-                alert('❌ Errore caricamento dettagli');
-            }
-        }
-
-        async function resetPIN(stayId) {
-            if (!confirm('Generare un nuovo PIN per questo soggiorno?')) return;
-
-            try {
-                const newPIN = Math.floor(100000 + Math.random() * 900000).toString();
-
-                console.log(`🔑 Resetting PIN for stay ${stayId}`);
-
-                const { error } = await supabaseClient
-                    .from('users')
-                    .update({ pin: newPIN })
-                    .eq('id', stayId);
-
-                if (error) throw error;
-
-                console.log('✅ PIN reset');
-                alert(`✅ Nuovo PIN generato: ${newPIN}\n\nComunicalo all'ospite.`);
-                loadActiveStays();
-
-            } catch (error) {
-                console.error('❌ Error resetting PIN:', error);
-                alert('❌ Errore reset PIN');
-            }
-        }
-
-        async function deactivateStay(stayId) {
-            if (!confirm('Disattivare questo soggiorno? L\'ospite non potrà più accedere.')) return;
-
-            try {
-                console.log(`❌ Deactivating stay ${stayId}`);
-
-                const { error } = await supabaseClient
-                    .from('users')
-                    .update({ active: false })
-                    .eq('id', stayId);
-
-                if (error) throw error;
-
-                console.log('✅ Stay deactivated');
-                alert('✅ Soggiorno disattivato con successo');
-                loadActiveStays();
-                loadOverviewStats();
-                loadAnalytics();
-
-            } catch (error) {
-                console.error('❌ Error deactivating stay:', error);
-                alert('❌ Errore disattivazione soggiorno');
-            }
-        }
-
-        async function completeCheckout(stayId) {
-            if (!confirm('Confermare check-out? Il soggiorno verrà disattivato.')) return;
-
-            try {
-                console.log(`📤 Completing checkout for stay ${stayId}`);
-
-                const { error } = await supabaseClient
-                    .from('users')
-                    .update({ active: false })
-                    .eq('id', stayId);
-
-                if (error) throw error;
-
-                console.log('✅ Checkout completed');
-                alert('✅ Check-out completato');
-                loadCheckoutToday();
-                loadOverviewStats();
-                loadAnalytics();
-
-            } catch (error) {
-                console.error('❌ Error completing checkout:', error);
-                alert('❌ Errore check-out');
-            }
-        }
-
-        // ============================================
-        // UTILITY FUNCTIONS
-        // ============================================
-        function formatDate(dateStr) {
-            if (!dateStr) return '-';
-            const date = new Date(dateStr);
-            return date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        }
+        window.showSection = showSection;
 
         function closeModal() {
-            document.querySelectorAll('.modal-overlay').forEach(modal => {
-                modal.classList.remove('active');
-            });
+            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
         }
-
-        function editStay() {
-            alert('Funzione modifica soggiorno in sviluppo');
-        }
+        window.closeModal = closeModal;
 
         function refreshData() {
-            console.log('🔄 Refreshing all data...');
-            loadOverviewStats();
-            loadAnalytics();
-            loadActiveStays();
+            callIfPresent('loadOverviewStats');
+            callIfPresent('loadAnalytics');
+            callIfPresent('loadActiveStays');
+            callIfPresent('updateQuickStats');
         }
+        window.refreshData = refreshData;
 
-        // ============================================
-        // ANALYTICS FUNCTIONS
-        // ============================================
-
-        async function loadAnalytics() {
-            console.log('📊 Loading analytics...');
-
-            try {
-                await Promise.all([
-                    loadPointsAnalytics(),
-                    loadRevenueAnalytics(),
-                    loadTopGuestsAnalytics()
-                ]);
-
-                console.log('✅ Analytics loaded');
-            } catch (error) {
-                console.error('❌ Error loading analytics:', error);
-            }
-        }
-
-        // 1. SISTEMA PUNTI
-        async function loadPointsAnalytics() {
-            try {
-                // Total points distributed
-                const { data: pointsData } = await supabaseClient
-                    .from('user_points')
-                    .select('points');
-
-                const totalPoints = pointsData?.reduce((sum, user) => sum + (user.points || 0), 0) || 0;
-                document.getElementById('total-points').textContent = totalPoints.toLocaleString('it-IT');
-
-                // Total rewards claimed
-                const { count: rewardsCount } = await supabaseClient
-                    .from('user_rewards')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('status', 'claimed');
-
-                document.getElementById('total-rewards').textContent = rewardsCount || 0;
-
-                // Average points per user
-                const avgPoints = pointsData?.length > 0 ? Math.round(totalPoints / pointsData.length) : 0;
-                document.getElementById('avg-points').textContent = avgPoints.toLocaleString('it-IT') + ' pts';
-
-            } catch (error) {
-                console.error('Error loading points analytics:', error);
-            }
-        }
-
-        // 2. REVENUE SETTIMANALE
-        async function loadRevenueAnalytics() {
-            try {
-                const sevenDaysAgo = new Date();
-                sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-                const dateFrom = sevenDaysAgo.toISOString().split('T')[0];
-
-                // Restaurant revenue
-                const { data: restaurantData } = await supabaseClient
-                    .from('restaurant_bookings')
-                    .select('final_price, original_price')
-                    .gte('booking_date', dateFrom)
-                    .in('status', ['confirmed', 'completed']);
-
-                const restaurantRevenue = restaurantData?.reduce((sum, b) =>
-                    sum + (b.final_price || b.original_price || 0), 0) || 0;
-
-                // Tours revenue
-                const { data: toursData } = await supabaseClient
-                    .from('tour_bookings')
-                    .select('final_price, original_price')
-                    .gte('booking_date', dateFrom)
-                    .in('status', ['confirmed', 'completed']);
-
-                const toursRevenue = toursData?.reduce((sum, b) =>
-                    sum + (b.final_price || b.original_price || 0), 0) || 0;
-
-                // Spa revenue
-                const { data: spaData } = await supabaseClient
-                    .from('spa_bookings')
-                    .select('final_price, original_price')
-                    .gte('booking_date', dateFrom)
-                    .in('status', ['confirmed', 'completed']);
-
-                const spaRevenue = spaData?.reduce((sum, b) =>
-                    sum + (b.final_price || b.original_price || 0), 0) || 0;
-
-                // Update UI
-                document.getElementById('revenue-restaurant').textContent = '€' + restaurantRevenue.toFixed(2);
-                document.getElementById('revenue-tours').textContent = '€' + toursRevenue.toFixed(2);
-                document.getElementById('revenue-spa').textContent = '€' + spaRevenue.toFixed(2);
-
-                const totalRevenue = restaurantRevenue + toursRevenue + spaRevenue;
-                document.getElementById('revenue-total').textContent = '€' + totalRevenue.toFixed(2);
-
-            } catch (error) {
-                console.error('Error loading revenue analytics:', error);
-            }
-        }
-
-        // 3. TOP OSPITI
-        async function loadTopGuestsAnalytics() {
-            try {
-                const { data } = await supabaseClient
-                    .from('user_points')
-                    .select('user_email, points')
-                    .order('points', { ascending: false })
-                    .limit(3);
-
-                const container = document.getElementById('top-guests-analytics');
-
-                if (!data || data.length === 0) {
-                    container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px; font-size: 14px;">Nessun dato</div>';
-                    return;
-                }
-
-                const medals = ['🥇', '🥈', '🥉'];
-                let html = '';
-
-                data.forEach((user, index) => {
-                    const shortEmail = user.user_email.length > 20 ?
-                        user.user_email.substring(0, 17) + '...' :
-                        user.user_email;
-
-                    html += `
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,0.05);">
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <span style="font-size: 24px;">${medals[index]}</span>
-                                <span style="font-size: 13px; font-weight: 700; color: #666;">${shortEmail}</span>
-                            </div>
-                            <div style="font-size: 16px; font-weight: 900; color: #FF0080;">${user.points.toLocaleString('it-IT')}</div>
-                        </div>
-                    `;
-                });
-
-                container.innerHTML = html;
-
-            } catch (error) {
-                console.error('Error loading top guests analytics:', error);
-            }
-        }
         function logout() {
-            console.log('🚪 Logging out...');
-            localStorage.removeItem('guestos_admin_session');
-            window.location.href = 'guestos-admin-login.html';
+            if (window.AdminOS) { window.AdminOS.logout(); return; }
+            window.location.replace('guestos-admin-login.html');
         }
+        window.logout = logout;
+
+        // ============================================
+        // DELEGA EVENTI (niente onclick nel markup)
+        // ============================================
+        document.addEventListener('click', (e) => {
+            const el = e.target.closest('[data-nav]');
+            if (!el) return;
+
+            switch (el.dataset.nav) {
+                case 'toggle-sidebar': toggleSidebar(); break;
+                case 'close-sidebar': closeSidebar(); break;
+                case 'logout': logout(); break;
+                case 'refresh': refreshData(); break;
+                case 'section': showSection(el.dataset.section, el.closest('.menu-item')); break;
+                case 'reload': callIfPresent(SECTION_LOADERS[el.dataset.section] || ''); break;
+                case 'content':
+                    if (typeof window.openContentManager === 'function') window.openContentManager(el.dataset.content);
+                    break;
+                case 'knowledge-base': window.location.href = 'admin-knowledge-base.html'; break;
+                case 'flash-deal-open':
+                    if (typeof openFlashDealModal === 'function') openFlashDealModal();
+                    break;
+                case 'flash-deal-submit':
+                    if (typeof submitFlashDeal === 'function') submitFlashDeal();
+                    break;
+                case 'yield-template':
+                    if (typeof useTemplate === 'function') useTemplate(el.dataset.template);
+                    break;
+                case 'close-content-modal':
+                    if (typeof closeContentModal === 'function') closeContentModal();
+                    break;
+                default: break;
+            }
+        });
+
+        // Filtri soggiorni: niente onkeyup nel markup.
+        document.addEventListener('input', (e) => {
+            const el = e.target.closest('[data-filter="stays"]');
+            if (el && typeof window.filterStays === 'function') window.filterStays();
+        });
+
+        // Anteprima offerta lampo (select/input dentro il modale).
+        document.addEventListener('input', (e) => {
+            const el = e.target.closest('[data-fd-preview]');
+            if (el && typeof window.updateOfferPreview === 'function') window.updateOfferPreview();
+        });
+        document.addEventListener('change', (e) => {
+            const el = e.target.closest('[data-fd-preview]');
+            if (el && typeof window.updateOfferPreview === 'function') window.updateOfferPreview();
+            const h = e.target.closest('#fd-headline-history');
+            if (h && typeof window.applyHeadlineTemplate === 'function') window.applyHeadlineTemplate(h.value);
+        });
     </script>
     <!-- Content Manager Modal -->
     <div class="modal-overlay" id="contentModal">
         <div class="modal-content" style="max-width: 800px;">
             <div class="modal-header">
                 <span id="contentModalTitle">Gestione</span>
-                <button class="btn-icon delete" onclick="closeContentModal()"
+                <button class="btn-icon delete" type="button" data-nav="close-content-modal"
                     style="width:30px; height:30px;">✕</button>
             </div>
             <div class="modal-body" id="contentModalBody">
@@ -2693,7 +1525,7 @@
                 <div style="margin-bottom: 20px;">
                     <label
                         style="display: block; font-size: 13px; font-weight: 800; color: #999; margin-bottom: 8px;">SERVIZIO</label>
-                    <select id="fd-service" class="filter-select" style="width: 100%;" onchange="updateOfferPreview()">
+                    <select id="fd-service" class="filter-select" style="width: 100%;" data-fd-preview>
                         <option value="spa">💆 Spa & Relax</option>
                         <option value="restaurant">🍽️ Ristorante</option>
                         <option value="tour">🚢 Escursioni</option>
@@ -2705,7 +1537,7 @@
                         style="display: block; font-size: 13px; font-weight: 800; color: #999; margin-bottom: 8px;">SCONTO
                         (%)</label>
                     <input type="number" id="fd-discount" class="filter-input" style="width: 100%;" value="20" min="5"
-                        max="90" onchange="updateOfferPreview()" oninput="updateOfferPreview()">
+                        max="90" data-fd-preview>
                 </div>
                 <div style="margin-bottom: 20px;">
                     <label
@@ -2715,7 +1547,7 @@
                     <!-- New History Dropdown -->
                     <select id="fd-headline-history" class="filter-select"
                         style="width: 100%; margin-bottom: 8px; font-size: 12px; color: #666;"
-                        onchange="applyHeadlineTemplate(this.value)">
+                        >
                         <option value="">✨ Scegli da template o storico...</option>
                         <optgroup label="Template Standard" id="fd-optgroup-templates"></optgroup>
                         <optgroup label="Ultimi Utilizzati" id="fd-optgroup-history"></optgroup>
@@ -2737,8 +1569,8 @@
                 </div>
             </div>
             <div class="modal-actions">
-                <button class="modal-btn" onclick="closeModal('modalFlashDeal')">Annulla</button>
-                <button class="modal-btn primary" onclick="submitFlashDeal()">Lancia Ora! 🚀</button>
+                <button class="modal-btn" type="button" data-action="close-modal">Annulla</button>
+                <button class="modal-btn primary" type="button" data-nav="flash-deal-submit">Lancia Ora! 🚀</button>
             </div>
         </div>
     </div>

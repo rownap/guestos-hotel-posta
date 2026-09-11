@@ -12,6 +12,11 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
+    <script src="guest-session.js"></script>
+    <script>
+        // Pagina riservata: senza sessione valida si torna al login.
+        if (window.GuestOS) window.GuestOS.requireLogin();
+    </script>
     <script src="pwa-install-prompt.js" defer></script>
     <script src="game-leaderboard.js" defer></script>
     <style>
@@ -1462,19 +1467,18 @@
             });
         });
 
-        function getUserEmail() {
-            let email = localStorage.getItem('guestos_user_email');
-            if (!email) { email = 'guest@hotel.com'; localStorage.setItem('guestos_user_email', email); }
-            return email;
-        }
-
-        async function getUserRank(userPoints) {
+        // La classifica arriva da get_leaderboard(): user_points non è leggibile
+        // dal browser. is_me segna la riga dell'ospite corrente.
+        async function getUserRank() {
             try {
-                const { data, error } = await supabaseClient.from('user_points').select('points').order('points', { ascending: false });
-                if (error) throw error;
-                const rank = data.findIndex(user => user.points <= userPoints) + 1;
-                return rank || data.length + 1;
-            } catch (error) { console.error('Error getting rank:', error); return '--'; }
+                const rows = await window.GuestOS.rpc('get_leaderboard', { p_limit: 100 });
+                if (!Array.isArray(rows)) return '--';
+                const index = rows.findIndex(r => r && r.is_me);
+                return index >= 0 ? index + 1 : '--';
+            } catch (error) {
+                console.warn('get_leaderboard:', error.code || '', error.message);
+                return '--';
+            }
         }
 
         // Livelli
@@ -1487,16 +1491,29 @@
             { min: 2000, max: Infinity, name: 'Leggenda' }
         ];
 
-        // Premi (sincronizzato con tabella rewards)
-        const REWARDS = [
-            { points: 1000, name: 'Caffè Gratis', emoji: '☕' },
-            { points: 2000, name: 'Cocktail Gratis', emoji: '🍹' },
-            { points: 3000, name: 'Pizza Margherita', emoji: '🍕' },
-            { points: 4000, name: 'Gelato + Dolce', emoji: '🍦' },
-            { points: 6000, name: 'Sconto 10% Cena', emoji: '💰' },
-            { points: 8000, name: 'Massaggio 30min', emoji: '💆' },
-            { points: 10000, name: 'Escursione Gratis', emoji: '🚢' }
-        ];
+        // Il catalogo premi sta nella tabella `rewards`, che e' pubblica in
+        // lettura e che lo staff modifica dal pannello. Qui c'era una copia
+        // scritta a mano "sincronizzata con la tabella": non lo era piu' su
+        // nessuna riga (il caffe' risultava a 1000 punti invece di 500), quindi
+        // il "prossimo premio" mostrato all'ospite era sbagliato sempre.
+        let rewardsCatalog = null;
+
+        async function loadRewardsCatalog() {
+            if (rewardsCatalog) return rewardsCatalog;
+            try {
+                const { data, error } = await supabaseClient
+                    .from('rewards')
+                    .select('name, points_required, emoji')
+                    .eq('active', true)
+                    .order('points_required', { ascending: true });
+                if (error) throw error;
+                rewardsCatalog = data || [];
+            } catch (err) {
+                console.warn('catalogo premi non disponibile:', err.message);
+                rewardsCatalog = [];
+            }
+            return rewardsCatalog;
+        }
 
         function getLevelData(points) {
             const level = LEVELS.find(l => points >= l.min && points <= l.max);
@@ -1516,182 +1533,135 @@
             };
         }
 
-        function getNextReward(points) {
-            return REWARDS.find(r => r.points > points) || REWARDS[REWARDS.length - 1];
+        // Il primo premio ancora fuori portata. Se l'ospite li ha sbloccati tutti
+        // restituisce l'ultimo, cosi' la barra resta piena invece di sparire.
+        async function getNextReward(points) {
+            const catalog = await loadRewardsCatalog();
+            if (!catalog.length) return null;
+            const next = catalog.find(r => Number(r.points_required) > points)
+                || catalog[catalog.length - 1];
+            return {
+                points: Number(next.points_required) || 0,
+                name: next.name || 'Premio',
+                emoji: next.emoji || '🎁'
+            };
         }
+
+        // Dashboard punti: guest_me(). Il record punti lo crea il server alla
+        // registrazione, il browser non lo inventa più con tre fallback.
+        let currentPoints = 0;
 
         async function loadUserStats() {
+            const local = window.GuestOS.user();
+            document.getElementById('userName').textContent = local.last_name || 'Ospite';
+
+            let me;
             try {
-                const userEmail = getUserEmail();
-                let { data, error } = await supabaseClient
-                    .from('user_points')
-                    .select('*')
-                    .eq('user_email', userEmail)
-                    .single();
-
-                if (error && error.code === 'PGRST116') {
-                    // Record non trovato. Proviamo a crearlo.
-                    // Usa upsert o ignora duplicati per evitare errori di concorrenza
-                    console.log('🆕 Creazione profilo punti per:', userEmail);
-                    const { data: newUser, error: createError } = await supabaseClient
-                        .from('user_points')
-                        .select('*')
-                        .eq('user_email', userEmail)
-                        .maybeSingle(); // Riprova check prima di insert
-
-                    if (newUser) {
-                        data = newUser;
-                    } else {
-                        // Insert safe
-                        const { data: created, error: insertError } = await supabaseClient
-                            .from('user_points')
-                            .insert([{ user_email: userEmail, points: 0, user_name: 'Ospite', level: 1 }])
-                            .select()
-                            .single();
-
-                        if (insertError) {
-                            // Se fallisce (es. duplicato nel frattempo), riprova select
-                            if (insertError.code === '23505') {
-                                const { data: retryData } = await supabaseClient
-                                    .from('user_points')
-                                    .select('*')
-                                    .eq('user_email', userEmail)
-                                    .single();
-                                data = retryData;
-                            } else {
-                                throw insertError; // Altro errore reale
-                            }
-                        } else {
-                            data = created;
-                        }
-                    }
-                } else if (error) {
-                    throw error;
-                }
-
-                if (data) {
-                    const points = data.points || 0;
-
-                    let badgesCount = 0;
-                    if (data.badges) {
-                        if (Array.isArray(data.badges)) {
-                            badgesCount = data.badges.length;
-                        } else if (typeof data.badges === 'string') {
-                            try {
-                                const parsed = JSON.parse(data.badges);
-                                badgesCount = Array.isArray(parsed) ? parsed.length : 1;
-                            } catch (e) {
-                                badgesCount = 1;
-                            }
-                        } else {
-                            badgesCount = 1;
-                        }
-                    }
-
-                    // Update UI
-                    document.getElementById('userName').textContent = data.user_name || 'Ospite';
-                    document.getElementById('userPoints').textContent = points;
-                    document.getElementById('userBadges').textContent = badgesCount;
-
-                    const levelData = getLevelData(points);
-                    document.getElementById('userLevel').querySelector('span').textContent =
-                        `Livello ${data.level || 1} - ${levelData.currentLevel.name}`;
-                    document.getElementById('currentLevelName').textContent = levelData.currentLevel.name;
-                    document.getElementById('progressPercent').textContent = levelData.progressPercent + '%';
-                    document.getElementById('progressBar').style.width = levelData.progressPercent + '%';
-
-                    if (levelData.pointsToNext > 0) {
-                        document.getElementById('nextLevelInfo').textContent =
-                            `${levelData.pointsToNext} pt a ${levelData.nextLevel.name}`;
-                    } else {
-                        document.getElementById('nextLevelInfo').textContent = 'Livello massimo!';
-                    }
-
-                    const nextReward = getNextReward(points);
-                    document.getElementById('nextRewardIcon').textContent = nextReward.emoji;
-                    document.getElementById('nextRewardName').textContent = nextReward.name;
-
-                    const rewardProgress = Math.min(100, (points / nextReward.points) * 100);
-                    const rewardMissing = nextReward.points - points;
-
-                    document.getElementById('rewardProgressBar').style.width = rewardProgress + '%';
-                    document.getElementById('rewardProgressPoints').textContent = `${points} / ${nextReward.points} pt`;
-                    document.getElementById('rewardProgressMissing').textContent =
-                        rewardMissing > 0 ? `Ti mancano ${rewardMissing} pt` : 'Puoi riscattare!';
-
-                    document.getElementById('rewardProgressMissing').textContent =
-                        rewardMissing > 0 ? `Ti mancano ${rewardMissing} pt` : 'Puoi riscattare!';
-
-                    // Rank calculation (safely)
-                    try {
-                        const rank = await getUserRank(points);
-                        document.getElementById('userRank').textContent = `#${rank}`;
-                    } catch (e) {
-                        console.warn('Could not load rank:', e);
-                        document.getElementById('userRank').textContent = '#--';
-                    }
-                }
+                me = await window.GuestOS.rpc('guest_me', {});
             } catch (error) {
-                console.error('Error loading user stats:', error);
-                // Fallback for UI so it doesn't look broken
-                document.getElementById('userName').textContent = localStorage.getItem('guestos_user_name') || 'Ospite';
+                console.warn('guest_me:', error.code || '', error.message);
                 document.getElementById('userPoints').textContent = '0';
+                return;
+            }
 
-                if (error.message && error.message.includes('relation "user_points" does not exist')) {
-                    console.log('User points table missing');
+            if (!me || !me.user) return;
+
+            const stats = me.points || {};
+            const points = Number(stats.points) || 0;
+            currentPoints = points;
+
+            let badgesCount = 0;
+            if (Array.isArray(stats.badges)) {
+                badgesCount = stats.badges.length;
+            } else if (typeof stats.badges === 'string') {
+                try {
+                    const parsed = JSON.parse(stats.badges);
+                    badgesCount = Array.isArray(parsed) ? parsed.length : 0;
+                } catch (e) {
+                    badgesCount = 0;
                 }
             }
+
+            document.getElementById('userName').textContent = me.user.last_name || 'Ospite';
+            document.getElementById('userPoints').textContent = points;
+            document.getElementById('userBadges').textContent = badgesCount;
+
+            const levelData = getLevelData(points);
+            document.getElementById('userLevel').querySelector('span').textContent =
+                `Livello ${stats.level || 1} - ${levelData.currentLevel.name}`;
+            document.getElementById('currentLevelName').textContent = levelData.currentLevel.name;
+            document.getElementById('progressPercent').textContent = levelData.progressPercent + '%';
+            document.getElementById('progressBar').style.width = levelData.progressPercent + '%';
+
+            document.getElementById('nextLevelInfo').textContent = levelData.pointsToNext > 0
+                ? `${levelData.pointsToNext} pt a ${levelData.nextLevel.name}`
+                : 'Livello massimo!';
+
+            const nextReward = await getNextReward(points);
+            if (nextReward) {
+                document.getElementById('nextRewardIcon').textContent = nextReward.emoji;
+                document.getElementById('nextRewardName').textContent = nextReward.name;
+
+                const rewardProgress = nextReward.points > 0
+                    ? Math.min(100, (points / nextReward.points) * 100)
+                    : 100;
+                const rewardMissing = nextReward.points - points;
+
+                document.getElementById('rewardProgressBar').style.width = rewardProgress + '%';
+                document.getElementById('rewardProgressPoints').textContent = `${points} / ${nextReward.points} pt`;
+                document.getElementById('rewardProgressMissing').textContent =
+                    rewardMissing > 0 ? `Ti mancano ${rewardMissing} pt` : 'Puoi riscattare!';
+            } else {
+                // Catalogo premi non raggiungibile: meglio non mostrare numeri finti.
+                document.getElementById('nextRewardName').textContent = 'Premi non disponibili';
+                document.getElementById('rewardProgressPoints').textContent = `${points} pt`;
+                document.getElementById('rewardProgressMissing').textContent = '';
+                document.getElementById('rewardProgressBar').style.width = '0%';
+            }
+
+            const rank = await getUserRank();
+            document.getElementById('userRank').textContent = `#${rank}`;
         }
 
+        // Catalogo premi: `rewards` resta pubblico. I punti li abbiamo già da guest_me.
         async function loadUnlockedRewards() {
             try {
-                const userEmail = getUserEmail();
-                const { data: userPointsData, error: pointsError } = await supabaseClient
-                    .from('user_points')
-                    .select('points')
-                    .eq('user_email', userEmail)
-                    .single();
-
-                if (pointsError && pointsError.code !== 'PGRST116') throw pointsError;
-                const userPoints = userPointsData?.points || 0;
-
-                const { data: rewards, error: rewardsError } = await supabaseClient
+                const { data: rewards, error } = await supabaseClient
                     .from('rewards')
                     .select('*')
                     .eq('active', true)
-                    .lte('points_required', userPoints)
+                    .lte('points_required', currentPoints)
                     .order('points_required', { ascending: true });
 
-                if (rewardsError) {
-                    if (rewardsError.message.includes('relation "rewards" does not exist')) return; // Silenzioso qui
-                    throw rewardsError;
-                }
+                if (error) throw error;
+                if (!rewards || rewards.length === 0) return;
 
-                if (rewards && rewards.length > 0) {
-                    document.getElementById('unlockedRewardsSection').style.display = 'block';
-                    const grid = document.getElementById('unlockedRewardsGrid');
-                    grid.innerHTML = '';
+                document.getElementById('unlockedRewardsSection').style.display = 'block';
+                const grid = document.getElementById('unlockedRewardsGrid');
+                grid.innerHTML = '';
 
-                    rewards.forEach(reward => {
-                        const badge = document.createElement('div');
-                        badge.className = 'unlocked-reward-badge';
-                        badge.onclick = () => window.location.href = 'rewards.html';
-                        badge.innerHTML = `
-                            <div class="unlocked-badge-label">✓ OK</div>
-                            <div class="unlocked-reward-icon">${reward.emoji || '🎁'}</div>
-                            <div class="unlocked-reward-name">${reward.name}</div>
-                            <div class="unlocked-reward-points">${reward.points_required} pt</div>
-                        `;
-                        grid.appendChild(badge);
-                    });
-                }
+                rewards.forEach(reward => {
+                    const badge = document.createElement('div');
+                    badge.className = 'unlocked-reward-badge';
+                    badge.addEventListener('click', () => { window.location.href = 'rewards.html'; });
+                    badge.innerHTML = `
+                        <div class="unlocked-badge-label">\u2713 OK</div>
+                        <div class="unlocked-reward-icon">${escapeHtml(reward.emoji || '\u{1F381}')}</div>
+                        <div class="unlocked-reward-name">${escapeHtml(reward.name)}</div>
+                        <div class="unlocked-reward-points">${Number(reward.points_required) || 0} pt</div>
+                    `;
+                    grid.appendChild(badge);
+                });
             } catch (error) {
-                console.error('Error loading unlocked rewards:', error);
+                console.warn('Catalogo premi non disponibile:', error.message);
             }
         }
 
-        loadUserStats();
-        loadUnlockedRewards();
+        // I premi sbloccati dipendono dai punti: prima le statistiche.
+        (async function init() {
+            await loadUserStats();
+            await loadUnlockedRewards();
+        })();
     </script>
     <script src="app.js"></script>
 </body>

@@ -13,6 +13,8 @@
     <link rel="stylesheet" href="common.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
+    <script src="guest-session.js"></script>
+    <script src="booking-notify.js"></script>
     <script src="payment-handler.js"></script>
     <style>
         * {
@@ -811,6 +813,14 @@
             padding: 12px;
         }
 
+        .price-estimate-note {
+            margin-top: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #777;
+            text-align: center;
+        }
+
         .price-row {
             display: flex;
             justify-content: space-between;
@@ -980,7 +990,7 @@
                     <div class="savings-badge">Risparmi €35</div>
                 </div>
 
-                <button class="book-premium-btn" onclick="openBookingModal('Pacchetto VIP Relax Total', 85)">🌟 Prenota
+                <button class="book-premium-btn" onclick="openBookingModal('Pacchetto VIP Relax Total', 85, 180)">🌟 Prenota
                     il Pacchetto VIP</button>
             </div>
 
@@ -1013,7 +1023,7 @@
                     <div class="treatment-footer">
                         <div class="treatment-price">€55</div>
                         <button class="treatment-book-btn"
-                            onclick="openBookingModal('Massaggio Rilassante', 55)">Prenota</button>
+                            onclick="openBookingModal('Massaggio Rilassante', 55, 60)">Prenota</button>
                     </div>
                 </div>
 
@@ -1040,7 +1050,7 @@
                     <div class="treatment-footer">
                         <div class="treatment-price">€48</div>
                         <button class="treatment-book-btn"
-                            onclick="openBookingModal('Trattamento Viso Luxury', 48)">Prenota</button>
+                            onclick="openBookingModal('Trattamento Viso Luxury', 48, 45)">Prenota</button>
                     </div>
                 </div>
 
@@ -1067,7 +1077,7 @@
                     <div class="treatment-footer">
                         <div class="treatment-price">€68</div>
                         <button class="treatment-book-btn"
-                            onclick="openBookingModal('Massaggio Hot Stone', 68)">Prenota</button>
+                            onclick="openBookingModal('Massaggio Hot Stone', 68, 75)">Prenota</button>
                     </div>
                 </div>
 
@@ -1094,7 +1104,7 @@
                     <div class="treatment-footer">
                         <div class="treatment-price">€42</div>
                         <button class="treatment-book-btn"
-                            onclick="openBookingModal('Riflessologia Plantare', 42)">Prenota</button>
+                            onclick="openBookingModal('Riflessologia Plantare', 42, 40)">Prenota</button>
                     </div>
                 </div>
 
@@ -1121,7 +1131,7 @@
                     <div class="treatment-footer">
                         <div class="treatment-price">€25</div>
                         <button class="treatment-book-btn"
-                            onclick="openBookingModal('Percorso Sauna & Bagno Turco', 25)">Prenota</button>
+                            onclick="openBookingModal('Percorso Sauna & Bagno Turco', 25, 120)">Prenota</button>
                     </div>
                 </div>
             </div>
@@ -1216,6 +1226,7 @@
                         <span id="finalPrice">€0</span>
                     </div>
                 </div>
+                <div class="price-estimate-note">Il totale viene confermato al momento della conferma.</div>
             </div>
 
             <div class="form-group">
@@ -1236,24 +1247,69 @@
         let selectedPeople = 0;
         let currentTreatmentName = '';
         let currentTreatmentPrice = 0;
-        let userPointsTotal = 0;
+        let currentTreatmentDuration = 60;
+        // treatment_id e' obbligatorio in create_booking: e' un intero che punta a
+        // spa_treatments, la tabella da cui il server ricava il prezzo reale.
+        let currentTreatmentId = null;
 
+        // Le card statiche di questa pagina portano solo il nome del trattamento.
+        // Carichiamo il catalogo una volta e risolviamo il nome nel suo id.
+        let treatmentIdByName = null;
+        async function loadTreatmentCatalog() {
+            if (treatmentIdByName) return treatmentIdByName;
+            treatmentIdByName = {};
+            try {
+                const { data, error } = await supabaseClient
+                    .from('spa_treatments')
+                    .select('id, name')
+                    .eq('active', true);
+                if (error) throw error;
+                (data || []).forEach(function (t) {
+                    treatmentIdByName[String(t.name).trim().toLowerCase()] = t.id;
+                });
+            } catch (e) {
+                console.warn('Catalogo spa non disponibile:', e);
+            }
+            return treatmentIdByName;
+        }
+        document.addEventListener('DOMContentLoaded', loadTreatmentCatalog);
+        let userPointsTotal = 0;
+        let bookingBusy = false;
+
+        // Il saldo punti arriva dal server (guest_me): la tabella user_points non è
+        // leggibile dal browser.
         async function loadUserPoints() {
             try {
-                const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
-                const { data } = await supabaseClient.from('user_points').select('points').eq('user_email', email).single();
-                userPointsTotal = data?.points || 0;
-                document.getElementById('userPoints').textContent = userPointsTotal;
-                document.getElementById('pointsSlider').max = Math.min(userPointsTotal, currentTreatmentPrice * 10);
+                userPointsTotal = await window.GuestOS.getPoints();
             } catch (error) {
-                console.error('Error loading points:', error);
+                userPointsTotal = 0;
             }
+            document.getElementById('userPoints').textContent = userPointsTotal;
+            document.getElementById('pointsSlider').max = Math.min(userPointsTotal, currentTreatmentPrice * 10);
+            updatePriceBreakdown();
         }
 
-        function openBookingModal(treatmentName, price) {
-            currentTreatmentName = treatmentName;
-            currentTreatmentPrice = price;
-            document.getElementById('treatmentNameDisplay').textContent = treatmentName;
+        // Accetta openBookingModal('Nome', 55, 60), openBookingModal('Nome', 55, 60, id)
+        // oppure openBookingModal({title, price, duration, id}).
+        async function openBookingModal(treatmentName, price, durationMinutes, treatmentId) {
+            if (treatmentName && typeof treatmentName === 'object') {
+                const opt = treatmentName;
+                treatmentId = opt.id;
+                treatmentName = opt.title || opt.name || '';
+                price = opt.price;
+                durationMinutes = opt.duration_minutes || opt.duration;
+            }
+            currentTreatmentName = String(treatmentName || '');
+            currentTreatmentPrice = Number(price) || 0;
+            currentTreatmentDuration = parseInt(durationMinutes, 10) || 60;
+            // Se l'id non arriva dal catalogo dinamico, lo risolviamo dal nome.
+            currentTreatmentId = treatmentId != null && treatmentId !== '' ? treatmentId : null;
+            if (currentTreatmentId == null) {
+                const map = await loadTreatmentCatalog();
+                const found = map[currentTreatmentName.trim().toLowerCase()];
+                currentTreatmentId = found != null ? found : null;
+            }
+            document.getElementById('treatmentNameDisplay').textContent = currentTreatmentName;
             document.getElementById('bookingModal').classList.add('active');
             document.body.style.overflow = 'hidden';
             renderCalendar();
@@ -1278,10 +1334,13 @@
             for (let i = 0; i < firstDay; i++) html += '<div class="calendar-day disabled"></div>';
             for (let day = 1; day <= daysInMonth; day++) {
                 const isSelected = selectedDate === day;
-                html += `<div class="calendar-day ${isSelected ? 'selected' : ''}" onclick="selectDate(${day})">${day}</div>`;
+                html += `<div class="calendar-day ${isSelected ? 'selected' : ''}" data-day="${day}">${day}</div>`;
             }
 
             grid.innerHTML = html;
+            grid.querySelectorAll('.calendar-day[data-day]').forEach(el => {
+                el.addEventListener('click', () => selectDate(parseInt(el.dataset.day, 10)));
+            });
             document.getElementById('monthDisplay').textContent = `${monthNames[currentMonth]} ${currentYear}`;
         }
 
@@ -1316,104 +1375,120 @@
             document.getElementById('finalPrice').textContent = `€${finalPrice.toFixed(2)}`;
         }
 
+        function money(value) {
+            const n = Number(value);
+            if (!isFinite(n)) return '-';
+            try {
+                return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
+            } catch (e) {
+                return '€ ' + n.toFixed(2);
+            }
+        }
+
+        // La prenotazione passa SEMPRE dalla RPC create_booking: il server ricalcola
+        // prezzo e sconto punti, il valore mostrato prima è solo una stima.
         async function submitBooking() {
+            if (bookingBusy) return;
+
+            if (!window.GuestOS.isLoggedIn()) {
+                alert('Accedi con la tua camera per prenotare.');
+                window.GuestOS.requireLogin();
+                return;
+            }
+
             if (!selectedDate || !selectedPeople) {
                 alert('Seleziona data e numero persone');
                 return;
             }
 
-            const userName = document.getElementById('userName').value;
+            // Senza id di catalogo il server rifiuta la prenotazione: meglio dirlo qui.
+            if (!currentTreatmentId) {
+                alert('Questo trattamento non è prenotabile online. Chiedi alla reception.');
+                return;
+            }
+
+            const userName = document.getElementById('userName').value.trim();
             if (!userName) {
                 alert('Inserisci il tuo nome');
                 return;
             }
 
-            const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
-            const pointsUsed = parseInt(document.getElementById('pointsSlider').value || 0);
-            const discount = pointsUsed / 10;
-            const totalPrice = currentTreatmentPrice * selectedPeople;
-            const finalPrice = Math.max(0, totalPrice - discount);
-
+            const pointsUsed = parseInt(document.getElementById('pointsSlider').value, 10) || 0;
+            const estimatedTotal = currentTreatmentPrice * selectedPeople;
+            const estimatedFinal = Math.max(0, estimatedTotal - pointsUsed / 10);
+            const paymentMethod = estimatedFinal <= 0 ? 'points' : 'card';
             const bookingDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(selectedDate).padStart(2, '0')}`;
 
+            bookingBusy = true;
+
+            let result;
             try {
-                // Scenario 1: Payment via Points Only (Amount <= 0)
-                if (finalPrice <= 0) {
-                    await saveSpaBooking(email, userName, bookingDate, 'points_full');
-                    return;
-                }
-
-                // Scenario 2: Stripe Payment
-                // Close modal first for better UX
-                closeBookingModal();
-
-                // Initialize PaymentHandler
-                const paymentHandler = new PaymentHandler();
-
-                // Process Stripe payment
-                await paymentHandler.processPaymentWithCheckout({
-                    amount: finalPrice,
-                    itemType: 'spa',
-                    itemId: null, // Will be set after DB insert
-                    itemName: currentTreatmentName,
-                    itemDescription: `Spa - ${currentTreatmentName} x${selectedPeople}`,
-                    userEmail: email,
-                    userName: userName,
-                    metadata: {
-                        bookingDate: bookingDate,
-                        people: selectedPeople,
-                        pointsUsed: pointsUsed,
-                        treatmentName: currentTreatmentName,
-                        originalPrice: totalPrice,
-                        discount: discount
+                result = await window.GuestOS.rpc('create_booking', {
+                    p_kind: 'spa',
+                    p_payload: {
+                        treatment_id: currentTreatmentId,
+                        treatment_name: currentTreatmentName,
+                        item_name: currentTreatmentName,
+                        booking_date: bookingDate,
+                        booking_time: '10:00',
+                        num_people: selectedPeople,
+                        duration_minutes: currentTreatmentDuration,
+                        points_used: pointsUsed,
+                        payment_method: paymentMethod
                     }
                 });
-
-            } catch (error) {
-                console.error('Booking Error:', error);
-                alert('Errore nel processo. Riprova.');
-                // Re-open modal if payment failed
-                document.getElementById('bookingModal').classList.add('active');
-            }
-        }
-
-        async function saveSpaBooking(email, userName, bookingDate, paymentStatus) {
-            const pointsUsed = parseInt(document.getElementById('pointsSlider').value || 0);
-            const discount = pointsUsed / 10;
-            const totalPrice = currentTreatmentPrice * selectedPeople;
-
-            // Save spa booking to database (for points-only payments)
-            // NB: la tabella spa_bookings NON ha payment_status (a differenza di restaurant/tour) — non aggiungere quel campo o l'insert va in PGRST204
-            const { error } = await supabaseClient.from('spa_bookings').insert({
-                user_email: email,
-                user_name: userName,
-                treatment_name: currentTreatmentName,
-                booking_date: bookingDate,
-                booking_time: '10:00:00',
-                price: Math.max(0, totalPrice - discount),
-                num_people: selectedPeople,
-                original_price: totalPrice,
-                points_used: pointsUsed,
-                discount_amount: discount,
-                final_price: Math.max(0, totalPrice - discount),
-                status: 'confirmed'
-            });
-
-            if (error) {
-                console.error('DB Insert Error:', error);
-                alert('Errore nel salvataggio della prenotazione.');
-                throw error;
+            } catch (err) {
+                bookingBusy = false;
+                alert(err && err.message ? err.message : 'Prenotazione non riuscita.');
+                return;
             }
 
-            // Deduct points if used (upsert per evitare no-op se record mancante)
-            if (pointsUsed > 0) {
-                const { data: userData } = await supabaseClient.from('user_points').select('points').eq('user_email', email).maybeSingle();
-                const newPts = Math.max(0, (userData?.points || 0) - pointsUsed);
-                await supabaseClient.from('user_points').update({ points: newPts, updated_at: new Date().toISOString() }).eq('user_email', email);
+            const bookingId = result && result.id;
+            // Il prezzo da mostrare è quello deciso dal server.
+            const finalPrice = result && result.final_price != null
+                ? Number(result.final_price)
+                : estimatedFinal;
+            const guest = window.GuestOS.user();
+
+            if (paymentMethod === 'card') {
+                closeBookingModal();
+                try {
+                    await new PaymentHandler().processPaymentWithCheckout({
+                        amount: finalPrice,
+                        itemType: 'spa',
+                        itemName: currentTreatmentName,
+                        itemDescription: `Spa - ${currentTreatmentName} x${selectedPeople}`,
+                        userEmail: guest.email,
+                        userName: userName,
+                        bookingKind: 'spa',
+                        bookingId: bookingId,
+                        cancelPath: '/spa.html'
+                    });
+                } catch (err) {
+                    alert('Non è stato possibile avviare il pagamento.');
+                }
+                bookingBusy = false;
+                return; // in caso di successo la pagina viene rediretta su Stripe
             }
 
-            alert('✅ Prenotazione confermata con successo! (Pagata con Punti)');
+            try {
+                await window.GuestOS?.notifyBooking?.({
+                    kind: 'spa',
+                    booking_id: bookingId,
+                    email: guest.email,
+                    name: userName,
+                    item_name: currentTreatmentName,
+                    date: bookingDate,
+                    time: '10:00',
+                    people: selectedPeople,
+                    final_price: finalPrice,
+                    room: guest.room_number
+                });
+            } catch (e) { /* l'email è un extra: la prenotazione resta valida */ }
+
+            bookingBusy = false;
             closeBookingModal();
+            alert('✅ Prenotazione confermata! Totale pagato con i punti: ' + money(finalPrice) + '.');
         }
     </script>
     <script src="app.js"></script>

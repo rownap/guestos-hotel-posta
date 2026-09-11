@@ -8,6 +8,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
+    <script src="guest-session.js"></script>
     <style>
         :root {
             --bg-primary: #0a0a12;
@@ -252,21 +253,6 @@
         </div>
 
         <div class="content">
-            <!-- Filter Tabs -->
-            <div class="filter-tabs">
-                <button class="filter-tab active" data-filter="all">
-                    <i data-lucide="trophy" style="width: 16px; height: 16px; vertical-align: middle;"></i>
-                    Tutti
-                </button>
-                <button class="filter-tab" data-filter="week">
-                    <i data-lucide="calendar" style="width: 16px; height: 16px; vertical-align: middle;"></i>
-                    Questa Settimana
-                </button>
-                <button class="filter-tab" data-filter="month">
-                    <i data-lucide="calendar-days" style="width: 16px; height: 16px; vertical-align: middle;"></i>
-                    Questo Mese
-                </button>
-            </div>
 
             <!-- Loading State -->
             <div class="loading" id="loadingState">
@@ -292,78 +278,68 @@
     <script>
         lucide.createIcons();
         
-        let currentFilter = 'all';
-        let allUsers = [];
+        // La classifica passa da get_leaderboard(): la vista `leaderboard` non e'
+        // leggibile senza sessione e restituirebbe una lista vuota senza dirlo.
+        // La RPC restituisce name, points, level e is_me.
+        //
+        // I filtri "questa settimana" / "questo mese" sono stati tolti: il dato
+        // per calcolarli non esiste (user_points tiene un totale, non uno storico
+        // datato) e le tab filtravano sulla data di registrazione dell'ospite.
+        const esc = window.escapeHtml;
 
         async function loadLeaderboard() {
+            const loading = document.getElementById('loadingState');
+            if (!window.GuestOS.isLoggedIn()) {
+                loading.innerHTML = '<div>Accedi con la tua camera per vedere la classifica.</div>';
+                window.GuestOS.requireLogin();
+                return;
+            }
+
             try {
-                let query = supabaseClient
-                    .from('user_points')
-                    .select('*')
-                    .order('points', { ascending: false })
-                    .limit(50);
-
-                // 🔥 FIX: Applica filtri basati su created_at
-                if (currentFilter === 'week') {
-                    const weekAgo = new Date();
-                    weekAgo.setDate(weekAgo.getDate() - 7);
-                    query = query.gte('created_at', weekAgo.toISOString());
-                } else if (currentFilter === 'month') {
-                    const monthAgo = new Date();
-                    monthAgo.setDate(monthAgo.getDate() - 30);
-                    query = query.gte('created_at', monthAgo.toISOString());
-                }
-
-                const { data, error } = await query;
-
-                if (error) throw error;
-                
-                if (data) {
-                    allUsers = data;
-                    renderLeaderboard(data);
-                }
-
-                document.getElementById('loadingState').style.display = 'none';
+                const data = await window.GuestOS.rpc('get_leaderboard', { p_limit: 50 });
+                renderLeaderboard(Array.isArray(data) ? data : []);
+                loading.style.display = 'none';
                 document.getElementById('podium').style.display = 'grid';
-
             } catch (error) {
-                console.error('Error loading leaderboard:', error);
-                document.getElementById('loadingState').innerHTML = '<div>Errore caricamento classifica</div>';
+                console.error('loadLeaderboard:', error);
+                loading.innerHTML = '<div>' + esc(error.message || 'Errore caricamento classifica') + '</div>';
             }
         }
 
         function renderLeaderboard(users) {
             const podium = document.getElementById('podium');
             podium.innerHTML = '';
-            
-            if (users.length >= 1) {
-                podium.innerHTML += createPodiumItem(users[0], 1, '🥇', 'first');
-            }
-            if (users.length >= 2) {
-                podium.innerHTML += createPodiumItem(users[1], 2, '🥈', 'second');
-            }
-            if (users.length >= 3) {
-                podium.innerHTML += createPodiumItem(users[2], 3, '🥉', 'third');
-            }
+
+            if (users.length >= 1) podium.innerHTML += createPodiumItem(users[0], 1, '\u{1F947}', 'first');
+            if (users.length >= 2) podium.innerHTML += createPodiumItem(users[1], 2, '\u{1F948}', 'second');
+            if (users.length >= 3) podium.innerHTML += createPodiumItem(users[2], 3, '\u{1F949}', 'third');
 
             const list = document.getElementById('rankingsList');
             list.innerHTML = '';
-            
-            const currentUserEmail = localStorage.getItem('guestos_user_email') || '';
-            
+
+            if (!users.length) {
+                list.innerHTML = '<div class="ranking-item"><div class="user-info">'
+                    + '<div class="user-name">Nessun punteggio ancora. Gioca per entrare in classifica!</div>'
+                    + '</div></div>';
+                lucide.createIcons();
+                return;
+            }
+
             users.slice(3).forEach((user, index) => {
                 const rank = index + 4;
-                const isCurrentUser = user.user_email === currentUserEmail;
-                
+                const isCurrentUser = user.is_me === true;
+
+                // Il nome lo sceglie l'ospite: va sempre escapato prima di finire
+                // nell'HTML, altrimenti un username diventa uno script per tutti.
                 list.innerHTML += `
                     <div class="ranking-item ${isCurrentUser ? 'me' : ''}">
                         <div class="rank-number">#${rank}</div>
-                        <div class="user-avatar">👤</div>
+                        <div class="user-avatar">\u{1F464}</div>
                         <div class="user-info">
-                            <div class="user-name">${user.user_name || 'Ospite'}</div>
-                            <div class="user-level">Livello ${user.level || 1}</div>
+                            <div class="user-name">${esc(user.name || 'Ospite')}</div>
+                            <div class="user-level">Livello ${parseInt(user.level, 10) || 1}</div>
                         </div>
-                        <div class="user-points">${user.points || 0}</div>
+                        <div class="user-points">${parseInt(user.points, 10) || 0}</div>
                     </div>
                 `;
             });
@@ -375,30 +351,17 @@
             return `
                 <div class="podium-item ${className}">
                     <div class="podium-avatar">
-                        ${rank === 1 ? '<div class="podium-crown">👑</div>' : ''}
-                        👤
+                        ${rank === 1 ? '<div class="podium-crown">\u{1F451}</div>' : ''}
+                        \u{1F464}
                     </div>
                     <div class="podium-platform">
                         <div class="podium-rank">${medal} #${rank}</div>
-                        <div class="podium-name">${user.user_name || 'Ospite'}</div>
-                        <div class="podium-points">${user.points || 0} pt</div>
+                        <div class="podium-name">${esc(user.name || 'Ospite')}</div>
+                        <div class="podium-points">${parseInt(user.points, 10) || 0} pt</div>
                     </div>
                 </div>
             `;
         }
-
-        // 🔥 FIX: Event listener per i filtri
-        document.querySelectorAll('.filter-tab').forEach(tab => {
-            tab.addEventListener('click', function() {
-                // Update active tab
-                document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-                this.classList.add('active');
-                
-                // Set filter and reload
-                currentFilter = this.getAttribute('data-filter');
-                loadLeaderboard();
-            });
-        });
 
         // Initialize
         loadLeaderboard();

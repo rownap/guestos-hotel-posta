@@ -9,6 +9,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
+    <script src="guest-session.js"></script>
     <script src="game-leaderboard.js" defer></script>
     <style>
         * {
@@ -560,26 +561,38 @@
         }
 
         async function showWin(pts) {
-            document.getElementById('winPoints').innerText = `+${pts} Punti`;
+            const pointsEl = document.getElementById('winPoints');
+            pointsEl.innerText = `+${pts} Punti`;
             document.getElementById('winModal').style.display = 'flex';
 
-            // Save to leaderboard
-            if (typeof saveGameScore === 'function') {
-                saveGameScore('scratch', pts);
-            }
-
-            // Add points
-            const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
-            await supabaseClient.from('user_points')
-                .select('points')
-                .eq('user_email', email)
-                .single()
-                .then(({ data }) => {
-                    const newPts = (data?.points || 0) + pts;
-                    return supabaseClient.from('user_points').update({ points: newPts, updated_at: new Date().toISOString() }).eq('user_email', email);
-                });
+            // Il premio viene accreditato dal server (award_points), che applica i tetti
+            await awardHotelPoints(pts, pointsEl, ' Punti');
         }
 
+        // Accredito punti hotel: passa SEMPRE dal server (award_points via guest-session.js).
+        // Il server converte il punteggio in punti applicando i tetti e salva anche la classifica.
+        const GAME_ID = 'scratch';
+        async function awardHotelPoints(score, el, suffix = '') {
+            const safeScore = Math.max(0, Math.floor(Number(score) || 0));
+            let result = null;
+            try {
+                result = await window.GuestOS?.awardPoints?.(GAME_ID, safeScore);
+            } catch (e) {
+                console.error('awardPoints error:', e);
+                if (el) el.textContent = 'Punti non disponibili';
+                return null;
+            }
+            if (el) {
+                if (!result) {
+                    el.textContent = 'Accedi per guadagnare punti';
+                } else {
+                    const awarded = Number(result.points_awarded) || 0;
+                    const total = Number(result.total) || 0;
+                    el.textContent = `+${awarded}${suffix}` + (suffix ? ` (totale ${total})` : '');
+                }
+            }
+            return result || null;
+        }
         scratchCanvas.addEventListener('mousemove', (e) => { if (e.buttons === 1) handleInput(e); });
         scratchCanvas.addEventListener('touchmove', handleInput);
 

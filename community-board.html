@@ -11,6 +11,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
+    <script src="guest-session.js"></script>
     <script src="game-leaderboard.js" defer></script>
     <style>
         :root {
@@ -215,11 +216,13 @@
 
         let challenges = [];
 
+        // community_challenges è un catalogo pubblico approvato: la LETTURA resta
+        // diretta. Tutte le scritture passano invece dalle RPC.
         async function loadChallenges() {
             try {
                 const { data, error } = await supabaseClient
                     .from('community_challenges')
-                    .select('*')
+                    .select('id, author_name, challenge_text, answer, points, completion_count, created_at')
                     .eq('is_approved', true)
                     .order('created_at', { ascending: false })
                     .limit(20);
@@ -251,25 +254,32 @@
                 return;
             }
 
+            const esc = window.escapeHtml;
             container.innerHTML = challenges.map((challenge, idx) => {
                 const timeAgo = getTimeAgo(new Date(challenge.created_at));
                 return `
                     <div class="challenge-card">
                         <div class="challenge-header">
-                            <div class="challenge-author">👤 ${challenge.author_name || 'Ospite Anonimo'}</div>
-                            <div style="font-size: 12px; opacity: 0.5;">${timeAgo}</div>
+                            <div class="challenge-author">👤 ${esc(challenge.author_name || 'Ospite Anonimo')}</div>
+                            <div style="font-size: 12px; opacity: 0.5;">${esc(timeAgo)}</div>
                         </div>
-                        <div class="challenge-text">${challenge.challenge_text}</div>
+                        <div class="challenge-text">${esc(challenge.challenge_text)}</div>
                         <div class="challenge-meta">
-                            <span>⭐ ${challenge.completion_count} completamenti</span>
-                            <span>🎁 +${challenge.points} punti</span>
+                            <span>⭐ ${esc(challenge.completion_count || 0)} completamenti</span>
+                            <span>🎁 +${esc(challenge.points || 0)} punti</span>
                         </div>
-                        <button class="secondary-btn" style="margin-top: 12px;" onclick="attemptChallenge('${challenge.id}', ${idx})">
+                        <button class="secondary-btn" style="margin-top: 12px;" data-challenge-index="${idx}">
                             Prova Sfida
                         </button>
                     </div>
                 `;
             }).join('');
+
+            container.querySelectorAll('[data-challenge-index]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    attemptChallenge(parseInt(btn.dataset.challengeIndex, 10));
+                });
+            });
         }
 
         function getTimeAgo(date) {
@@ -290,6 +300,8 @@
             document.getElementById('challengeAnswer').value = '';
         }
 
+        // La pubblicazione passa dalla RPC post_challenge: il browser non può
+        // scrivere direttamente in community_challenges.
         async function publishChallenge() {
             const text = document.getElementById('challengeText').value.trim();
             const answer = document.getElementById('challengeAnswer').value.trim();
@@ -299,96 +311,87 @@
                 return;
             }
 
-            const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
-            const username = localStorage.getItem('guestos_username') || email.split('@')[0];
+            if (!window.GuestOS.isLoggedIn()) {
+                alert('Accedi con la tua camera per pubblicare una sfida.');
+                window.GuestOS.requireLogin();
+                return;
+            }
 
             try {
-                const { data, error } = await supabaseClient
-                    .from('community_challenges')
-                    .insert([{
-                        author_email: email,
-                        author_name: username,
-                        challenge_text: text,
-                        answer: answer.toLowerCase(),
-                        points: 10,
-                        difficulty: 'medium'
-                    }])
-                    .select();
-
-                if (error) throw error;
-
-                alert('✅ Sfida pubblicata con successo! Gli altri ospiti possono ora provarla.');
+                await window.GuestOS.rpc('post_challenge', {
+                    p_text: text,
+                    p_answer: answer.toLowerCase()
+                });
+                alert('✅ Sfida pubblicata! Gli altri ospiti possono ora provarla.');
                 closeCreateModal();
                 loadChallenges(); // Reload to show new challenge
             } catch (err) {
-                console.error('Error publishing challenge:', err);
-                alert('Errore durante la pubblicazione. Riprova.');
+                alert(err && err.message ? err.message : 'Pubblicazione non riuscita.');
             }
         }
 
-        async function attemptChallenge(challengeId, index) {
-            const challenge = challenges[index];
-            const userAnswer = prompt(challenge.challenge_text);
+        // Promemoria locale delle sfide già completate su questo dispositivo: il
+        // conteggio vero lo tiene il server (award_points applica i suoi tetti).
+        const DONE_KEY = 'guestos_challenges_done';
 
+        function doneList() {
+            try {
+                return JSON.parse(localStorage.getItem(DONE_KEY) || '[]');
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function markDone(id) {
+            try {
+                const list = doneList();
+                if (list.indexOf(id) === -1) list.push(id);
+                localStorage.setItem(DONE_KEY, JSON.stringify(list.slice(-200)));
+            } catch (e) { /* niente promemoria locale */ }
+        }
+
+        async function attemptChallenge(index) {
+            const challenge = challenges[index];
+            if (!challenge) return;
+
+            if (!window.GuestOS.isLoggedIn()) {
+                alert('Accedi con la tua camera per provare le sfide.');
+                window.GuestOS.requireLogin();
+                return;
+            }
+
+            if (doneList().indexOf(String(challenge.id)) !== -1) {
+                alert('Hai già completato questa sfida!');
+                return;
+            }
+
+            const userAnswer = prompt(challenge.challenge_text);
             if (!userAnswer) return;
 
-            const email = localStorage.getItem('guestos_user_email') || 'guest@hotel.com';
-
-            if (userAnswer.toLowerCase().trim() === challenge.answer.toLowerCase()) {
-                try {
-                    // Check if already completed
-                    const { data: existing } = await supabaseClient
-                        .from('challenge_completions')
-                        .select('id')
-                        .eq('challenge_id', challengeId)
-                        .eq('user_email', email)
-                        .single();
-
-                    if (existing) {
-                        alert('Hai già completato questa sfida!');
-                        return;
-                    }
-
-                    // Record completion
-                    await supabaseClient
-                        .from('challenge_completions')
-                        .insert([{
-                            challenge_id: challengeId,
-                            user_email: email
-                        }]);
-
-                    // Update completion count
-                    await supabaseClient
-                        .from('community_challenges')
-                        .update({ completion_count: challenge.completion_count + 1 })
-                        .eq('id', challengeId);
-
-                    // Award points
-                    const { data: current } = await supabaseClient
-                        .from('user_points')
-                        .select('points')
-                        .eq('user_email', email)
-                        .single();
-
-                    const newPoints = (current?.points || 0) + challenge.points;
-                    await supabaseClient
-                        .from('user_points')
-                        .update({ points: newPoints })
-                        .eq('user_email', email);
-
-                    if (typeof saveGameScore === 'function') {
-                        saveGameScore('community_board', challenge.points);
-                    }
-
-                    alert(`✅ Corretto! Hai guadagnato ${challenge.points} punti!`);
-                    loadChallenges(); // Reload to show updated count
-                } catch (err) {
-                    console.error('Error saving completion:', err);
-                    alert('Errore durante il salvataggio. Riprova.');
-                }
-            } else {
+            if (userAnswer.toLowerCase().trim() !== String(challenge.answer || '').toLowerCase()) {
                 alert('❌ Risposta errata! Riprova.');
+                return;
             }
+
+            // complete_challenge fa tutto lato server: verifica che la sfida esista
+            // e sia approvata, impedisce di completare la propria, rifiuta un
+            // secondo completamento (ALREADY_COMPLETED) e assegna i punti.
+            let res;
+            try {
+                res = await window.GuestOS.rpc('complete_challenge', { p_challenge_id: challenge.id });
+            } catch (err) {
+                alert('❌ ' + (err.message || 'Sfida non completata.'));
+                if (err.code === 'ALREADY_COMPLETED') markDone(String(challenge.id));
+                return;
+            }
+            markDone(String(challenge.id));
+
+            if (res && res.points_awarded != null) {
+                alert('✅ Corretto! Hai guadagnato ' + res.points_awarded + ' punti!');
+            } else {
+                alert('✅ Corretto! Sfida completata.');
+            }
+            loadChallenges(); // Reload to show updated count
         }
 
         // Load challenges on page load
