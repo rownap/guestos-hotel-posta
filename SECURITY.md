@@ -78,16 +78,27 @@ Nessuna tabella concede privilegi ad `anon` per default: i grant sono espliciti,
 tabella per tabella, e le `default privileges` per le tabelle future sono
 revocate.
 
+**Dal browser non si scrive su nessuna tabella con dati dell'ospite.** I
+privilegi di `INSERT`, `UPDATE` e `DELETE` per `anon` e `authenticated` sono
+revocati su tutte: le modifiche passano dalle RPC `SECURITY DEFINER`, che
+girano con i privilegi del proprietario e applicano le regole di business.
+Restano scrivibili dal browser solo i cataloghi, che la dashboard admin
+modifica con insert/update dirette sotto la policy `admin_all`.
+
 | Gruppo | Tabelle | Ospite | Admin |
 |---|---|---|---|
-| Mai dal browser | `admin_users`, `guest_credentials`, `guest_sessions`, `admin_sessions`, `login_attempts`, viste `dashboard_stats`, `revenue_analytics`, `top_customers` | nessun accesso | nessun accesso (solo `service_role`) |
-| Dati personali | `users` | solo la propria riga, in lettura | tutto |
-| Note interne | `guest_staff_notes` | nessun accesso | tutto |
-| Punti e attività | `user_points`, `game_scores`, `quiz_scores`, `point_transactions`, `challenge_completions`, `weekly_challenge_completions`, `user_rewards`, `user_push_subscriptions` | solo le proprie righe | tutto |
-| Prenotazioni e pagamenti | `restaurant_bookings`, `tour_bookings`, `spa_bookings`, `payments`, `last_minute_purchases`, `stripe_customers` | lettura e inserimento delle proprie | tutto |
-| Chat AI | `ai_conversations`, `ai_messages`, `ai_actions`, `ai_feedback` | solo le proprie conversazioni | tutto |
-| Cataloghi | `tours`, `rewards`, `restaurant_menu`, `spa_services`, `flash_deals`, `last_minute_offers`, `hotel_settings`, `ui_sections`, `activities`, `rooms`, `weekly_challenges`, `daily_riddles`, `ai_knowledge_base` | sola lettura | scrittura |
-| Solo admin | `admin_audit_log`, `hotels`, `bookings`, `animation_bookings`, `lastminute_bookings`, `ai_analytics`, `photo_challenges` | nessun accesso | tutto |
+| Mai dal browser | `admin_users`, `guest_credentials`, `guest_sessions`, `admin_sessions`, `login_attempts`, `spa_services_legacy`, viste `dashboard_stats`, `revenue_analytics`, `top_customers` | nessun accesso | nessun accesso (solo `service_role`) |
+| Dati personali | `users` | solo la propria riga, in lettura | lettura; scrittura dalle RPC |
+| Note interne | `guest_staff_notes` | nessun accesso | lettura; scrittura dalle RPC |
+| Punti e attività | `user_points`, `game_scores`, `quiz_scores`, `point_transactions`, `challenge_completions`, `weekly_challenge_completions`, `user_rewards`, `user_push_subscriptions` | solo le proprie righe, in lettura | lettura; scrittura dalle RPC |
+| Prenotazioni e pagamenti | `restaurant_bookings`, `tour_bookings`, `spa_bookings`, `payments`, `last_minute_purchases`, `stripe_customers` | solo le proprie, in lettura | lettura; scrittura dalle RPC e dal webhook Stripe (`service_role`) |
+| Chat AI | `ai_conversations`, `ai_messages`, `ai_actions`, `ai_feedback` | solo le proprie conversazioni, in lettura | lettura; scrittura dalle RPC |
+| Cataloghi | `tours`, `rewards`, `restaurant_menu`, `spa_treatments`, `flash_deals`, `last_minute_offers`, `hotel_settings`, `ui_sections`, `activities`, `rooms`, `weekly_challenges`, `daily_riddles`, `ai_knowledge_base` | sola lettura | scrittura diretta |
+| Solo admin | `admin_audit_log`, `hotels`, `bookings`, `animation_bookings`, `lastminute_bookings`, `ai_analytics`, `photo_challenges` | nessun accesso | lettura; scrittura dalle RPC |
+
+Il catalogo della spa è `spa_treatments`. La vecchia `spa_services` conteneva
+una sola riga stantia che nella pagina spa sostituiva le card vere: è stata
+rinominata `spa_services_legacy` e tolta dalla portata del browser.
 
 Le classifiche passano dalle viste `leaderboard` e `game_leaderboard`, che non
 espongono le email degli altri ospiti e restituiscono un flag `is_me`. Sono
@@ -112,6 +123,12 @@ Queste RPC esistono perché la regola non può stare nel client:
   `payment_method = 'points'` i punti necessari li calcola il server sul prezzo
   di catalogo e, se non bastano, la prenotazione non viene creata
   (`INSUFFICIENT_POINTS`). Il metodo ammesso è `points`, `card` o `room`.
+  Con `offer_id` il prezzo base diventa lo scontato di `last_minute_offers`:
+  l'offerta deve essere attiva, nel suo periodo di validità, del tipo giusto e
+  collegata al catalogo (`item_id`); il posto viene sottratto da
+  `slots_available` con una guardia che impedisce l'overbooking
+  (`OFFER_SOLD_OUT`, `OFFER_EXPIRED`) e l'acquisto finisce in
+  `last_minute_purchases`.
 - `get_my_rewards`, `cancel_booking`, `get_my_bookings`, `update_profile`,
   `save_push_subscription`, `log_ai_message`, `get_my_ai_history`,
   `submit_ai_feedback`: operano sempre e solo sulle righe dell'ospite che
@@ -152,12 +169,6 @@ Queste RPC esistono perché la regola non può stare nel client:
       pubblica, configurare SMTP e `site_url` sul dominio di produzione,
       creare gli utenti, valorizzare `admin_users.auth_user_id`. Solo dopo si
       possono rimuovere `admin_login`, `admin_sessions` e `x-admin-token`.
-- [ ] Un ospite autenticato può ancora scrivere la colonna `points` della propria
-      riga di `user_points` con una chiamata REST diretta: non espone dati di
-      altri, ma consente di gonfiarsi i punti. Va chiuso revocando il privilegio
-      di UPDATE su quella colonna, **dopo** aver spostato su RPC gli ultimi punti
-      di scrittura diretta (`points-helper.js`, `quiz.html`, `games.html`,
-      `community-board.html`, `riddle-of-day.html`, `weekly-challenge.html`).
 - [ ] Content Security Policy in `vercel.json`.
 - [ ] Escape di tutto il contenuto dinamico inserito con `innerHTML`.
 - [ ] Error tracking (Sentry o Vercel Observability).
